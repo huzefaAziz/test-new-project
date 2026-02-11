@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Animation vs. Coding — Mandelbrot Cat Deep Dream</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; overflow: hidden; font-family: 'Courier New', monospace; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; z-index: 10;
+  }
+  #ui button {
+    padding: 10px 24px; border: none; border-radius: 6px; cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 14px; font-weight: bold;
+    transition: all .2s;
+  }
+  #playBtn { background: #e94560; color: #fff; }
+  #playBtn:hover { background: #ff6b81; }
+  #restartBtn { background: #0f3460; color: #fff; }
+  #restartBtn:hover { background: #16213e; }
+  #sceneLabel {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    color: #e94560; font-size: 16px; letter-spacing: 2px; z-index: 10;
+    text-transform: uppercase; opacity: 0.8;
+  }
+  #progressBar {
+    position: fixed; top: 0; left: 0; height: 3px; background: #e94560;
+    z-index: 10; transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+<div id="progressBar" style="width:0%"></div>
+<div id="sceneLabel">ANIMATION vs. CODING</div>
+<canvas id="c"></canvas>
+<div id="ui">
+  <button id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+  <button id="restartBtn" onclick="restart()">↻ RESTART</button>
+</div>
+
+<script>
+// ============================================================
+//  ANIMATION VS. CODING  —  Alan Becker–inspired stick figure
+//  vs Mandelbrot + Cat Deep Dream
+// ============================================================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+// ── Global time ──
+let t = 0, playing = false, speed = 1;
+const TOTAL_DURATION = 42; // seconds
+const sceneLabel = document.getElementById('sceneLabel');
+const progressBar = document.getElementById('progressBar');
+const playBtn = document.getElementById('playBtn');
+
+function togglePlay() {
+  playing = !playing;
+  playBtn.textContent = playing ? '❚❚ PAUSE' : '▶ PLAY';
+}
+function restart() { t = 0; playing = true; playBtn.textContent = '❚❚ PAUSE'; }
+
+// ── Easing helpers ──
+const ease = t => t < .5 ? 2*t*t : -1+(4-2*t)*t;
+const lerp = (a,b,t) => a + (b-a) * Math.max(0, Math.min(1, t));
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+// ============================================================
+//  STICK FIGURE (Alan Becker orange style)
+// ============================================================
+class StickFigure {
+  constructor(x, y, color='#e94560') {
+    this.x = x; this.y = y; this.color = color;
+    this.scale = 1; this.angle = 0;
+    this.armL = 0; this.armR = 0; this.legL = 0; this.legR = 0;
+    this.headTilt = 0; this.jumping = 0; this.opacity = 1;
+    this.lookDir = 1; // 1 = right, -1 = left
+    this.expression = 'neutral'; // neutral, surprise, angry, happy
+  }
+
+  walk(speed) {
+    const s = Math.sin(t * speed * 8);
+    this.armL = s * 0.6; this.armR = -s * 0.6;
+    this.legL = -s * 0.5; this.legR = s * 0.5;
+  }
+
+  idle() {
+    this.armL = Math.sin(t * 2) * 0.08;
+    this.armR = Math.sin(t * 2 + 1) * 0.08;
+    this.legL = 0; this.legR = 0;
+  }
+
+  punch(dir) {
+    this.armR = dir * -1.2;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.translate(this.x, this.y - this.jumping);
+    ctx.scale(this.scale * this.lookDir, this.scale);
+    ctx.rotate(this.angle);
+
+    const lw = 4 * this.scale;
+    ctx.strokeStyle = this.color;
+    ctx.fillStyle = this.color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Head
+    ctx.save();
+    ctx.rotate(this.headTilt);
+    ctx.beginPath();
+    ctx.arc(0, -45, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#1a1a2e';
+    if (this.expression === 'surprise') {
+      ctx.beginPath(); ctx.arc(-4, -47, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(4, -47, 3, 0, Math.PI*2); ctx.fill();
+    } else if (this.expression === 'angry') {
+      ctx.fillRect(-6, -49, 5, 2); ctx.fillRect(2, -49, 5, 2);
+    } else if (this.expression === 'happy') {
+      ctx.beginPath(); ctx.arc(0, -44, 5, 0, Math.PI); ctx.stroke();
+    } else {
+      ctx.fillRect(-5, -48, 3, 2); ctx.fillRect(3, -48, 3, 2);
+    }
+    ctx.restore();
+
+    // Body
+    ctx.strokeStyle = this.color;
+    ctx.beginPath(); ctx.moveTo(0, -35); ctx.lineTo(0, 0); ctx.stroke();
+
+    // Arms
+    ctx.save();
+    ctx.translate(0, -28);
+    // Left arm
+    ctx.save(); ctx.rotate(this.armL);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-18, 18); ctx.stroke();
+    ctx.restore();
+    // Right arm
+    ctx.save(); ctx.rotate(this.armR);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(18, 18); ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+
+    // Legs
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.save(); ctx.rotate(this.legL);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-12, 25); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.rotate(this.legR);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(12, 25); ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  CODE LINES (floating Python code)
+// ============================================================
+const codeLines = [
+  'from functools import cache',
+  'import numpy as np',
+  'from sklearn.pipeline import Pipeline',
+  'from sklearn.cluster import KMeans',
+  'import matplotlib.pyplot as plt',
+  '',
+  'cat_img = plt.imread("card.jpg")',
+  'cat_arr = np.array(cat_img)[:,:,:3]',
+  'h, w = 1200, 1200',
+  '',
+  'def mandelbrot_grid(width, height):',
+  '    c = cx + 1j * cy',
+  '    z = np.zeros_like(c)',
+  '    z[mask] = z[mask]**2 + c[mask]',
+  '',
+  'mandel = mandelbrot_grid(w, h)',
+  'mandel_rgb = fractal_to_rgb(mandel)',
+  '',
+  'alpha = 0.35 + 0.5 * lum',
+  'fractal_inside_cat = (1-alpha)*cat + alpha*mandel',
+  '',
+  'model = Pipeline([',
+  '    ("kmeans", KMeans(n_clusters=64))',
+  '])',
+  'labels = model.fit_predict(X)',
+  'dream_rgb = centroids[labels]',
+  '',
+  'plt.imshow(dream_rgb)',
+  'plt.savefig("deepdream_cat.png")',
+  'plt.show()'
+];
+
+class CodeBlock {
+  constructor(lines, x, y) {
+    this.lines = lines; this.x = x; this.y = y;
+    this.revealedLines = 0; this.opacity = 0; this.scale = 1;
+    this.glowIntensity = 0; this.shakeX = 0; this.shakeY = 0;
+    this.highlighted = -1;
+  }
+  draw(ctx) {
+    if (this.opacity <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.translate(this.x + this.shakeX, this.y + this.shakeY);
+    ctx.scale(this.scale, this.scale);
+
+    // Background
+    const lineH = 18;
+    const bw = 400, bh = this.revealedLines * lineH + 30;
+    ctx.fillStyle = 'rgba(22, 33, 62, 0.92)';
+    ctx.strokeStyle = '#0f3460';
+    ctx.lineWidth = 2;
+    roundRect(ctx, -15, -15, bw, bh, 8);
+    ctx.fill(); ctx.stroke();
+
+    // Glow
+    if (this.glowIntensity > 0) {
+      ctx.shadowColor = '#e94560';
+      ctx.shadowBlur = 20 * this.glowIntensity;
+    }
+
+    // Code
+    ctx.font = '13px "Courier New", monospace';
+    const colors = { keyword: '#c792ea', func: '#82aaff', string: '#c3e88d',
+                     num: '#f78c6c', comment: '#546e7a', op: '#89ddff', default: '#eeffff' };
+    for (let i = 0; i < Math.min(this.revealedLines, this.lines.length); i++) {
+      const line = this.lines[i];
+      const ly = i * lineH;
+      // Highlight
+      if (i === this.highlighted) {
+        ctx.fillStyle = 'rgba(233, 69, 96, 0.15)';
+        ctx.fillRect(-10, ly - 2, bw - 10, lineH);
+      }
+      // Syntax coloring (simple)
+      ctx.fillStyle = colors.default;
+      if (line.startsWith('#') || line.startsWith('//')) ctx.fillStyle = colors.comment;
+      else if (line.match(/^(from|import|def|for|if|else|return|class)\b/)) ctx.fillStyle = colors.keyword;
+      else if (line.includes('=')) ctx.fillStyle = colors.op;
+      if (line.includes('"') || line.includes("'")) ctx.fillStyle = colors.string;
+      if (line.match(/\d+/)) ctx.fillStyle = colors.num;
+      ctx.fillText(line, 0, ly + 12);
+    }
+    ctx.restore();
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ============================================================
+//  MANDELBROT FRACTAL (rendered in canvas)
+// ============================================================
+let fractalCanvas, fractalCtx;
+function initFractal(size) {
+  fractalCanvas = document.createElement('canvas');
+  fractalCanvas.width = fractalCanvas.height = size;
+  fractalCtx = fractalCanvas.getContext('2d');
+}
+function renderMandelbrot(size, progress, zoom, cx, cy) {
+  if (!fractalCanvas || fractalCanvas.width !== size) initFractal(size);
+  const imgData = fractalCtx.createImageData(size, size);
+  const maxIter = Math.floor(30 + progress * 70);
+  const scale = 3 / zoom;
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const x0 = (px / size - 0.5) * scale + cx;
+      const y0 = (py / size - 0.5) * scale + cy;
+      let x = 0, y = 0, iter = 0;
+      while (x*x + y*y <= 4 && iter < maxIter) {
+        const xt = x*x - y*y + x0;
+        y = 2*x*y + y0; x = xt; iter++;
+      }
+      const idx = (py * size + px) * 4;
+      if (iter === maxIter) {
+        imgData.data[idx] = imgData.data[idx+1] = imgData.data[idx+2] = 0;
+      } else {
+        const v = iter / maxIter;
+        imgData.data[idx]   = Math.floor(clamp(2*v, 0, 1) * 255);
+        imgData.data[idx+1] = Math.floor(clamp(2*v - 0.5, 0, 1) * 255);
+        imgData.data[idx+2] = Math.floor(clamp(3*v - 0.3, 0, 1) * 200);
+      }
+      imgData.data[idx+3] = 255;
+    }
+  }
+  fractalCtx.putImageData(imgData, 0, 0);
+}
+
+// ============================================================
+//  CAT SILHOUETTE (procedural vector cat)
+// ============================================================
+function drawCatSilhouette(ctx, x, y, size, fill, opacity) {
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.translate(x, y);
+  const s = size / 100;
+  ctx.scale(s, s);
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = fill;
+  ctx.lineWidth = 3;
+
+  // Body (oval)
+  ctx.beginPath();
+  ctx.ellipse(0, 20, 45, 35, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -30, 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Left ear
+  ctx.beginPath();
+  ctx.moveTo(-22, -50); ctx.lineTo(-35, -78); ctx.lineTo(-8, -55);
+  ctx.closePath(); ctx.fill();
+  // Right ear
+  ctx.beginPath();
+  ctx.moveTo(22, -50); ctx.lineTo(35, -78); ctx.lineTo(8, -55);
+  ctx.closePath(); ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.ellipse(-11, -34, 5, 6, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(11, -34, 5, 6, 0, 0, Math.PI*2); ctx.fill();
+  // Eye glow
+  ctx.fillStyle = '#82aaff';
+  ctx.beginPath(); ctx.arc(-11, -35, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(11, -35, 2.5, 0, Math.PI*2); ctx.fill();
+
+  // Nose
+  ctx.fillStyle = '#ffb4a2';
+  ctx.beginPath();
+  ctx.moveTo(0, -24); ctx.lineTo(-4, -20); ctx.lineTo(4, -20);
+  ctx.closePath(); ctx.fill();
+
+  // Whiskers
+  ctx.strokeStyle = fill;
+  ctx.lineWidth = 1.5;
+  for (let side of [-1, 1]) {
+    for (let a = -0.2; a <= 0.2; a += 0.2) {
+      ctx.beginPath();
+      ctx.moveTo(side * 12, -22);
+      ctx.lineTo(side * 45, -22 + a * 30);
+      ctx.stroke();
+    }
+  }
+
+  // Tail
+  ctx.strokeStyle = fill;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(40, 30);
+  ctx.bezierCurveTo(65, 10, 70, -20, 55, -35);
+  ctx.stroke();
+
+  // Paws
+  ctx.fillStyle = fill;
+  for (let px of [-22, -8, 8, 22]) {
+    ctx.beginPath();
+    ctx.ellipse(px, 52, 8, 5, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  PARTICLES
+// ============================================================
+let particles = [];
+class Particle {
+  constructor(x, y, color, vx, vy, life) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy; this.life = life; this.maxLife = life;
+    this.size = 2 + Math.random() * 4;
+  }
+  update(dt) {
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.vy += 80 * dt; this.life -= dt;
+  }
+  draw(ctx) {
+    if (this.life <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.life / this.maxLife;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * (this.life / this.maxLife), 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+function spawnParticles(x, y, color, count, spread) {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, color,
+      (Math.random()-0.5) * spread, (Math.random()-0.5) * spread,
+      0.5 + Math.random() * 1.5));
+  }
+}
+
+// ============================================================
+//  FLASH / SCREEN EFFECTS
+// ============================================================
+let flashAlpha = 0, flashColor = '#fff';
+let screenShake = 0;
+
+// ============================================================
+//  SCENE OBJECTS
+// ============================================================
+const stick = new StickFigure(100, H * 0.7, '#e94560');
+const code = new CodeBlock(codeLines, W * 0.35, 60);
+
+// ============================================================
+//  MAIN ANIMATION LOOP
+// ============================================================
+let lastTime = performance.now();
+let fractalSize = 200, fractalProgress = 0;
+let fractalX = W * 0.6, fractalY = H * 0.45;
+let fractalOpacity = 0, fractalScale = 1, fractalZoom = 1;
+let catOpacity = 0, catX = W * 0.5, catY = H * 0.55, catSize = 0;
+let mergeProgress = 0;
+let titleOpacity = 1, titleY = H * 0.4;
+let finalGlow = 0;
+let endTextOpacity = 0;
+
+function getScene() {
+  if (t < 3) return 'title';
+  if (t < 8) return 'code_appear';
+  if (t < 14) return 'stick_reads';
+  if (t < 20) return 'fractal_generate';
+  if (t < 27) return 'stick_vs_fractal';
+  if (t < 34) return 'cat_merge';
+  if (t < 40) return 'deep_dream';
+  return 'end';
+}
+
+function update(dt) {
+  const scene = getScene();
+  sceneLabel.textContent = {
+    'title': 'ANIMATION vs. CODING',
+    'code_appear': 'ACT I — THE CODE APPEARS',
+    'stick_reads': 'ACT II — READING THE CODE',
+    'fractal_generate': 'ACT III — THE MANDELBROT AWAKENS',
+    'stick_vs_fractal': 'ACT IV — STICK FIGURE vs. FRACTAL',
+    'cat_merge': 'ACT V — THE CAT EMERGES',
+    'deep_dream': 'ACT VI — DEEP DREAM FUSION',
+    'end': 'FIN'
+  }[scene] || '';
+  progressBar.style.width = (t / TOTAL_DURATION * 100) + '%';
+
+  // ── Title ──
+  if (scene === 'title') {
+    titleOpacity = 1;
+    titleY = H * 0.4;
+    stick.x = -50; stick.opacity = 0;
+    code.opacity = 0;
+  }
+
+  // ── Code appears from right ──
+  if (scene === 'code_appear') {
+    titleOpacity = Math.max(0, 1 - (t - 3));
+    const p = clamp((t - 3.5) / 3, 0, 1);
+    code.opacity = ease(p);
+    code.x = lerp(W + 100, W * 0.35, ease(p));
+    code.revealedLines = Math.floor(lerp(0, codeLines.length, ease(clamp((t-4)/3, 0, 1))));
+    // Stick figure walks in from left
+    const sp = clamp((t - 4) / 3, 0, 1);
+    stick.opacity = clamp((t - 4) * 2, 0, 1);
+    stick.x = lerp(-50, W * 0.22, ease(sp));
+    stick.y = H * 0.7;
+    stick.walk(1);
+    stick.lookDir = 1;
+  }
+
+  // ── Stick reads code ──
+  if (scene === 'stick_reads') {
+    code.opacity = 1; code.x = W * 0.35;
+    code.revealedLines = codeLines.length;
+    stick.idle();
+    stick.x = W * 0.22;
+
+    // Head tilts reading
+    stick.headTilt = Math.sin(t * 1.5) * 0.15;
+    stick.expression = 'neutral';
+
+    // Highlight line cycling
+    const lineIdx = Math.floor((t - 8) / 0.5) % codeLines.length;
+    code.highlighted = lineIdx;
+
+    // Surprise at mandelbrot line
+    if (lineIdx >= 10 && lineIdx <= 13) {
+      stick.expression = 'surprise';
+      code.glowIntensity = 0.5 + Math.sin(t * 5) * 0.3;
+    } else {
+      code.glowIntensity = 0;
+    }
+
+    // At ~13s, stick punches the code
+    if (t > 13.2) {
+      stick.punch(1);
+      code.shakeX = Math.sin(t * 40) * 5;
+      code.shakeY = Math.cos(t * 30) * 3;
+      spawnParticles(W * 0.35, H * 0.35, '#82aaff', 2, 100);
+    }
+  }
+
+  // ── Fractal generates ──
+  if (scene === 'fractal_generate') {
+    code.highlighted = -1;
+    code.glowIntensity = 0;
+    code.shakeX = 0; code.shakeY = 0;
+
+    // Code shrinks to corner
+    const cp = clamp((t - 14) / 2, 0, 1);
+    code.scale = lerp(1, 0.5, ease(cp));
+    code.x = lerp(W * 0.35, 20, ease(cp));
+    code.y = lerp(60, 20, ease(cp));
+
+    // Fractal appears
+    fractalProgress = clamp((t - 15) / 4, 0, 1);
+    fractalOpacity = clamp((t - 14.5) / 1.5, 0, 1);
+    fractalX = W * 0.55;
+    fractalY = H * 0.4;
+    fractalSize = Math.floor(lerp(50, 280, ease(fractalProgress)));
+    fractalZoom = lerp(0.8, 1.5, ease(fractalProgress));
+
+    // Stick watches amazed
+    stick.idle();
+    stick.expression = 'surprise';
+    stick.lookDir = 1;
+    stick.x = W * 0.22;
+
+    if (t > 16 && t < 17) {
+      flashAlpha = Math.max(0, 0.3 - (t - 16) * 0.5);
+      flashColor = '#e94560';
+    }
+
+    // Particles emanate from fractal
+    if (fractalProgress > 0.2 && Math.random() < 0.3) {
+      spawnParticles(fractalX, fractalY, '#f78c6c', 1, 80);
+    }
+  }
+
+  // ── Stick vs Fractal (battle!) ──
+  if (scene === 'stick_vs_fractal') {
+    fractalOpacity = 1;
+    fractalProgress = 1;
+    fractalSize = 280;
+    code.scale = 0.5; code.x = 20; code.y = 20;
+
+    const phase = t - 20;
+
+    // Stick approaches fractal
+    if (phase < 2) {
+      stick.walk(1.5);
+      stick.x = lerp(W * 0.22, W * 0.42, ease(phase / 2));
+      stick.expression = 'angry';
+      stick.lookDir = 1;
+    }
+    // Punch!
+    else if (phase < 3) {
+      stick.x = W * 0.42;
+      stick.punch(1);
+      stick.expression = 'angry';
+      screenShake = Math.max(0, 5 * (1 - (phase - 2)));
+      if (phase > 2 && phase < 2.2) {
+        spawnParticles(fractalX - 100, fractalY, '#e94560', 20, 200);
+        flashAlpha = 0.4;
+      }
+      // Fractal pushes back
+      fractalScale = 1 + Math.sin(phase * 10) * 0.1;
+    }
+    // Fractal retaliates — grows and chases
+    else if (phase < 5) {
+      const rp = (phase - 3) / 2;
+      fractalSize = Math.floor(lerp(280, 400, ease(rp)));
+      fractalX = lerp(W * 0.55, W * 0.45, ease(rp));
+      stick.x = lerp(W * 0.42, W * 0.18, ease(rp));
+      stick.walk(2);
+      stick.lookDir = -1;
+      stick.expression = 'surprise';
+      fractalScale = 1;
+      if (Math.random() < 0.4) spawnParticles(fractalX - 100, fractalY, '#c792ea', 2, 120);
+    }
+    // Stick fights back — kicks the fractal
+    else if (phase < 7) {
+      const rp = (phase - 5) / 2;
+      stick.x = lerp(W * 0.18, W * 0.35, ease(rp));
+      stick.lookDir = 1;
+      stick.expression = 'angry';
+      stick.legR = -1.0 + Math.sin(phase * 8) * 0.3;
+      stick.armR = -0.8;
+      fractalX = lerp(W * 0.45, W * 0.6, ease(rp));
+      fractalSize = Math.floor(lerp(400, 250, ease(rp)));
+      if (phase > 5.5 && phase < 5.7) {
+        spawnParticles(fractalX, fractalY, '#e94560', 30, 250);
+        screenShake = 8;
+        flashAlpha = 0.3;
+      }
+    }
+  }
+
+  // ── Cat emerges ── fractal merges into cat ──
+  if (scene === 'cat_merge') {
+    const phase = t - 27;
+    stick.idle();
+    stick.x = W * 0.15;
+    stick.expression = 'surprise';
+    stick.lookDir = 1;
+    code.scale = 0.5; code.x = 20; code.y = 20;
+
+    // Cat fades in
+    catOpacity = clamp(phase / 2, 0, 1);
+    catX = W * 0.5;
+    catY = H * 0.52;
+    catSize = lerp(0, 200, ease(clamp(phase / 2.5, 0, 1)));
+
+    // Fractal shrinks toward cat
+    fractalOpacity = clamp(1 - (phase - 3) / 3, 0, 1);
+    fractalX = lerp(W * 0.6, W * 0.5, ease(clamp(phase / 5, 0, 1)));
+    fractalY = lerp(H * 0.4, H * 0.52, ease(clamp(phase / 5, 0, 1)));
+    fractalSize = Math.floor(lerp(250, 80, ease(clamp((phase - 2) / 3, 0, 1))));
+
+    // Merge
+    mergeProgress = clamp((phase - 3) / 3, 0, 1);
+
+    if (phase > 4 && phase < 4.3) {
+      flashAlpha = 0.5; flashColor = '#c792ea';
+      spawnParticles(catX, catY, '#e94560', 40, 300);
+    }
+
+    // Stick gets happy
+    if (phase > 5) {
+      stick.expression = 'happy';
+    }
+  }
+
+  // ── Deep Dream finale ──
+  if (scene === 'deep_dream') {
+    const phase = t - 34;
+    catOpacity = 1;
+    catSize = 200;
+    fractalOpacity = 0;
+    mergeProgress = 1;
+    code.opacity = clamp(1 - phase / 2, 0, 1);
+
+    finalGlow = 0.5 + Math.sin(t * 3) * 0.3;
+
+    stick.x = lerp(W * 0.15, W * 0.38, ease(clamp(phase / 3, 0, 1)));
+    stick.idle();
+    stick.expression = 'happy';
+    stick.lookDir = 1;
+
+    // Zoom cat
+    catSize = lerp(200, 320, ease(clamp(phase / 4, 0, 1)));
+
+    // Particles swirl around
+    if (Math.random() < 0.5) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 180 + Math.random() * 100;
+      spawnParticles(catX + Math.cos(angle) * r, catY + Math.sin(angle) * r,
+        ['#e94560','#c792ea','#82aaff','#f78c6c','#c3e88d'][Math.floor(Math.random()*5)],
+        1, 60);
+    }
+
+    endTextOpacity = clamp((phase - 4) / 2, 0, 1);
+  }
+
+  if (scene === 'end') {
+    endTextOpacity = 1;
+    stick.idle();
+    stick.expression = 'happy';
+    finalGlow = 0.5 + Math.sin(t * 2) * 0.3;
+  }
+
+  // Update particles
+  particles.forEach(p => p.update(dt));
+  particles = particles.filter(p => p.life > 0);
+
+  // Decay effects
+  flashAlpha = Math.max(0, flashAlpha - dt * 2);
+  screenShake = Math.max(0, screenShake - dt * 15);
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function render() {
+  ctx.save();
+
+  // Screen shake
+  if (screenShake > 0) {
+    ctx.translate((Math.random()-0.5) * screenShake * 2, (Math.random()-0.5) * screenShake * 2);
+  }
+
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0f0c29');
+  grad.addColorStop(0.5, '#1a1a2e');
+  grad.addColorStop(1, '#16213e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines (subtle)
+  ctx.strokeStyle = 'rgba(15, 52, 96, 0.3)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 50) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 50) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Floor line
+  ctx.strokeStyle = '#0f3460';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, H * 0.82); ctx.lineTo(W, H * 0.82); ctx.stroke();
+
+  // ── Title ──
+  if (titleOpacity > 0) {
+    ctx.save();
+    ctx.globalAlpha = titleOpacity;
+    ctx.fillStyle = '#e94560';
+    ctx.font = 'bold 52px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ANIMATION', W/2, titleY - 20);
+    ctx.fillStyle = '#eeffff';
+    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.fillText('— vs —', W/2, titleY + 20);
+    ctx.fillStyle = '#82aaff';
+    ctx.font = 'bold 52px "Courier New", monospace';
+    ctx.fillText('CODING', W/2, titleY + 70);
+    ctx.fillStyle = '#546e7a';
+    ctx.font = '16px "Courier New", monospace';
+    ctx.fillText('Mandelbrot  ×  Cat  ×  Deep Dream  ×  KMeans', W/2, titleY + 110);
+    ctx.fillText('inspired by Alan Becker', W/2, titleY + 135);
+    ctx.restore();
+  }
+
+  // ── Code block ──
+  code.draw(ctx);
+
+  // ── Mandelbrot fractal ──
+  if (fractalOpacity > 0 && fractalProgress > 0) {
+    const fs = Math.max(10, fractalSize);
+    renderMandelbrot(Math.min(fs, 300), fractalProgress, fractalZoom, -0.5, 0);
+    ctx.save();
+    ctx.globalAlpha = fractalOpacity;
+    ctx.translate(fractalX, fractalY);
+    ctx.scale(fractalScale, fractalScale);
+    // Glow
+    ctx.shadowColor = '#e94560';
+    ctx.shadowBlur = 30;
+    ctx.drawImage(fractalCanvas, -fs/2, -fs/2, fs, fs);
+    ctx.shadowBlur = 0;
+    // Border
+    ctx.strokeStyle = '#e94560';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-fs/2, -fs/2, fs, fs);
+    ctx.restore();
+  }
+
+  // ── Cat ──
+  if (catOpacity > 0) {
+    // Fractal fill inside cat (using clipping)
+    ctx.save();
+
+    // Draw cat body as clip path for fractal fill
+    if (mergeProgress > 0) {
+      ctx.save();
+      ctx.globalAlpha = catOpacity * mergeProgress;
+      ctx.translate(catX, catY);
+      const s = catSize / 100;
+      ctx.scale(s, s);
+      // Create clip from cat shape
+      ctx.beginPath();
+      ctx.ellipse(0, 20, 45, 35, 0, 0, Math.PI * 2);
+      ctx.arc(0, -30, 28, 0, Math.PI * 2);
+      ctx.moveTo(-22, -50); ctx.lineTo(-35, -78); ctx.lineTo(-8, -55); ctx.closePath();
+      ctx.moveTo(22, -50); ctx.lineTo(35, -78); ctx.lineTo(8, -55); ctx.closePath();
+      ctx.clip();
+      // Draw fractal inside the clip
+      ctx.scale(1/s, 1/s);
+      ctx.translate(-catX, -catY);
+      // Render a full-size fractal for the fill
+      const fillSize = Math.floor(catSize * 2.5);
+      renderMandelbrot(Math.min(fillSize, 350), 1, 2 + Math.sin(t * 0.5) * 0.5, -0.74, 0.17);
+      ctx.globalAlpha = catOpacity * mergeProgress * 0.85;
+      ctx.drawImage(fractalCanvas, catX - fillSize/2, catY - fillSize/2, fillSize, fillSize);
+      ctx.restore();
+    }
+
+    // Cat silhouette outline (always visible)
+    const catFill = mergeProgress > 0.8 ? 'rgba(233, 69, 96, 0.5)' : '#e94560';
+    drawCatSilhouette(ctx, catX, catY, catSize, catFill, catOpacity * (1 - mergeProgress * 0.7));
+
+    // Cat eyes always visible
+    ctx.save();
+    ctx.globalAlpha = catOpacity;
+    ctx.translate(catX, catY);
+    const es = catSize / 100;
+    ctx.scale(es, es);
+    ctx.fillStyle = '#82aaff';
+    ctx.shadowColor = '#82aaff';
+    ctx.shadowBlur = 10 + finalGlow * 20;
+    ctx.beginPath(); ctx.arc(-11, -35, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(11, -35, 3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Final glow ring
+    if (finalGlow > 0) {
+      ctx.save();
+      ctx.globalAlpha = finalGlow * 0.4;
+      ctx.strokeStyle = '#c792ea';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(catX, catY, catSize * 0.9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#e94560';
+      ctx.beginPath();
+      ctx.arc(catX, catY, catSize * 1.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // ── Stick figure ──
+  stick.draw(ctx);
+
+  // ── Particles ──
+  particles.forEach(p => p.draw(ctx));
+
+  // ── Flash ──
+  if (flashAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = flashAlpha;
+    ctx.fillStyle = flashColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // ── End text ──
+  if (endTextOpacity > 0) {
+    ctx.save();
+    ctx.globalAlpha = endTextOpacity;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#c3e88d';
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('KMeans(n_clusters=64) × Mandelbrot × Cat = Deep Dream', W/2, H * 0.9);
+    ctx.fillStyle = '#546e7a';
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillText('No neural network was harmed in the making of this animation.', W/2, H * 0.94);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  LOOP
+// ============================================================
+function frame(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  if (playing) {
+    t += dt * speed;
+    if (t > TOTAL_DURATION + 2) t = TOTAL_DURATION + 2; // clamp at end
+  }
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

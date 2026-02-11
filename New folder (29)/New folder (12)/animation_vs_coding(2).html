@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Animation vs. Coding — Mandelbrot Cat Deep Dream</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f0c29; overflow: hidden; font-family: 'Courier New', monospace; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; z-index: 10;
+  }
+  #ui button {
+    padding: 10px 24px; border: none; border-radius: 6px; cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 14px; font-weight: bold;
+    transition: all .2s; user-select: none;
+  }
+  #playBtn { background: #e94560; color: #fff; }
+  #playBtn:hover { background: #ff6b81; transform: scale(1.05); }
+  #restartBtn { background: #0f3460; color: #fff; }
+  #restartBtn:hover { background: #233d6e; transform: scale(1.05); }
+  #sceneLabel {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    color: #e94560; font-size: 15px; letter-spacing: 3px; z-index: 10;
+    text-transform: uppercase; opacity: 0.85;
+    text-shadow: 0 0 10px rgba(233,69,96,0.5);
+  }
+  #progressBar {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, #e94560, #c792ea, #82aaff);
+    z-index: 10; transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+<div id="progressBar" style="width:0%"></div>
+<div id="sceneLabel">ANIMATION vs. CODING</div>
+<canvas id="c"></canvas>
+<div id="ui">
+  <button id="playBtn" onclick="togglePlay()">&#9654; PLAY</button>
+  <button id="restartBtn" onclick="restart()">&#8635; RESTART</button>
+</div>
+
+<script>
+// ============================================================
+//  ANIMATION VS. CODING  —  Alan Becker–inspired
+//  Stick Figure vs Mandelbrot × Cat Deep Dream (detailed)
+// ============================================================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+// ── Load actual cat image (card.jpg) ──
+const catImage = new Image();
+catImage.src = 'card.jpg';
+let catImageLoaded = false;
+catImage.onload = () => { catImageLoaded = true; };
+
+// ── Global time ──
+let t = 0, playing = false, speed = 1;
+const TOTAL_DURATION = 48;
+const sceneLabel = document.getElementById('sceneLabel');
+const progressBar = document.getElementById('progressBar');
+const playBtn = document.getElementById('playBtn');
+
+// ── Cat has appeared at least once? It stays forever. ──
+let catEverShown = false;
+
+function togglePlay() {
+  playing = !playing;
+  playBtn.innerHTML = playing ? '&#10074;&#10074; PAUSE' : '&#9654; PLAY';
+}
+function restart() {
+  // cat stays visible — only reset timeline
+  t = 0; playing = true;
+  playBtn.innerHTML = '&#10074;&#10074; PAUSE';
+  particles = [];
+  flashAlpha = 0; screenShake = 0;
+}
+
+// ── Easing helpers ──
+const ease = t => t < .5 ? 2*t*t : -1+(4-2*t)*t;
+const easeOut = t => 1 - (1-t)*(1-t);
+const easeIn = t => t*t;
+const lerp = (a,b,t) => a + (b-a) * Math.max(0, Math.min(1, t));
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+// ============================================================
+//  STICK FIGURE (Alan Becker orange-red, with joints + detail)
+// ============================================================
+class StickFigure {
+  constructor(x, y, color='#e94560') {
+    this.x = x; this.y = y; this.color = color;
+    this.scale = 1; this.angle = 0;
+    this.armL = 0; this.armR = 0; this.legL = 0; this.legR = 0;
+    this.forearmL = 0; this.forearmR = 0;
+    this.headTilt = 0; this.jumping = 0; this.opacity = 1;
+    this.lookDir = 1;
+    this.expression = 'neutral';
+    this.trail = []; // motion trail
+  }
+  walk(spd) {
+    const s = Math.sin(t * spd * 8);
+    this.armL = s * 0.6; this.armR = -s * 0.6;
+    this.legL = -s * 0.55; this.legR = s * 0.55;
+    this.forearmL = Math.abs(s) * 0.3; this.forearmR = Math.abs(s) * 0.3;
+    this.jumping = Math.abs(Math.sin(t * spd * 8)) * 3;
+  }
+  run(spd) {
+    const s = Math.sin(t * spd * 12);
+    this.armL = s * 0.9; this.armR = -s * 0.9;
+    this.legL = -s * 0.8; this.legR = s * 0.8;
+    this.forearmL = Math.abs(s) * 0.5; this.forearmR = Math.abs(s) * 0.5;
+    this.jumping = Math.abs(Math.sin(t * spd * 12)) * 6;
+    this.angle = Math.sin(t * spd * 12) * 0.04;
+  }
+  idle() {
+    this.armL = Math.sin(t * 2) * 0.08;
+    this.armR = Math.sin(t * 2 + 1) * 0.08;
+    this.forearmL = 0; this.forearmR = 0;
+    this.legL = 0; this.legR = 0; this.jumping = 0; this.angle = 0;
+  }
+  punch(dir) { this.armR = dir * -1.4; this.forearmR = -0.3; }
+  kick() { this.legR = -1.2; }
+
+  draw(ctx) {
+    if (this.opacity <= 0) return;
+    // Motion trail
+    this.trail.push({x: this.x, y: this.y - this.jumping, a: 0.3});
+    if (this.trail.length > 8) this.trail.shift();
+    for (const tr of this.trail) {
+      tr.a *= 0.85;
+      if (tr.a > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = tr.a * this.opacity * 0.3;
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(tr.x, tr.y - 45, 8, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.translate(this.x, this.y - this.jumping);
+    ctx.scale(this.scale * this.lookDir, this.scale);
+    ctx.rotate(this.angle);
+
+    const lw = 4.5;
+    ctx.strokeStyle = this.color;
+    ctx.fillStyle = this.color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Glow
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 6;
+
+    // Head
+    ctx.save();
+    ctx.rotate(this.headTilt);
+    ctx.beginPath(); ctx.arc(0, -48, 11, 0, Math.PI * 2); ctx.fill();
+    // Expression
+    ctx.fillStyle = '#0f0c29';
+    ctx.shadowBlur = 0;
+    if (this.expression === 'surprise') {
+      ctx.beginPath(); ctx.arc(-4, -50, 3.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(5, -50, 3.5, 0, Math.PI*2); ctx.fill();
+      // Mouth O
+      ctx.strokeStyle = '#0f0c29'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0.5, -42, 3, 0, Math.PI*2); ctx.stroke();
+    } else if (this.expression === 'angry') {
+      // Angry eyebrows
+      ctx.lineWidth = 2; ctx.strokeStyle = '#0f0c29';
+      ctx.beginPath(); ctx.moveTo(-7, -55); ctx.lineTo(-2, -53); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(8, -55); ctx.lineTo(3, -53); ctx.stroke();
+      ctx.fillRect(-6, -51, 4, 2.5); ctx.fillRect(3, -51, 4, 2.5);
+      // Gritted teeth
+      ctx.strokeStyle = '#0f0c29'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-3, -41); ctx.lineTo(4, -41); ctx.stroke();
+    } else if (this.expression === 'happy') {
+      ctx.fillRect(-5, -51, 3, 2); ctx.fillRect(3, -51, 3, 2);
+      ctx.strokeStyle = '#0f0c29'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0.5, -44, 4, 0.1, Math.PI - 0.1); ctx.stroke();
+    } else {
+      ctx.fillRect(-5, -51, 3, 2.5); ctx.fillRect(3, -51, 3, 2.5);
+    }
+    ctx.restore();
+
+    ctx.shadowColor = this.color; ctx.shadowBlur = 4;
+
+    // Neck
+    ctx.strokeStyle = this.color; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(0, -37); ctx.lineTo(0, -33); ctx.stroke();
+
+    // Body
+    ctx.beginPath(); ctx.moveTo(0, -33); ctx.lineTo(0, 2); ctx.stroke();
+
+    // Arms with elbows
+    ctx.save(); ctx.translate(0, -30);
+    // Left arm
+    ctx.save(); ctx.rotate(this.armL);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-14, 16); ctx.stroke();
+    ctx.translate(-14, 16); ctx.rotate(this.forearmL);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-6, 14); ctx.stroke();
+    // Hand
+    ctx.beginPath(); ctx.arc(-6, 16, 3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    // Right arm
+    ctx.save(); ctx.rotate(this.armR);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(14, 16); ctx.stroke();
+    ctx.translate(14, 16); ctx.rotate(this.forearmR);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(6, 14); ctx.stroke();
+    ctx.beginPath(); ctx.arc(6, 16, 3, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+
+    // Legs with knees
+    ctx.save(); ctx.translate(0, 2);
+    // Left leg
+    ctx.save(); ctx.rotate(this.legL);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, 16); ctx.lineTo(-10, 30); ctx.stroke();
+    // Foot
+    ctx.beginPath(); ctx.moveTo(-10, 30); ctx.lineTo(-16, 32); ctx.stroke();
+    ctx.restore();
+    // Right leg
+    ctx.save(); ctx.rotate(this.legR);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8, 16); ctx.lineTo(10, 30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 30); ctx.lineTo(16, 32); ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  CODE LINES (floating Python code with typing cursor)
+// ============================================================
+const codeLines = [
+  'from functools import cache',
+  'import numpy as np',
+  'from sklearn.pipeline import Pipeline',
+  'from sklearn.cluster import KMeans',
+  'import matplotlib.pyplot as plt',
+  '',
+  'cat_img = plt.imread("card.jpg")',
+  'cat_arr = np.array(cat_img)[:,:,:3]',
+  'h, w = 1200, 1200',
+  '',
+  'def mandelbrot_grid(width, height):',
+  '    cx, cy = np.meshgrid(x, y)',
+  '    c = cx + 1j * cy',
+  '    z = np.zeros_like(c)',
+  '    for n in range(max_iter):',
+  '        mask = np.abs(z) <= 2',
+  '        z[mask] = z[mask]**2 + c[mask]',
+  '',
+  'mandel = mandelbrot_grid(w, h)',
+  'mandel_rgb = fractal_to_rgb(mandel)',
+  '',
+  'lum = np.dot(cat_arr, [0.299, 0.587, 0.114])',
+  'alpha = np.clip(0.35 + 0.5 * lum, 0, 1)',
+  'fractal_inside_cat = (1-alpha)*cat + alpha*mandel',
+  '',
+  'model = Pipeline([',
+  '    ("kmeans", KMeans(n_clusters=64,',
+  '                      random_state=0))',
+  '])',
+  'labels = model.fit_predict(X)',
+  'centroids = model.named_steps["kmeans"]',
+  'dream_rgb = centroids[labels].reshape(h,w,3)',
+  '',
+  'plt.imshow(dream_rgb)',
+  'plt.savefig("deepdream_cat_mandelbrot.png")',
+  'plt.show()'
+];
+
+class CodeBlock {
+  constructor(lines, x, y) {
+    this.lines = lines; this.x = x; this.y = y;
+    this.revealedChars = 0; this.opacity = 0; this.scale = 1;
+    this.glowIntensity = 0; this.shakeX = 0; this.shakeY = 0;
+    this.highlighted = -1; this.cursorBlink = true;
+  }
+  draw(ctx) {
+    if (this.opacity <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.opacity;
+    ctx.translate(this.x + this.shakeX, this.y + this.shakeY);
+    ctx.scale(this.scale, this.scale);
+
+    const lineH = 17;
+    const bw = 420, bh = Math.min(this.getTotalRevealedLines() + 2, this.lines.length) * lineH + 28;
+    // Background panel
+    ctx.fillStyle = 'rgba(15, 12, 41, 0.95)';
+    ctx.strokeStyle = this.glowIntensity > 0 ? `rgba(233,69,96,${0.5 + this.glowIntensity * 0.5})` : 'rgba(15, 52, 96, 0.8)';
+    ctx.lineWidth = this.glowIntensity > 0 ? 2 : 1;
+    ctx.shadowColor = this.glowIntensity > 0 ? '#e94560' : 'transparent';
+    ctx.shadowBlur = this.glowIntensity * 25;
+    roundRect(ctx, -15, -15, bw, bh, 8);
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Title bar
+    ctx.fillStyle = 'rgba(15, 52, 96, 0.6)';
+    roundRect(ctx, -15, -15, bw, 22, 8);
+    ctx.fill();
+    // Dots
+    ctx.fillStyle = '#e94560'; ctx.beginPath(); ctx.arc(2, -4, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#f78c6c'; ctx.beginPath(); ctx.arc(16, -4, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#c3e88d'; ctx.beginPath(); ctx.arc(30, -4, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#546e7a'; ctx.font = '10px "Courier New"';
+    ctx.fillText('deep_dream_cat.py', 50, -1);
+
+    const yOff = 14;
+    ctx.font = '12.5px "Courier New", monospace';
+    let charCount = 0;
+    for (let i = 0; i < this.lines.length; i++) {
+      const line = this.lines[i];
+      const ly = yOff + i * lineH;
+      if (charCount > this.revealedChars) break;
+
+      // Line number
+      ctx.fillStyle = '#3b4261';
+      ctx.fillText(String(i+1).padStart(2, ' '), -8, ly + 12);
+
+      // Highlight bar
+      if (i === this.highlighted) {
+        ctx.fillStyle = 'rgba(233, 69, 96, 0.12)';
+        ctx.fillRect(16, ly - 1, bw - 40, lineH);
+      }
+
+      const visibleLen = Math.min(line.length, this.revealedChars - charCount);
+      const visibleLine = line.substring(0, visibleLen);
+      charCount += line.length;
+
+      // Syntax coloring
+      this.drawSyntaxLine(ctx, visibleLine, 20, ly + 12);
+
+      // Typing cursor
+      if (visibleLen < line.length && visibleLen > 0 && Math.sin(t * 8) > 0) {
+        const cw = ctx.measureText(visibleLine).width;
+        ctx.fillStyle = '#eeffff';
+        ctx.fillRect(20 + cw, ly + 2, 7, 13);
+      }
+    }
+    ctx.restore();
+  }
+
+  getTotalRevealedLines() {
+    let charCount = 0, lines = 0;
+    for (const line of this.lines) {
+      if (charCount >= this.revealedChars) break;
+      charCount += line.length; lines++;
+    }
+    return lines;
+  }
+
+  drawSyntaxLine(ctx, line, x, y) {
+    const keywords = /\b(from|import|def|for|if|else|return|class|in|range|while|and|or|not|as)\b/g;
+    const builtins = /\b(np|plt|Pipeline|KMeans|KNeighborsClassifier|print|int|float|len|abs|min|max)\b/g;
+    const strings = /(["'])(?:(?=(\\?))\2.)*?\1/g;
+    const numbers = /\b\d+\.?\d*\b/g;
+    const comments = /#.*/g;
+
+    // Simple: color the whole line by dominant type
+    if (line.trimStart().startsWith('#')) { ctx.fillStyle = '#546e7a'; }
+    else if (strings.test(line)) { ctx.fillStyle = '#c3e88d'; }
+    else if (/\b(from|import|def|for|if|else|return|class|in|as)\b/.test(line)) { ctx.fillStyle = '#c792ea'; }
+    else if (/\b(Pipeline|KMeans|np|plt)\b/.test(line)) { ctx.fillStyle = '#82aaff'; }
+    else if (/\d/.test(line)) { ctx.fillStyle = '#f78c6c'; }
+    else if (line.includes('=')) { ctx.fillStyle = '#89ddff'; }
+    else { ctx.fillStyle = '#eeffff'; }
+    ctx.fillText(line, x, y);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ============================================================
+//  MANDELBROT FRACTAL (rendered in offscreen canvas)
+// ============================================================
+let fractalCanvas, fractalCtx, lastFractalKey = '';
+function initFractal(size) {
+  fractalCanvas = document.createElement('canvas');
+  fractalCanvas.width = fractalCanvas.height = size;
+  fractalCtx = fractalCanvas.getContext('2d');
+}
+function renderMandelbrot(size, progress, zoom, cx, cy) {
+  const key = `${size}_${Math.floor(progress*20)}_${zoom.toFixed(2)}_${cx.toFixed(3)}_${cy.toFixed(3)}`;
+  if (key === lastFractalKey) return; // cache
+  lastFractalKey = key;
+  if (!fractalCanvas || fractalCanvas.width !== size) initFractal(size);
+  const imgData = fractalCtx.createImageData(size, size);
+  const maxIter = Math.floor(30 + progress * 80);
+  const scale = 3 / zoom;
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const x0 = (px / size - 0.5) * scale + cx;
+      const y0 = (py / size - 0.5) * scale + cy;
+      let x = 0, y = 0, iter = 0;
+      while (x*x + y*y <= 4 && iter < maxIter) {
+        const xt = x*x - y*y + x0;
+        y = 2*x*y + y0; x = xt; iter++;
+      }
+      const idx = (py * size + px) * 4;
+      if (iter === maxIter) {
+        imgData.data[idx] = 5; imgData.data[idx+1] = 2; imgData.data[idx+2] = 15;
+      } else {
+        const v = iter / maxIter;
+        const v2 = v * v;
+        imgData.data[idx]   = Math.floor(clamp(2.5*v, 0, 1) * 255);
+        imgData.data[idx+1] = Math.floor(clamp(1.5*v2, 0, 1) * 200);
+        imgData.data[idx+2] = Math.floor(clamp(4*v - 0.6, 0, 1) * 220);
+      }
+      imgData.data[idx+3] = 255;
+    }
+  }
+  fractalCtx.putImageData(imgData, 0, 0);
+}
+
+// Pre-render a large fractal for the cat fill
+let catFractalCanvas;
+function renderCatFractal() {
+  const sz = 400;
+  catFractalCanvas = document.createElement('canvas');
+  catFractalCanvas.width = catFractalCanvas.height = sz;
+  const fctx = catFractalCanvas.getContext('2d');
+  const imgData = fctx.createImageData(sz, sz);
+  const maxIter = 100;
+  const zoom = 3.5, cx = -0.745, cy = 0.186;
+  const scale = 3 / zoom;
+  for (let py = 0; py < sz; py++) {
+    for (let px = 0; px < sz; px++) {
+      const x0 = (px / sz - 0.5) * scale + cx;
+      const y0 = (py / sz - 0.5) * scale + cy;
+      let x = 0, y = 0, iter = 0;
+      while (x*x + y*y <= 4 && iter < maxIter) {
+        const xt = x*x - y*y + x0;
+        y = 2*x*y + y0; x = xt; iter++;
+      }
+      const idx = (py * sz + px) * 4;
+      if (iter === maxIter) {
+        imgData.data[idx] = 10; imgData.data[idx+1] = 5; imgData.data[idx+2] = 20;
+      } else {
+        const v = iter / maxIter;
+        imgData.data[idx]   = Math.floor(clamp(2.5*v, 0, 1) * 255);
+        imgData.data[idx+1] = Math.floor(clamp(1.2*v*v, 0, 1) * 200);
+        imgData.data[idx+2] = Math.floor(clamp(4*v - 0.5, 0, 1) * 240);
+      }
+      imgData.data[idx+3] = 255;
+    }
+  }
+  fctx.putImageData(imgData, 0, 0);
+}
+renderCatFractal();
+
+// ============================================================
+//  DETAILED CAT (orange tabby - procedural, like the real photo)
+// ============================================================
+function drawDetailedCat(ctx, x, y, size, opacity, fractalBlend) {
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.translate(x, y);
+  const s = size / 120;
+  ctx.scale(s, s);
+
+  const furColor = '#d4874e';
+  const darkStripe = '#a85c2e';
+  const lightFur = '#f0c896';
+  const white = '#fae8d0';
+  const nose = '#e8a0a0';
+
+  // BODY — rounded sitting pose
+  ctx.fillStyle = furColor;
+  ctx.beginPath();
+  ctx.ellipse(0, 30, 55, 40, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Body stripes
+  ctx.strokeStyle = darkStripe; ctx.lineWidth = 3; ctx.globalAlpha = opacity * 0.4;
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * 12, 5);
+    ctx.quadraticCurveTo(i * 14 + 5, 30, i * 12, 55);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = opacity;
+
+  // Chest (white)
+  ctx.fillStyle = white;
+  ctx.beginPath();
+  ctx.ellipse(0, 18, 22, 25, 0, -0.3, Math.PI + 0.3);
+  ctx.fill();
+
+  // HEAD — round
+  ctx.fillStyle = furColor;
+  ctx.beginPath();
+  ctx.arc(0, -28, 34, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head stripes (tabby M marking)
+  ctx.strokeStyle = darkStripe; ctx.lineWidth = 2.5; ctx.globalAlpha = opacity * 0.5;
+  // M on forehead
+  ctx.beginPath();
+  ctx.moveTo(-15, -50); ctx.lineTo(-8, -42); ctx.lineTo(0, -52);
+  ctx.lineTo(8, -42); ctx.lineTo(15, -50);
+  ctx.stroke();
+  // Side stripes
+  for (let side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * 20, -45); ctx.quadraticCurveTo(side * 28, -30, side * 25, -15);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(side * 15, -48); ctx.quadraticCurveTo(side * 22, -35, side * 20, -20);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = opacity;
+
+  // Cheek fluff (lighter)
+  ctx.fillStyle = lightFur;
+  ctx.beginPath(); ctx.ellipse(-18, -18, 12, 10, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(18, -18, 12, 10, 0.3, 0, Math.PI*2); ctx.fill();
+
+  // White muzzle
+  ctx.fillStyle = white;
+  ctx.beginPath(); ctx.ellipse(0, -14, 14, 10, 0, 0, Math.PI*2); ctx.fill();
+
+  // EARS
+  for (let side of [-1, 1]) {
+    // Outer ear
+    ctx.fillStyle = furColor;
+    ctx.beginPath();
+    ctx.moveTo(side * 20, -52); ctx.lineTo(side * 36, -82); ctx.lineTo(side * 6, -56);
+    ctx.closePath(); ctx.fill();
+    // Inner ear (pink)
+    ctx.fillStyle = '#e8a0a0';
+    ctx.beginPath();
+    ctx.moveTo(side * 21, -54); ctx.lineTo(side * 33, -76); ctx.lineTo(side * 10, -56);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // EYES — large, green-gold like the photo
+  for (let side of [-1, 1]) {
+    const ex = side * 13, ey = -32;
+    // Eye white
+    ctx.fillStyle = '#2a3a2a';
+    ctx.beginPath(); ctx.ellipse(ex, ey, 8, 9, 0, 0, Math.PI*2); ctx.fill();
+    // Iris
+    const irisGrad = ctx.createRadialGradient(ex, ey, 2, ex, ey, 7);
+    irisGrad.addColorStop(0, '#d4a030');
+    irisGrad.addColorStop(0.6, '#8aaa30');
+    irisGrad.addColorStop(1, '#2a5a2a');
+    ctx.fillStyle = irisGrad;
+    ctx.beginPath(); ctx.ellipse(ex, ey, 7, 8, 0, 0, Math.PI*2); ctx.fill();
+    // Pupil (vertical slit)
+    ctx.fillStyle = '#0a0a0a';
+    ctx.beginPath(); ctx.ellipse(ex, ey, 2.5, 6.5, 0, 0, Math.PI*2); ctx.fill();
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.arc(ex - 2, ey - 3, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex + 1.5, ey + 2, 1.2, 0, Math.PI*2); ctx.fill();
+  }
+
+  // NOSE
+  ctx.fillStyle = nose;
+  ctx.beginPath();
+  ctx.moveTo(0, -18); ctx.lineTo(-5, -13); ctx.quadraticCurveTo(0, -10, 5, -13);
+  ctx.closePath(); ctx.fill();
+
+  // MOUTH
+  ctx.strokeStyle = '#8a5a3a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(0, -9); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -9); ctx.quadraticCurveTo(-5, -5, -8, -8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -9); ctx.quadraticCurveTo(5, -5, 8, -8); ctx.stroke();
+
+  // WHISKERS
+  ctx.strokeStyle = '#fae8d0'; ctx.lineWidth = 1;
+  for (let side of [-1, 1]) {
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(side * 14, -14 + i * 3);
+      ctx.lineTo(side * 55, -16 + i * 6);
+      ctx.stroke();
+    }
+  }
+
+  // FRONT PAWS
+  ctx.fillStyle = furColor;
+  ctx.beginPath(); ctx.ellipse(-20, 62, 12, 7, -0.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(20, 62, 12, 7, 0.2, 0, Math.PI*2); ctx.fill();
+  // Paw pads (pink)
+  ctx.fillStyle = lightFur;
+  ctx.beginPath(); ctx.ellipse(-20, 64, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(20, 64, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+  // Toe lines
+  ctx.strokeStyle = darkStripe; ctx.lineWidth = 1;
+  for (let side of [-1, 1]) {
+    for (let j = -1; j <= 1; j++) {
+      ctx.beginPath();
+      ctx.moveTo(side * 20 + j * 4, 59);
+      ctx.lineTo(side * 20 + j * 5, 65);
+      ctx.stroke();
+    }
+  }
+
+  // TAIL (curving up)
+  ctx.strokeStyle = furColor; ctx.lineWidth = 10; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(48, 35);
+  ctx.bezierCurveTo(72, 15, 75, -15, 60, -40);
+  ctx.stroke();
+  // Tail stripes
+  ctx.strokeStyle = darkStripe; ctx.lineWidth = 4; ctx.globalAlpha = opacity * 0.5;
+  for (let ti = 0; ti < 5; ti++) {
+    const tt = ti / 5;
+    const tx = 48 + (72-48)*tt + (75-72)*tt*tt;
+    const ty = 35 + (15-35)*tt*2;
+    ctx.beginPath(); ctx.moveTo(tx - 5, ty - 3); ctx.lineTo(tx + 5, ty + 3); ctx.stroke();
+  }
+  ctx.globalAlpha = opacity;
+
+  // ── Fractal overlay inside the cat (clip to body+head) ──
+  if (fractalBlend > 0 && catFractalCanvas) {
+    ctx.save();
+    ctx.globalAlpha = opacity * fractalBlend * 0.65;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.beginPath();
+    ctx.ellipse(0, 30, 55, 40, 0, 0, Math.PI * 2);
+    ctx.arc(0, -28, 34, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(catFractalCanvas, -80, -80, 160, 160);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  PARTICLES (improved: multiple types)
+// ============================================================
+let particles = [];
+class Particle {
+  constructor(x, y, color, vx, vy, life, type='circle') {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy; this.life = life; this.maxLife = life;
+    this.size = 2 + Math.random() * 4;
+    this.type = type; this.rot = Math.random() * Math.PI * 2;
+  }
+  update(dt) {
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.vy += 60 * dt; this.life -= dt;
+    this.rot += dt * 3;
+  }
+  draw(ctx) {
+    if (this.life <= 0) return;
+    const a = this.life / this.maxLife;
+    const sz = this.size * a;
+    ctx.save();
+    ctx.globalAlpha = a * 0.9;
+    ctx.translate(this.x, this.y);
+    if (this.type === 'star') {
+      ctx.rotate(this.rot);
+      ctx.fillStyle = this.color;
+      drawStar(ctx, 0, 0, sz * 1.5);
+    } else if (this.type === 'code') {
+      ctx.fillStyle = this.color;
+      ctx.font = `${10 + sz}px "Courier New"`;
+      const chars = ['0','1','{','}','(',')','+','=','*','z'];
+      ctx.fillText(chars[Math.floor(Math.random()*chars.length)], 0, 0);
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color; ctx.shadowBlur = sz * 2;
+      ctx.beginPath(); ctx.arc(0, 0, sz, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function drawStar(ctx, x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a1 = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    const a2 = ((i + 0.5) / 5) * Math.PI * 2 - Math.PI / 2;
+    ctx.lineTo(x + Math.cos(a1) * r, y + Math.sin(a1) * r);
+    ctx.lineTo(x + Math.cos(a2) * r * 0.4, y + Math.sin(a2) * r * 0.4);
+  }
+  ctx.closePath(); ctx.fill();
+}
+function spawnParticles(x, y, color, count, spread, type='circle') {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, color,
+      (Math.random()-0.5) * spread, (Math.random()-0.5) * spread,
+      0.5 + Math.random() * 1.8, type));
+  }
+}
+
+// ============================================================
+//  IMPACT STAR (big flash star on hits)
+// ============================================================
+let impactStars = [];
+function spawnImpact(x, y, size, color) {
+  impactStars.push({x, y, size, color, life: 0.4, maxLife: 0.4});
+}
+function drawImpacts(ctx) {
+  for (const s of impactStars) {
+    if (s.life <= 0) continue;
+    const a = s.life / s.maxLife;
+    const sz = s.size * (1 + (1-a) * 0.5);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(s.x, s.y);
+    ctx.fillStyle = s.color;
+    ctx.shadowColor = s.color; ctx.shadowBlur = 20;
+    drawStar(ctx, 0, 0, sz);
+    // Spikes
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ang) * sz * 0.8, Math.sin(ang) * sz * 0.8);
+      ctx.lineTo(Math.cos(ang) * sz * 1.6, Math.sin(ang) * sz * 1.6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  EFFECTS
+// ============================================================
+let flashAlpha = 0, flashColor = '#fff';
+let screenShake = 0;
+
+// ============================================================
+//  SCENE OBJECTS
+// ============================================================
+const stick = new StickFigure(100, H * 0.72, '#e94560');
+const code = new CodeBlock(codeLines, W * 0.35, 60);
+
+// ── Scene state ──
+let fractalSize = 200, fractalProgress = 0;
+let fractalX = W * 0.6, fractalY = H * 0.45;
+let fractalOpacity = 0, fractalScale = 1, fractalZoom = 1;
+let catOpacity = 0, catX = W * 0.5, catY = H * 0.52, catSize = 0;
+let mergeProgress = 0;
+let titleOpacity = 1, titleY = H * 0.38;
+let finalGlow = 0, endTextOpacity = 0;
+let catImageOpacity = 0, catImageScale = 0;
+let lastTime = performance.now();
+
+// ============================================================
+//  SCENE TIMELINE
+// ============================================================
+function getScene() {
+  if (t < 3.5) return 'title';
+  if (t < 9) return 'code_appear';
+  if (t < 16) return 'stick_reads';
+  if (t < 22) return 'fractal_generate';
+  if (t < 30) return 'stick_vs_fractal';
+  if (t < 38) return 'cat_merge';
+  if (t < 46) return 'deep_dream';
+  return 'end';
+}
+
+function update(dt) {
+  const scene = getScene();
+  sceneLabel.textContent = {
+    'title': 'ANIMATION vs. CODING',
+    'code_appear': 'ACT I \u2014 THE CODE APPEARS',
+    'stick_reads': 'ACT II \u2014 STICK FIGURE READS THE CODE',
+    'fractal_generate': 'ACT III \u2014 THE MANDELBROT AWAKENS',
+    'stick_vs_fractal': 'ACT IV \u2014 STICK FIGURE vs. FRACTAL',
+    'cat_merge': 'ACT V \u2014 THE CAT EMERGES',
+    'deep_dream': 'ACT VI \u2014 DEEP DREAM FUSION',
+    'end': '\u2014 FIN \u2014'
+  }[scene] || '';
+  progressBar.style.width = (t / TOTAL_DURATION * 100) + '%';
+
+  const floorY = H * 0.72;
+
+  // ── Title ──
+  if (scene === 'title') {
+    titleOpacity = 1; titleY = H * 0.35;
+    stick.x = -60; stick.opacity = 0;
+    code.opacity = 0; code.revealedChars = 0;
+    fractalOpacity = 0; fractalProgress = 0;
+    // Don't reset cat if it was shown before
+    if (!catEverShown) { catOpacity = 0; catSize = 0; }
+  }
+
+  // ── Code appears + stick walks in ──
+  if (scene === 'code_appear') {
+    titleOpacity = clamp(1 - (t - 3.5) * 1.5, 0, 1);
+    const p = clamp((t - 4) / 3.5, 0, 1);
+    code.opacity = ease(p);
+    code.x = lerp(W + 100, W * 0.38, ease(p));
+    code.y = 50;
+    const totalChars = codeLines.reduce((s, l) => s + l.length, 0);
+    code.revealedChars = Math.floor(lerp(0, totalChars, ease(clamp((t-4.5)/4, 0, 1))));
+
+    const sp = clamp((t - 4.5) / 3, 0, 1);
+    stick.opacity = clamp((t - 4.5) * 2, 0, 1);
+    stick.x = lerp(-60, W * 0.2, ease(sp));
+    stick.y = floorY;
+    stick.walk(1);
+    stick.lookDir = 1;
+    stick.expression = 'neutral';
+
+    // Code typing particles
+    if (code.revealedChars > 10 && Math.random() < 0.15) {
+      spawnParticles(code.x + 200, code.y + 100, '#82aaff', 1, 40, 'code');
+    }
+  }
+
+  // ── Stick reads code (detailed) ──
+  if (scene === 'stick_reads') {
+    const totalChars = codeLines.reduce((s, l) => s + l.length, 0);
+    code.opacity = 1; code.x = W * 0.38; code.revealedChars = totalChars;
+    stick.y = floorY;
+    stick.x = W * 0.2;
+    stick.idle();
+    stick.headTilt = Math.sin(t * 1.2) * 0.12;
+
+    const lineIdx = Math.floor((t - 9) / 0.45) % codeLines.length;
+    code.highlighted = lineIdx;
+
+    // Reactions to specific code sections
+    if (lineIdx >= 10 && lineIdx <= 16) {
+      // Mandelbrot code — surprised
+      stick.expression = 'surprise';
+      code.glowIntensity = 0.5 + Math.sin(t * 6) * 0.3;
+      if (Math.random() < 0.1) spawnParticles(code.x + 200, code.y + lineIdx * 17, '#c792ea', 1, 30);
+    } else if (lineIdx >= 25 && lineIdx <= 31) {
+      // KMeans/Pipeline — interested
+      stick.expression = 'neutral';
+      code.glowIntensity = 0.3 + Math.sin(t * 4) * 0.15;
+    } else {
+      stick.expression = 'neutral';
+      code.glowIntensity = 0;
+    }
+
+    // At end: stick gets angry and punches the code
+    if (t > 14.5) {
+      stick.expression = 'angry';
+      const pp = clamp((t - 14.5) / 0.3, 0, 1);
+      stick.x = lerp(W * 0.2, W * 0.3, ease(pp));
+      stick.walk(2);
+    }
+    if (t > 15) {
+      stick.punch(1);
+      code.shakeX = Math.sin(t * 50) * 8;
+      code.shakeY = Math.cos(t * 35) * 5;
+      if (t > 15 && t < 15.15) {
+        spawnImpact(W * 0.38 + 50, H * 0.35, 30, '#82aaff');
+        spawnParticles(W * 0.38, H * 0.35, '#82aaff', 15, 150, 'code');
+        spawnParticles(W * 0.38, H * 0.35, '#e94560', 10, 180, 'star');
+        screenShake = 10;
+        flashAlpha = 0.3; flashColor = '#82aaff';
+      }
+    }
+  }
+
+  // ── Fractal generates ──
+  if (scene === 'fractal_generate') {
+    code.highlighted = -1; code.glowIntensity = 0;
+    code.shakeX = 0; code.shakeY = 0;
+    stick.y = floorY;
+
+    const cp = clamp((t - 16) / 2.5, 0, 1);
+    code.scale = lerp(1, 0.45, ease(cp));
+    code.x = lerp(W * 0.38, 15, ease(cp));
+    code.y = lerp(50, 15, ease(cp));
+
+    fractalProgress = clamp((t - 17) / 4, 0, 1);
+    fractalOpacity = clamp((t - 16.5) / 2, 0, 1);
+    fractalX = W * 0.55;
+    fractalY = H * 0.42;
+    fractalSize = Math.floor(lerp(30, 300, ease(fractalProgress)));
+    fractalZoom = lerp(0.6, 1.5, ease(fractalProgress));
+    fractalScale = 1;
+
+    stick.idle();
+    stick.expression = 'surprise';
+    stick.lookDir = 1;
+    stick.x = W * 0.2;
+    stick.headTilt = Math.sin(t * 2) * 0.1;
+
+    // Flash when fractal first appears
+    if (t > 17 && t < 17.2) {
+      flashAlpha = 0.35; flashColor = '#c792ea';
+      screenShake = 5;
+    }
+
+    // Energy particles from fractal
+    if (fractalProgress > 0.15 && Math.random() < 0.35) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = fractalSize / 2;
+      spawnParticles(
+        fractalX + Math.cos(angle) * r,
+        fractalY + Math.sin(angle) * r,
+        ['#e94560','#f78c6c','#c792ea'][Math.floor(Math.random()*3)],
+        1, 60
+      );
+    }
+
+    // Stick backs away slightly as fractal grows
+    if (fractalProgress > 0.6) {
+      stick.x = lerp(W * 0.2, W * 0.15, ease(clamp((fractalProgress - 0.6) / 0.4, 0, 1)));
+    }
+  }
+
+  // ── Stick vs Fractal (epic battle) ──
+  if (scene === 'stick_vs_fractal') {
+    fractalOpacity = 1; fractalProgress = 1; fractalSize = 300;
+    code.scale = 0.45; code.x = 15; code.y = 15;
+    stick.y = floorY;
+
+    const phase = t - 22;
+
+    if (phase < 2) {
+      // Approach
+      stick.walk(1.5);
+      stick.x = lerp(W * 0.15, W * 0.4, ease(phase / 2));
+      stick.expression = 'angry';
+      stick.lookDir = 1;
+      fractalX = W * 0.55; fractalY = H * 0.42;
+    }
+    else if (phase < 3) {
+      // PUNCH!
+      stick.x = W * 0.4; stick.punch(1); stick.expression = 'angry';
+      fractalScale = 1 + Math.sin(phase * 15) * 0.15;
+      if (phase > 2 && phase < 2.15) {
+        spawnImpact(W * 0.48, H * 0.42, 40, '#e94560');
+        spawnParticles(W * 0.48, H * 0.42, '#e94560', 25, 250, 'star');
+        spawnParticles(W * 0.48, H * 0.42, '#f78c6c', 15, 200);
+        screenShake = 12; flashAlpha = 0.4; flashColor = '#e94560';
+      }
+    }
+    else if (phase < 5) {
+      // Fractal retaliates — GROWS and pushes stick back
+      const rp = (phase - 3) / 2;
+      fractalSize = Math.floor(lerp(300, 450, ease(rp)));
+      fractalX = lerp(W * 0.55, W * 0.42, ease(rp));
+      fractalScale = 1 + Math.sin(phase * 8) * 0.05;
+      stick.x = lerp(W * 0.4, W * 0.1, ease(rp));
+      stick.run(2);
+      stick.lookDir = -1;
+      stick.expression = 'surprise';
+      // Energy beams from fractal
+      if (Math.random() < 0.5)
+        spawnParticles(fractalX - 150, fractalY, '#c792ea', 3, 150);
+    }
+    else if (phase < 6.5) {
+      // Stick gathers energy
+      const rp = (phase - 5) / 1.5;
+      stick.x = W * 0.1; stick.idle();
+      stick.expression = 'angry';
+      stick.lookDir = 1;
+      fractalSize = 450; fractalX = W * 0.42;
+      fractalScale = 1;
+      // Gather particles toward stick
+      if (Math.random() < 0.6) {
+        spawnParticles(stick.x, stick.y - 30, '#e94560', 2, 80, 'star');
+      }
+      // Power-up flash
+      if (phase > 6 && phase < 6.1) {
+        flashAlpha = 0.2; flashColor = '#e94560';
+      }
+    }
+    else if (phase < 8) {
+      // KICK! Stick charges and kicks the fractal
+      const rp = (phase - 6.5) / 1.5;
+      stick.x = lerp(W * 0.1, W * 0.35, ease(rp));
+      stick.lookDir = 1; stick.expression = 'angry';
+      stick.kick();
+      stick.armL = -0.6; stick.armR = 0.8;
+      fractalX = lerp(W * 0.42, W * 0.65, ease(rp));
+      fractalSize = Math.floor(lerp(450, 220, ease(rp)));
+      fractalScale = 1 - Math.sin(rp * Math.PI) * 0.1;
+      if (phase > 7 && phase < 7.15) {
+        spawnImpact(fractalX - 80, fractalY, 50, '#f78c6c');
+        spawnParticles(fractalX, fractalY, '#e94560', 35, 300, 'star');
+        screenShake = 15; flashAlpha = 0.5; flashColor = '#f78c6c';
+      }
+    }
+  }
+
+  // ── Cat emerges + fractal merges ──
+  if (scene === 'cat_merge') {
+    const phase = t - 30;
+    stick.y = floorY;
+    stick.idle(); stick.x = W * 0.12; stick.lookDir = 1;
+    code.scale = 0.45; code.x = 15; code.y = 15;
+
+    // Cat fades in
+    catEverShown = true;
+    catOpacity = clamp(phase / 2.5, 0, 1);
+    catX = W * 0.52; catY = H * 0.48;
+    catSize = lerp(0, 220, ease(clamp(phase / 3, 0, 1)));
+
+    // Cat IMAGE fades in behind the vector cat
+    if (catImageLoaded) {
+      catImageOpacity = clamp((phase - 0.5) / 2, 0, 1);
+      catImageScale = lerp(0.3, 1, ease(clamp(phase / 3, 0, 1)));
+    }
+
+    // Fractal shrinks toward cat
+    fractalOpacity = clamp(1 - (phase - 3) / 3, 0, 1);
+    fractalX = lerp(W * 0.65, W * 0.52, ease(clamp(phase / 5, 0, 1)));
+    fractalY = lerp(H * 0.42, H * 0.48, ease(clamp(phase / 5, 0, 1)));
+    fractalSize = Math.floor(lerp(220, 60, ease(clamp((phase - 2) / 3, 0, 1))));
+    fractalScale = 1;
+
+    mergeProgress = clamp((phase - 3.5) / 3, 0, 1);
+
+    // Big merge flash
+    if (phase > 4.5 && phase < 4.7) {
+      flashAlpha = 0.6; flashColor = '#c792ea';
+      spawnParticles(catX, catY, '#e94560', 30, 300, 'star');
+      spawnParticles(catX, catY, '#c792ea', 20, 250);
+      spawnParticles(catX, catY, '#f78c6c', 15, 200);
+      screenShake = 8;
+    }
+
+    stick.expression = phase < 3 ? 'surprise' : 'happy';
+
+    // Swirl particles around cat during merge
+    if (mergeProgress > 0 && Math.random() < 0.4) {
+      const angle = t * 2 + Math.random() * Math.PI * 2;
+      const r = catSize * 0.8;
+      spawnParticles(
+        catX + Math.cos(angle) * r, catY + Math.sin(angle) * r,
+        ['#e94560','#c792ea','#82aaff','#f78c6c'][Math.floor(Math.random()*4)],
+        1, 40
+      );
+    }
+  }
+
+  // ── Deep Dream finale ──
+  if (scene === 'deep_dream') {
+    const phase = t - 38;
+    catEverShown = true;
+    catOpacity = 1; catSize = 220; fractalOpacity = 0; mergeProgress = 1;
+    catX = W * 0.52; catY = H * 0.48;
+    catImageOpacity = 1;
+    code.opacity = clamp(1 - phase / 2, 0, 1);
+    stick.y = floorY;
+
+    finalGlow = 0.5 + Math.sin(t * 2.5) * 0.35;
+
+    stick.x = lerp(W * 0.12, W * 0.32, ease(clamp(phase / 3, 0, 1)));
+    stick.idle(); stick.expression = 'happy'; stick.lookDir = 1;
+
+    // Cat grows majestically
+    catSize = lerp(220, 340, ease(clamp(phase / 5, 0, 1)));
+    catImageScale = lerp(1, 1.4, ease(clamp(phase / 5, 0, 1)));
+
+    // Persistent rainbow particle swirl
+    if (Math.random() < 0.6) {
+      const angle = t * 1.5 + Math.random() * Math.PI * 2;
+      const r = catSize * 0.7 + Math.random() * 80;
+      spawnParticles(
+        catX + Math.cos(angle) * r, catY + Math.sin(angle) * r,
+        ['#e94560','#c792ea','#82aaff','#f78c6c','#c3e88d'][Math.floor(Math.random()*5)],
+        1, 50
+      );
+    }
+
+    endTextOpacity = clamp((phase - 5) / 2, 0, 1);
+  }
+
+  if (scene === 'end') {
+    endTextOpacity = 1;
+    stick.idle(); stick.expression = 'happy'; stick.y = floorY;
+    finalGlow = 0.5 + Math.sin(t * 2) * 0.3;
+    catEverShown = true; catOpacity = 1;
+    catX = W * 0.52; catY = H * 0.48;
+    catImageOpacity = 1;
+    // Gentle particles
+    if (Math.random() < 0.3) {
+      const angle = t + Math.random() * Math.PI * 2;
+      const r = catSize * 0.8;
+      spawnParticles(
+        catX + Math.cos(angle) * r, catY + Math.sin(angle) * r,
+        ['#e94560','#c792ea','#82aaff'][Math.floor(Math.random()*3)], 1, 30
+      );
+    }
+  }
+
+  // Update particles + impacts
+  particles.forEach(p => p.update(dt));
+  particles = particles.filter(p => p.life > 0);
+  impactStars.forEach(s => s.life -= dt);
+  impactStars = impactStars.filter(s => s.life > 0);
+
+  flashAlpha = Math.max(0, flashAlpha - dt * 2.5);
+  screenShake = Math.max(0, screenShake - dt * 18);
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function render() {
+  ctx.save();
+
+  if (screenShake > 0) {
+    ctx.translate((Math.random()-0.5) * screenShake * 2, (Math.random()-0.5) * screenShake * 2);
+  }
+
+  // Background gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0f0c29');
+  grad.addColorStop(0.5, '#1a1a2e');
+  grad.addColorStop(1, '#16213e');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(15, 52, 96, 0.2)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 60) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 60) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Floor
+  ctx.strokeStyle = 'rgba(15, 52, 96, 0.6)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, H * 0.84); ctx.lineTo(W, H * 0.84); ctx.stroke();
+  // Floor glow
+  const floorGrad = ctx.createLinearGradient(0, H * 0.84, 0, H);
+  floorGrad.addColorStop(0, 'rgba(15, 52, 96, 0.15)');
+  floorGrad.addColorStop(1, 'rgba(15, 12, 41, 0)');
+  ctx.fillStyle = floorGrad; ctx.fillRect(0, H * 0.84, W, H * 0.16);
+
+  // ── Title ──
+  if (titleOpacity > 0) {
+    ctx.save(); ctx.globalAlpha = titleOpacity; ctx.textAlign = 'center';
+    ctx.shadowColor = '#e94560'; ctx.shadowBlur = 30;
+    ctx.fillStyle = '#e94560';
+    ctx.font = 'bold 56px "Courier New", monospace';
+    ctx.fillText('ANIMATION', W/2, titleY);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#546e7a';
+    ctx.font = 'bold 26px "Courier New", monospace';
+    ctx.fillText('\u2014 vs \u2014', W/2, titleY + 45);
+    ctx.shadowColor = '#82aaff'; ctx.shadowBlur = 30;
+    ctx.fillStyle = '#82aaff';
+    ctx.font = 'bold 56px "Courier New", monospace';
+    ctx.fillText('CODING', W/2, titleY + 95);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#546e7a';
+    ctx.font = '15px "Courier New", monospace';
+    ctx.fillText('Mandelbrot  \u00d7  Cat  \u00d7  Deep Dream  \u00d7  KMeans', W/2, titleY + 135);
+    ctx.fillStyle = '#3b4261';
+    ctx.fillText('inspired by Alan Becker', W/2, titleY + 158);
+    ctx.restore();
+  }
+
+  // ── Code block ──
+  code.draw(ctx);
+
+  // ── Mandelbrot fractal ──
+  if (fractalOpacity > 0 && fractalProgress > 0) {
+    const fs = Math.max(10, fractalSize);
+    const renderSize = Math.min(fs, 320);
+    renderMandelbrot(renderSize, fractalProgress, fractalZoom, -0.5, 0);
+    ctx.save();
+    ctx.globalAlpha = fractalOpacity;
+    ctx.translate(fractalX, fractalY);
+    ctx.scale(fractalScale, fractalScale);
+    ctx.shadowColor = '#c792ea'; ctx.shadowBlur = 30 + Math.sin(t * 3) * 10;
+    ctx.drawImage(fractalCanvas, -fs/2, -fs/2, fs, fs);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#c792ea'; ctx.lineWidth = 2;
+    ctx.strokeRect(-fs/2, -fs/2, fs, fs);
+    // Corner accents
+    const c = 10;
+    ctx.strokeStyle = '#e94560'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-fs/2, -fs/2 + c); ctx.lineTo(-fs/2, -fs/2); ctx.lineTo(-fs/2 + c, -fs/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fs/2 - c, -fs/2); ctx.lineTo(fs/2, -fs/2); ctx.lineTo(fs/2, -fs/2 + c); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-fs/2, fs/2 - c); ctx.lineTo(-fs/2, fs/2); ctx.lineTo(-fs/2 + c, fs/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fs/2 - c, fs/2); ctx.lineTo(fs/2, fs/2); ctx.lineTo(fs/2, fs/2 - c); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Cat (PERSISTS once shown) ──
+  if (catOpacity > 0 || catEverShown) {
+    const drawOp = catEverShown ? Math.max(catOpacity, 0.95) : catOpacity;
+
+    // Draw actual cat image behind the vector cat
+    if (catImageLoaded && catImageOpacity > 0) {
+      ctx.save();
+      ctx.globalAlpha = drawOp * catImageOpacity * 0.55;
+      const imgSize = catSize * 2.2 * (catImageScale || 1);
+      // Circular clip for the photo
+      ctx.beginPath();
+      ctx.arc(catX, catY, imgSize * 0.38, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(catImage, catX - imgSize/2, catY - imgSize/2 - imgSize * 0.08, imgSize, imgSize);
+      ctx.restore();
+    }
+
+    // Detailed vector cat with fractal blend
+    drawDetailedCat(ctx, catX, catY, catSize, drawOp, mergeProgress);
+
+    // Glow rings
+    if (finalGlow > 0) {
+      ctx.save();
+      ctx.globalAlpha = finalGlow * 0.35;
+      for (let i = 0; i < 3; i++) {
+        const r = catSize * (0.8 + i * 0.25) + Math.sin(t * 2 + i) * 10;
+        ctx.strokeStyle = ['#c792ea','#e94560','#82aaff'][i];
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(catX, catY, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // ── Stick figure ──
+  stick.draw(ctx);
+
+  // ── Particles & impacts ──
+  particles.forEach(p => p.draw(ctx));
+  drawImpacts(ctx);
+
+  // ── Flash ──
+  if (flashAlpha > 0) {
+    ctx.save(); ctx.globalAlpha = flashAlpha;
+    ctx.fillStyle = flashColor; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  // ── End text ──
+  if (endTextOpacity > 0) {
+    ctx.save(); ctx.globalAlpha = endTextOpacity; ctx.textAlign = 'center';
+    ctx.shadowColor = '#c3e88d'; ctx.shadowBlur = 15;
+    ctx.fillStyle = '#c3e88d';
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillText('KMeans(n_clusters=64) \u00d7 Mandelbrot \u00d7 Cat = Deep Dream', W/2, H * 0.91);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#546e7a';
+    ctx.font = '13px "Courier New", monospace';
+    ctx.fillText('No neural network was harmed in the making of this animation.', W/2, H * 0.95);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  LOOP
+// ============================================================
+function frame(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  if (playing) {
+    t += dt * speed;
+    if (t > TOTAL_DURATION + 2) t = TOTAL_DURATION + 2;
+  }
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

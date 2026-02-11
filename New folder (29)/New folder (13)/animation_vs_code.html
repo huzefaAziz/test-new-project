@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animation vs Code — Closed Timelike Curves</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1e1e2e;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  #codeLayer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  #uiOverlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Scanline CRT effect */
+  #uiOverlay::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    gap: 12px;
+    pointer-events: all;
+  }
+
+  #controls button {
+    background: rgba(30, 30, 46, 0.9);
+    border: 1px solid #cba6f7;
+    color: #cba6f7;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    pointer-events: all;
+  }
+
+  #controls button:hover {
+    background: #cba6f7;
+    color: #1e1e2e;
+  }
+
+  #progressBar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f38ba8, #cba6f7, #89b4fa, #a6e3a1);
+    z-index: 60;
+    transition: width 0.3s;
+  }
+
+  #title {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #cdd6f4;
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+    z-index: 50;
+    opacity: 0;
+    text-shadow: 0 0 20px rgba(203, 166, 247, 0.5);
+    white-space: nowrap;
+  }
+
+  #sceneLabel {
+    position: fixed;
+    top: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #a6adc8;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    z-index: 50;
+    opacity: 0;
+    white-space: nowrap;
+  }
+
+  .code-block {
+    position: absolute;
+    background: rgba(30, 30, 46, 0.92);
+    border: 1px solid rgba(203, 166, 247, 0.3);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #cdd6f4;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.6s, transform 0.6s;
+    max-width: 700px;
+    overflow: hidden;
+    white-space: pre;
+  }
+
+  .code-block.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .code-block .keyword { color: #cba6f7; }
+  .code-block .type { color: #89b4fa; }
+  .code-block .string { color: #a6e3a1; }
+  .code-block .comment { color: #6c7086; font-style: italic; }
+  .code-block .func { color: #f9e2af; }
+  .code-block .operator { color: #f38ba8; }
+  .code-block .number { color: #fab387; }
+  .code-block .prop { color: #89dceb; }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: #cba6f7;
+    animation: blink 0.6s infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .glow-line {
+    position: absolute;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #cba6f7, transparent);
+    opacity: 0;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div id="codeLayer"></div>
+<div id="uiOverlay">
+  <div id="progressBar"></div>
+  <div id="title">⟨ Animation vs Code ⟩ — Closed Timelike Curves</div>
+  <div id="sceneLabel"></div>
+</div>
+
+<div id="controls">
+  <button id="playBtn" onclick="togglePlay()">▶ Play</button>
+  <button onclick="restart()">↺ Restart</button>
+</div>
+
+<script>
+// ─── CONFIGURATION ──────────────────────────────────────────
+const W = () => window.innerWidth;
+const H = () => window.innerHeight;
+
+const canvas = document.getElementById('bgCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = W();
+canvas.height = H();
+
+window.addEventListener('resize', () => {
+  canvas.width = W();
+  canvas.height = H();
+});
+
+// ─── ANIMATION STATE ────────────────────────────────────────
+let playing = false;
+let time = 0;
+let scene = 0;
+let sceneTime = 0;
+let particles = [];
+let codeBlocks = [];
+let stickFigure = { x: -60, y: H() * 0.5, vx: 0, vy: 0, action: 'idle', frame: 0 };
+let latticeNodes = [];
+let ctcPath = [];
+let glowLines = [];
+let shakeAmount = 0;
+let flashAlpha = 0;
+let typingQueue = [];
+let warps = [];
+let explosionParticles = [];
+
+// ─── CODE SNIPPETS ──────────────────────────────────────────
+const codeSnippets = [
+  // Scene 0 — Intro: Axioms
+  {
+    code: `<span class="comment">-- Axioms for arithmetic bounds</span>
+<span class="keyword">axiom</span> <span class="func">nat_sub_bound</span> (<span class="prop">a n</span> : <span class="type">Nat</span>)
+  (<span class="prop">h1</span> : a <span class="operator">&gt;</span> <span class="number">0</span>) (<span class="prop">h2</span> : a <span class="operator">&lt;</span> n)
+  : a <span class="operator">-</span> <span class="number">1</span> <span class="operator">&lt;</span> n
+<span class="keyword">axiom</span> <span class="func">nat_add_bound</span> (<span class="prop">a n</span> : <span class="type">Nat</span>)
+  (<span class="prop">h</span> : a <span class="operator">&lt;</span> n <span class="operator">-</span> <span class="number">1</span>)
+  : a <span class="operator">+</span> <span class="number">1</span> <span class="operator">&lt;</span> n`,
+    x: 0.05, y: 0.15
+  },
+  // Scene 1 — Molecule Structure
+  {
+    code: `<span class="keyword">structure</span> <span class="type">MoleculeRegular</span> (<span class="type">V</span> : <span class="type">Type</span>) <span class="keyword">where</span>
+  <span class="prop">vertices</span>   : <span class="type">List</span> V
+  <span class="prop">neighbors</span>  : V <span class="operator">→</span> <span class="type">List</span> V
+  <span class="prop">regularity</span> : <span class="operator">∀</span> v, v <span class="operator">∈</span> vertices <span class="operator">→</span>
+    <span class="operator">∃</span> n : <span class="type">Nat</span>, (neighbors v).length <span class="operator">=</span> n
+  <span class="prop">symmetry</span>   : <span class="operator">∀</span> v w,
+    v <span class="operator">∈</span> vertices <span class="operator">→</span> w <span class="operator">∈</span> vertices <span class="operator">→</span>
+    (w <span class="operator">∈</span> neighbors v <span class="operator">↔</span> v <span class="operator">∈</span> neighbors w)`,
+    x: 0.04, y: 0.12
+  },
+  // Scene 2 — Spacetime
+  {
+    code: `<span class="keyword">structure</span> <span class="type">Spacetime</span> (<span class="type">E</span> : <span class="type">Type</span>) <span class="keyword">where</span>
+  <span class="prop">events</span>           : <span class="type">List</span> E
+  <span class="prop">causally_related</span> : E <span class="operator">→</span> E <span class="operator">→</span> <span class="type">Prop</span>
+  <span class="prop">reflexivity</span>      : <span class="operator">∀</span> e, e <span class="operator">∈</span> events <span class="operator">→</span>
+    causally_related e e
+  <span class="prop">transitivity</span>     : <span class="operator">∀</span> e₁ e₂ e₃,
+    causally_related e₁ e₂ <span class="operator">→</span>
+    causally_related e₂ e₃ <span class="operator">→</span>
+    causally_related e₁ e₃`,
+    x: 0.5, y: 0.12
+  },
+  // Scene 3 — Timelike Curve
+  {
+    code: `<span class="keyword">structure</span> <span class="type">TimelikeCurve</span> (<span class="type">E</span> : <span class="type">Type</span>)
+    (<span class="prop">S</span> : <span class="type">Spacetime</span> E) <span class="keyword">where</span>
+  <span class="prop">path</span>           : <span class="type">Nat</span> <span class="operator">→</span> E
+  <span class="prop">path_in_events</span> : <span class="operator">∀</span> n, path n <span class="operator">∈</span> S.events
+  <span class="prop">causality</span>      : <span class="operator">∀</span> n,
+    S.causally_related (path n) (path (n <span class="operator">+</span> <span class="number">1</span>))`,
+    x: 0.04, y: 0.55
+  },
+  // Scene 4 — Closed Timelike Curve
+  {
+    code: `<span class="keyword">structure</span> <span class="type">ClosedTimelikeCurve</span> (<span class="type">E</span> : <span class="type">Type</span>)
+    (<span class="prop">S</span> : <span class="type">Spacetime</span> E) <span class="keyword">where</span>
+  <span class="prop">toTimelikeCurve</span> : <span class="type">TimelikeCurve</span> E S
+  <span class="prop">closed</span> : <span class="operator">∃</span> k, k <span class="operator">&gt;</span> <span class="number">0</span> <span class="operator">∧</span>
+    <span class="operator">∀</span> n, toTimelikeCurve.path (n <span class="operator">+</span> k) <span class="operator">=</span>
+      toTimelikeCurve.path n`,
+    x: 0.5, y: 0.55
+  },
+  // Scene 5 — molecule_to_spacetime
+  {
+    code: `<span class="keyword">def</span> <span class="func">molecule_to_spacetime</span> (<span class="type">V</span> : <span class="type">Type</span>)
+    (<span class="prop">M</span> : <span class="type">MoleculeRegular</span> V) : <span class="type">Spacetime</span> V <span class="keyword">where</span>
+  <span class="prop">events</span> := M.vertices
+  <span class="prop">causally_related</span> := <span class="keyword">fun</span> v w <span class="operator">=></span>
+    v <span class="operator">∈</span> M.vertices <span class="operator">∧</span> w <span class="operator">∈</span> M.vertices <span class="operator">∧</span>
+    (w <span class="operator">∈</span> M.neighbors v <span class="operator">∨</span> v <span class="operator">=</span> w)`,
+    x: 0.1, y: 0.2
+  },
+  // Scene 6 — Lattice
+  {
+    code: `<span class="keyword">structure</span> <span class="type">RegularLattice</span> (<span class="prop">n</span> : <span class="type">Nat</span>) <span class="keyword">where</span>
+  <span class="prop">coords</span> : <span class="type">Fin</span> n <span class="operator">×</span> <span class="type">Fin</span> n
+  <span class="keyword">deriving</span> <span class="type">DecidableEq</span>
+
+<span class="keyword">def</span> <span class="func">lattice_neighbors</span> (<span class="prop">n</span> : <span class="type">Nat</span>)
+    (<span class="prop">p</span> : <span class="type">RegularLattice</span> n) :
+    <span class="type">List</span> (<span class="type">RegularLattice</span> n) :=
+  <span class="keyword">let</span> (i, j) := p.coords
+  <span class="comment">-- Up, Down, Left, Right neighbors</span>
+  ...`,
+    x: 0.1, y: 0.15
+  },
+  // Scene 7 — CTC creation
+  {
+    code: `<span class="keyword">def</span> <span class="func">create_lattice_ctc</span> (<span class="prop">n</span> : <span class="type">Nat</span>)
+    (<span class="prop">start</span> : <span class="type">RegularLattice</span> n)
+    : <span class="type">ClosedTimelikeCurve</span> (<span class="type">RegularLattice</span> n)
+      (molecule_to_spacetime ...) <span class="keyword">where</span>
+  toTimelikeCurve := {
+    <span class="prop">path</span> := <span class="keyword">fun</span> k <span class="operator">=></span>
+      <span class="keyword">match</span> k <span class="operator">%</span> <span class="number">4</span> <span class="keyword">with</span>
+      | <span class="number">0</span> <span class="operator">=></span> (i, j)
+      | <span class="number">1</span> <span class="operator">=></span> (i<span class="operator">+</span><span class="number">1</span>, j)
+      | <span class="number">2</span> <span class="operator">=></span> (i<span class="operator">+</span><span class="number">1</span>, j<span class="operator">+</span><span class="number">1</span>)
+      | <span class="number">3</span> <span class="operator">=></span> (i, j<span class="operator">+</span><span class="number">1</span>) }`,
+    x: 0.05, y: 0.12
+  },
+  // Scene 8 — Final Theorem
+  {
+    code: `<span class="keyword">theorem</span> <span class="func">ctc_from_molecule_regular</span>
+    (<span class="type">V</span> : <span class="type">Type</span>)
+    (<span class="prop">M</span> : <span class="type">MoleculeRegular</span> V)
+    (<span class="prop">h_cycle</span> : <span class="operator">∃</span> v : V, <span class="operator">∃</span> cycle : <span class="type">List</span> V,
+      cycle.head? <span class="operator">=</span> some v <span class="operator">∧</span>
+      cycle.getLast? <span class="operator">=</span> some v) :
+  <span class="operator">∃</span> S : <span class="type">Spacetime</span> V,
+  <span class="operator">∃</span> _ctc : <span class="type">ClosedTimelikeCurve</span> V S,
+    <span class="type">True</span> := <span class="keyword">by</span>
+  <span class="comment">-- ✅ Proved with zero sorry!</span>`,
+    x: 0.2, y: 0.2
+  }
+];
+
+// ─── SCENES ─────────────────────────────────────────────────
+const scenes = [
+  { name: "Axioms — Foundations",         duration: 7 },
+  { name: "Molecule Regular Structure",   duration: 8 },
+  { name: "Spacetime Fabric",             duration: 7 },
+  { name: "Timelike Curve",               duration: 6 },
+  { name: "Closed Timelike Curve",        duration: 7 },
+  { name: "Molecule → Spacetime",         duration: 8 },
+  { name: "Regular Lattice Grid",         duration: 9 },
+  { name: "CTC Construction — The Loop",  duration: 10 },
+  { name: "Final Theorem — QED ✅",       duration: 10 },
+  { name: "Epilogue",                     duration: 6 },
+];
+
+const totalDuration = scenes.reduce((s, sc) => s + sc.duration, 0);
+
+// ─── PARTICLES ──────────────────────────────────────────────
+function spawnParticles(cx, cy, count, color, speed) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const v = (Math.random() * 0.5 + 0.5) * speed;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * v,
+      vy: Math.sin(angle) * v,
+      life: 1,
+      decay: 0.008 + Math.random() * 0.015,
+      radius: Math.random() * 3 + 1,
+      color
+    });
+  }
+}
+
+function spawnExplosion(cx, cy) {
+  for (let i = 0; i < 60; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const v = Math.random() * 6 + 2;
+    explosionParticles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * v,
+      vy: Math.sin(angle) * v,
+      life: 1,
+      decay: 0.01 + Math.random() * 0.02,
+      radius: Math.random() * 5 + 2,
+      color: ['#f38ba8','#cba6f7','#89b4fa','#a6e3a1','#f9e2af','#fab387'][Math.floor(Math.random()*6)]
+    });
+  }
+  shakeAmount = 12;
+  flashAlpha = 0.3;
+}
+
+// ─── STICK FIGURE (The Coder) ───────────────────────────────
+function drawStickFigure(x, y, scale, action, frame) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#fab387';
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -35, 10, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Eyes
+  ctx.fillStyle = '#1e1e2e';
+  const eyeOffset = action === 'typing' ? Math.sin(frame * 0.1) * 2 : 0;
+  ctx.fillRect(-4 + eyeOffset, -38, 3, 3);
+  ctx.fillRect(2 + eyeOffset, -38, 3, 3);
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(0, -25);
+  ctx.lineTo(0, 5);
+  ctx.stroke();
+
+  // Arms
+  const armWave = action === 'typing' ? Math.sin(frame * 0.3) * 15 : 0;
+  ctx.beginPath();
+  ctx.moveTo(0, -15);
+  ctx.lineTo(-20, -5 + armWave);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -15);
+  ctx.lineTo(20, -5 - armWave);
+  ctx.stroke();
+
+  // Legs
+  const legMove = action === 'walking' ? Math.sin(frame * 0.15) * 12 : 0;
+  ctx.beginPath();
+  ctx.moveTo(0, 5);
+  ctx.lineTo(-12, 30 + legMove);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, 5);
+  ctx.lineTo(12, 30 - legMove);
+  ctx.stroke();
+
+  // Glow around character
+  if (action === 'power') {
+    ctx.shadowColor = '#cba6f7';
+    ctx.shadowBlur = 20 + Math.sin(frame * 0.2) * 10;
+    ctx.strokeStyle = '#cba6f7';
+    ctx.beginPath();
+    ctx.arc(0, -5, 30 + Math.sin(frame * 0.1) * 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.restore();
+}
+
+// ─── LATTICE GRID ───────────────────────────────────────────
+function createLattice(n, cx, cy, spacing) {
+  latticeNodes = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      latticeNodes.push({
+        x: cx + (i - (n-1)/2) * spacing,
+        y: cy + (j - (n-1)/2) * spacing,
+        i, j,
+        glow: 0,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+  }
+}
+
+function drawLattice(alpha, highlightCTC) {
+  const n = Math.round(Math.sqrt(latticeNodes.length));
+  ctx.globalAlpha = alpha;
+
+  // Draw edges
+  ctx.strokeStyle = 'rgba(137, 180, 250, 0.3)';
+  ctx.lineWidth = 1;
+  for (const node of latticeNodes) {
+    for (const other of latticeNodes) {
+      const di = Math.abs(node.i - other.i);
+      const dj = Math.abs(node.j - other.j);
+      if ((di === 1 && dj === 0) || (di === 0 && dj === 1)) {
+        ctx.beginPath();
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(other.x, other.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw nodes
+  for (const node of latticeNodes) {
+    node.pulse += 0.02;
+    const r = 5 + Math.sin(node.pulse) * 1.5 + node.glow * 4;
+    ctx.fillStyle = node.glow > 0.1
+      ? `rgba(203, 166, 247, ${0.6 + node.glow * 0.4})`
+      : `rgba(137, 180, 250, 0.7)`;
+    ctx.shadowColor = node.glow > 0.1 ? '#cba6f7' : '#89b4fa';
+    ctx.shadowBlur = node.glow > 0.1 ? 15 : 5;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    node.glow *= 0.95;
+  }
+
+  // Draw CTC path
+  if (highlightCTC && ctcPath.length > 1) {
+    ctx.strokeStyle = '#f38ba8';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#f38ba8';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.moveTo(ctcPath[0].x, ctcPath[0].y);
+    for (let i = 1; i < ctcPath.length; i++) {
+      ctx.lineTo(ctcPath[i].x, ctcPath[i].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Animate a dot along the CTC
+    const idx = (time * 1.5) % ctcPath.length;
+    const i0 = Math.floor(idx);
+    const i1 = (i0 + 1) % ctcPath.length;
+    const t = idx - i0;
+    const px = ctcPath[i0].x + (ctcPath[i1].x - ctcPath[i0].x) * t;
+    const py = ctcPath[i0].y + (ctcPath[i1].y - ctcPath[i0].y) * t;
+
+    ctx.fillStyle = '#f38ba8';
+    ctx.shadowColor = '#f38ba8';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(px, py, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    spawnParticles(px, py, 1, '#f38ba8', 1);
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// ─── WARP EFFECT ────────────────────────────────────────────
+function drawWarps() {
+  for (let i = warps.length - 1; i >= 0; i--) {
+    const w = warps[i];
+    w.radius += w.speed;
+    w.life -= 0.015;
+    if (w.life <= 0) { warps.splice(i, 1); continue; }
+    ctx.strokeStyle = `rgba(203, 166, 247, ${w.life * 0.5})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function spawnWarp(x, y) {
+  for (let i = 0; i < 3; i++) {
+    warps.push({ x, y, radius: 5 + i * 20, speed: 2 + i, life: 1 });
+  }
+}
+
+// ─── BACKGROUND ─────────────────────────────────────────────
+let stars = [];
+for (let i = 0; i < 200; i++) {
+  stars.push({
+    x: Math.random(),
+    y: Math.random(),
+    r: Math.random() * 1.5 + 0.5,
+    twinkle: Math.random() * Math.PI * 2
+  });
+}
+
+function drawBackground() {
+  // Gradient bg
+  const grd = ctx.createRadialGradient(W()/2, H()/2, 0, W()/2, H()/2, Math.max(W(), H()));
+  grd.addColorStop(0, '#1e1e2e');
+  grd.addColorStop(0.5, '#181825');
+  grd.addColorStop(1, '#11111b');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W(), H());
+
+  // Stars
+  for (const s of stars) {
+    s.twinkle += 0.01;
+    const alpha = 0.3 + Math.sin(s.twinkle) * 0.3;
+    ctx.fillStyle = `rgba(205, 214, 244, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(s.x * W(), s.y * H(), s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ─── CODE BLOCK MANAGEMENT ──────────────────────────────────
+function showCodeBlock(index) {
+  // Remove existing
+  document.querySelectorAll('.code-block').forEach(el => {
+    el.classList.remove('visible');
+    setTimeout(() => el.remove(), 600);
+  });
+
+  if (index >= codeSnippets.length) return;
+
+  const snippet = codeSnippets[index];
+  const div = document.createElement('div');
+  div.className = 'code-block';
+  div.innerHTML = snippet.code + '<span class="cursor-blink"></span>';
+  div.style.left = (snippet.x * W()) + 'px';
+  div.style.top = (snippet.y * H()) + 'px';
+
+  document.getElementById('codeLayer').appendChild(div);
+  setTimeout(() => div.classList.add('visible'), 50);
+}
+
+// ─── DRAW CONNECTED MOLECULES ───────────────────────────────
+let molecules = [];
+
+function createMolecules() {
+  molecules = [];
+  const cx = W() * 0.7;
+  const cy = H() * 0.5;
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const r = 80 + Math.random() * 40;
+    molecules.push({
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r,
+      baseAngle: angle,
+      baseR: r,
+      glow: 0,
+      connections: []
+    });
+  }
+  // Connect neighbors
+  for (let i = 0; i < molecules.length; i++) {
+    molecules[i].connections.push((i + 1) % molecules.length);
+    molecules[i].connections.push((i + molecules.length - 1) % molecules.length);
+  }
+}
+
+function drawMolecules(alpha) {
+  ctx.globalAlpha = alpha;
+  const cx = W() * 0.7;
+  const cy = H() * 0.5;
+
+  // Animate orbiting
+  for (const m of molecules) {
+    m.baseAngle += 0.003;
+    m.x = cx + Math.cos(m.baseAngle) * m.baseR;
+    m.y = cy + Math.sin(m.baseAngle) * m.baseR;
+  }
+
+  // Edges
+  ctx.strokeStyle = 'rgba(166, 227, 161, 0.4)';
+  ctx.lineWidth = 1.5;
+  for (const m of molecules) {
+    for (const ci of m.connections) {
+      const other = molecules[ci];
+      ctx.beginPath();
+      ctx.moveTo(m.x, m.y);
+      ctx.lineTo(other.x, other.y);
+      ctx.stroke();
+    }
+  }
+
+  // Nodes
+  for (const m of molecules) {
+    m.glow *= 0.97;
+    const r = 8 + m.glow * 5;
+    ctx.fillStyle = m.glow > 0.1
+      ? `rgba(166, 227, 161, ${0.7 + m.glow * 0.3})`
+      : 'rgba(166, 227, 161, 0.7)';
+    ctx.shadowColor = '#a6e3a1';
+    ctx.shadowBlur = 8 + m.glow * 10;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// ─── SPACETIME GRID ─────────────────────────────────────────
+function drawSpacetimeGrid(alpha) {
+  ctx.globalAlpha = alpha;
+  const cx = W() / 2;
+  const cy = H() / 2;
+  const gridSize = 40;
+  const extent = 8;
+
+  // Warped grid to represent curved spacetime
+  ctx.strokeStyle = 'rgba(137, 180, 250, 0.2)';
+  ctx.lineWidth = 1;
+
+  for (let i = -extent; i <= extent; i++) {
+    ctx.beginPath();
+    for (let j = -extent; j <= extent; j++) {
+      let px = cx + i * gridSize;
+      let py = cy + j * gridSize;
+      // Warp around center
+      const dx = px - cx;
+      const dy = py - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const warp = Math.max(0, 1 - dist / 300) * 30 * Math.sin(time * 0.5);
+      px += (dx / (dist + 1)) * warp;
+      py += (dy / (dist + 1)) * warp;
+      if (j === -extent) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  for (let j = -extent; j <= extent; j++) {
+    ctx.beginPath();
+    for (let i = -extent; i <= extent; i++) {
+      let px = cx + i * gridSize;
+      let py = cy + j * gridSize;
+      const dx = px - cx;
+      const dy = py - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const warp = Math.max(0, 1 - dist / 300) * 30 * Math.sin(time * 0.5);
+      px += (dx / (dist + 1)) * warp;
+      py += (dy / (dist + 1)) * warp;
+      if (i === -extent) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// ─── DRAW TIMELIKE ARROW CURVE ──────────────────────────────
+function drawTimelikeCurve(alpha, closed) {
+  ctx.globalAlpha = alpha;
+  const cx = W() / 2;
+  const cy = H() / 2;
+  const r = 120;
+  const segments = 80;
+
+  ctx.strokeStyle = closed ? '#f38ba8' : '#f9e2af';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = closed ? '#f38ba8' : '#f9e2af';
+  ctx.shadowBlur = 15;
+
+  ctx.beginPath();
+  for (let i = 0; i <= segments; i++) {
+    const t = (i / segments) * Math.PI * 2;
+    const stretch = closed ? 1 : 0.7;
+    const px = cx + Math.cos(t) * r * 1.5;
+    const py = cy + Math.sin(t) * r * stretch + (closed ? 0 : t * 15);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  if (closed) ctx.closePath();
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Animated dot
+  const tDot = ((time * 0.8) % 1) * Math.PI * 2;
+  const stretch = closed ? 1 : 0.7;
+  const dotX = cx + Math.cos(tDot) * r * 1.5;
+  const dotY = cy + Math.sin(tDot) * r * stretch + (closed ? 0 : tDot * 15);
+
+  ctx.fillStyle = '#fff';
+  ctx.shadowColor = '#fff';
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Arrows
+  for (let a = 0; a < 4; a++) {
+    const at = ((a / 4) + time * 0.1) % 1 * Math.PI * 2;
+    const ax = cx + Math.cos(at) * r * 1.5;
+    const ay = cy + Math.sin(at) * r * stretch + (closed ? 0 : at * 15);
+    const dx = -Math.sin(at) * 12;
+    const dy = Math.cos(at) * 12 * stretch;
+    ctx.strokeStyle = closed ? 'rgba(243, 139, 168, 0.8)' : 'rgba(249, 226, 175, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax + dx + dy * 0.3, ay + dy - dx * 0.3);
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax + dx - dy * 0.3, ay + dy + dx * 0.3);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// ─── MAIN UPDATE ────────────────────────────────────────────
+function getSceneInfo() {
+  let acc = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    if (time < acc + scenes[i].duration) {
+      return { index: i, localTime: time - acc, duration: scenes[i].duration };
+    }
+    acc += scenes[i].duration;
+  }
+  return { index: scenes.length - 1, localTime: 0, duration: scenes[scenes.length-1].duration };
+}
+
+let lastScene = -1;
+
+function update(dt) {
+  if (!playing) return;
+  time += dt;
+
+  const si = getSceneInfo();
+  scene = si.index;
+  sceneTime = si.localTime;
+
+  // Scene transitions
+  if (scene !== lastScene) {
+    lastScene = scene;
+    if (scene < codeSnippets.length) showCodeBlock(scene);
+
+    // Scene-specific inits
+    if (scene === 1) createMolecules();
+    if (scene === 6) {
+      createLattice(5, W() * 0.65, H() * 0.5, 60);
+    }
+    if (scene === 7) {
+      createLattice(5, W() * 0.65, H() * 0.5, 60);
+      // CTC path: a square loop on the lattice
+      const find = (i, j) => latticeNodes.find(n => n.i === i && n.j === j);
+      ctcPath = [find(1,1), find(2,1), find(2,2), find(1,2)].filter(Boolean);
+    }
+    if (scene === 8) {
+      spawnExplosion(W() / 2, H() / 2);
+    }
+    if (scene === 9) {
+      // Hide code blocks for epilogue
+      document.querySelectorAll('.code-block').forEach(el => {
+        el.classList.remove('visible');
+        setTimeout(() => el.remove(), 600);
+      });
+    }
+
+    spawnWarp(W() / 2, H() / 2);
+  }
+
+  // Update title
+  const titleEl = document.getElementById('title');
+  const labelEl = document.getElementById('sceneLabel');
+  titleEl.style.opacity = Math.min(1, time * 0.5);
+  if (scene < scenes.length) {
+    labelEl.textContent = `Scene ${scene + 1}/${scenes.length}: ${scenes[scene].name}`;
+    labelEl.style.opacity = 1;
+  }
+
+  // Progress bar
+  document.getElementById('progressBar').style.width = `${(time / totalDuration) * 100}%`;
+
+  // Stick figure
+  const figureScale = 1.2;
+  if (scene < 9) {
+    stickFigure.action = 'typing';
+    stickFigure.x = W() * 0.03 + 40;
+    stickFigure.y = H() * 0.85;
+  }
+  if (scene === 9) {
+    stickFigure.action = 'power';
+    stickFigure.x = W() / 2;
+    stickFigure.y = H() / 2;
+  }
+  stickFigure.frame++;
+
+  // Ambient particles
+  if (Math.random() < 0.3) {
+    spawnParticles(
+      Math.random() * W(), Math.random() * H(),
+      1,
+      ['#cba6f7','#89b4fa','#a6e3a1','#f38ba8'][Math.floor(Math.random()*4)],
+      0.3
+    );
+  }
+
+  // Molecule glow in scene 1
+  if (scene === 1 && molecules.length > 0) {
+    const mi = Math.floor((sceneTime * 2) % molecules.length);
+    molecules[mi].glow = 1;
+  }
+
+  // Lattice glow in scenes 6-7
+  if ((scene === 6 || scene === 7) && latticeNodes.length > 0) {
+    const li = Math.floor((sceneTime * 3) % latticeNodes.length);
+    latticeNodes[li].glow = 1;
+  }
+
+  // Shake decay
+  shakeAmount *= 0.9;
+  flashAlpha *= 0.93;
+
+  // End
+  if (time >= totalDuration) {
+    playing = false;
+    document.getElementById('playBtn').textContent = '▶ Play';
+  }
+}
+
+// ─── MAIN DRAW ──────────────────────────────────────────────
+function draw() {
+  ctx.save();
+
+  // Screen shake
+  if (shakeAmount > 0.5) {
+    ctx.translate(
+      (Math.random() - 0.5) * shakeAmount,
+      (Math.random() - 0.5) * shakeAmount
+    );
+  }
+
+  drawBackground();
+
+  // Scene-specific drawing
+  const si = getSceneInfo();
+  const fadeIn = Math.min(1, si.localTime * 2);
+  const fadeOut = Math.max(0, 1 - (si.localTime - si.duration + 1));
+  const alpha = Math.min(fadeIn, fadeOut);
+
+  switch (scene) {
+    case 0: // Axioms
+      drawSpacetimeGrid(alpha * 0.3);
+      break;
+    case 1: // Molecule
+      drawMolecules(alpha);
+      break;
+    case 2: // Spacetime
+      drawSpacetimeGrid(alpha);
+      break;
+    case 3: // Timelike Curve
+      drawSpacetimeGrid(alpha * 0.3);
+      drawTimelikeCurve(alpha, false);
+      break;
+    case 4: // Closed Timelike Curve
+      drawSpacetimeGrid(alpha * 0.3);
+      drawTimelikeCurve(alpha, true);
+      break;
+    case 5: // molecule_to_spacetime
+      drawMolecules(alpha * 0.5);
+      drawSpacetimeGrid(alpha * 0.5);
+      // Draw conversion arrows
+      ctx.strokeStyle = `rgba(249, 226, 175, ${alpha * 0.8})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 4]);
+      ctx.beginPath();
+      ctx.moveTo(W() * 0.55, H() * 0.5);
+      ctx.lineTo(W() * 0.35, H() * 0.5);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrow head
+      ctx.fillStyle = `rgba(249, 226, 175, ${alpha * 0.8})`;
+      ctx.beginPath();
+      ctx.moveTo(W() * 0.35, H() * 0.5);
+      ctx.lineTo(W() * 0.37, H() * 0.5 - 6);
+      ctx.lineTo(W() * 0.37, H() * 0.5 + 6);
+      ctx.fill();
+      break;
+    case 6: // Lattice
+      drawLattice(alpha, false);
+      break;
+    case 7: // CTC in lattice
+      drawLattice(alpha, true);
+      break;
+    case 8: // Final theorem
+      drawSpacetimeGrid(alpha * 0.3);
+      drawTimelikeCurve(alpha, true);
+      // QED glow
+      if (si.localTime > 4) {
+        const qedAlpha = Math.min(1, (si.localTime - 4) * 0.5);
+        ctx.font = 'bold 60px "Courier New"';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(166, 227, 161, ${qedAlpha})`;
+        ctx.shadowColor = '#a6e3a1';
+        ctx.shadowBlur = 30;
+        ctx.fillText('✅ Q.E.D.', W() / 2, H() * 0.82);
+        ctx.shadowBlur = 0;
+      }
+      break;
+    case 9: // Epilogue
+      drawSpacetimeGrid(alpha * 0.2);
+      // All structures swirling
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2 + time * 0.3;
+        const r = 150 + Math.sin(time + i) * 30;
+        const px = W()/2 + Math.cos(angle) * r;
+        const py = H()/2 + Math.sin(angle) * r;
+        ctx.fillStyle = ['#cba6f7','#89b4fa','#a6e3a1','#f38ba8','#f9e2af','#fab387'][i % 6];
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      // Closing text
+      if (si.localTime > 2) {
+        const tAlpha = Math.min(1, (si.localTime - 2) * 0.5);
+        ctx.font = '24px "Courier New"';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = `rgba(205, 214, 244, ${tAlpha})`;
+        ctx.fillText('Closed Timelike Curves — Proven in Lean 4', W()/2, H() * 0.25);
+        ctx.font = '16px "Courier New"';
+        ctx.fillStyle = `rgba(166, 173, 200, ${tAlpha * 0.8})`;
+        ctx.fillText('Zero sorry declarations • Pure mathematical proof', W()/2, H() * 0.30);
+        ctx.fillText('Molecule Regular Structures → Spacetime → CTC', W()/2, H() * 0.34);
+      }
+      break;
+  }
+
+  drawWarps();
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.99;
+    p.vy *= 0.99;
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Explosion particles
+  for (let i = explosionParticles.length - 1; i >= 0; i--) {
+    const p = explosionParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.97;
+    p.vy *= 0.97;
+    p.life -= p.decay;
+    if (p.life <= 0) { explosionParticles.splice(i, 1); continue; }
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  }
+
+  // Stick figure
+  if (scene < 9) {
+    drawStickFigure(stickFigure.x, stickFigure.y, 1.2, stickFigure.action, stickFigure.frame);
+  } else if (scene === 9) {
+    drawStickFigure(stickFigure.x, stickFigure.y, 1.5, 'power', stickFigure.frame);
+  }
+
+  // Flash
+  if (flashAlpha > 0.01) {
+    ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
+    ctx.fillRect(0, 0, W(), H());
+  }
+
+  ctx.restore();
+}
+
+// ─── GAME LOOP ──────────────────────────────────────────────
+let lastTime = 0;
+function loop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update(dt);
+  draw();
+
+  requestAnimationFrame(loop);
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+}
+
+function restart() {
+  time = 0;
+  scene = 0;
+  lastScene = -1;
+  particles = [];
+  explosionParticles = [];
+  warps = [];
+  shakeAmount = 0;
+  flashAlpha = 0;
+  document.querySelectorAll('.code-block').forEach(el => el.remove());
+  playing = true;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+}
+
+// Initialize
+createMolecules();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

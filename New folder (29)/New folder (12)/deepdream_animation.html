@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation vs Coding — Cat + Mandelbrot Deep Dream</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a1a;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: 'Comic Sans MS', 'Chalkboard', sans-serif;
+    }
+    #stage {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 100%);
+    }
+    /* Stick figure — Alan Becker style */
+    .stick {
+      stroke: #222;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .stick-head { stroke-width: 3; }
+    .stick-body { stroke-width: 2.5; }
+    .stick-arms { stroke-width: 2; }
+    .stick-legs { stroke-width: 2; }
+    .cat-ear { fill: #ff8c42; stroke: #222; stroke-width: 2; }
+    .cat-face { fill: #ffb366; stroke: #222; stroke-width: 2; }
+    .pupil { fill: #222; }
+    .scene {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    .scene.active { opacity: 1; pointer-events: auto; }
+    .scene-title {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      font-weight: bold;
+      color: #333;
+      text-shadow: 2px 2px 0 #fff;
+      letter-spacing: 2px;
+    }
+    .scene-sub {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 16px;
+      color: #555;
+    }
+    #canvas-fractal, #canvas-cat, #canvas-dream {
+      border: 3px solid #333;
+      border-radius: 8px;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+      background: #fff;
+    }
+    .stick-figure {
+      position: absolute;
+      transition: transform 0.3s ease;
+    }
+    .bounce { animation: bounce 0.5s ease infinite alternate; }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-8px); }
+    }
+    .float-in {
+      animation: floatIn 1s ease forwards;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    @keyframes floatIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .merge-glow {
+      animation: mergeGlow 1.5s ease infinite alternate;
+    }
+    @keyframes mergeGlow {
+      from { filter: drop-shadow(0 0 10px rgba(255,140,0,0.5)); }
+      to { filter: drop-shadow(0 0 25px rgba(255,100,0,0.8)); }
+    }
+    .arrow {
+      font-size: 48px;
+      color: #333;
+      margin: 0 20px;
+      animation: pulse 0.8s ease infinite;
+    }
+    @keyframes pulse {
+      50% { transform: scale(1.2); opacity: 0.8; }
+    }
+    .row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 20px; }
+    .kmeans-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 42px;
+      font-weight: bold;
+      color: #c44;
+      text-shadow: 2px 2px 0 #fff, 0 0 20px rgba(200,50,50,0.5);
+      animation: kmeansPulse 1s ease infinite alternate;
+    }
+    @keyframes kmeansPulse {
+      from { transform: translate(-50%, -50%) scale(1); }
+      to { transform: translate(-50%, -50%) scale(1.05); }
+    }
+    #progress {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #ff6b35, #f7c94b);
+      width: 0%;
+      transition: width 0.1s linear;
+      z-index: 100;
+    }
+    .animator {
+      position: absolute;
+      bottom: 30px;
+      right: 40px;
+      opacity: 0.9;
+    }
+    .scene-num {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 18px;
+      color: #666;
+    }
+    /* Lag / Animation vs Coding */
+    #coding-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 200;
+      background: rgba(0, 12, 0, 0.85);
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      color: #0f0;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      overflow: hidden;
+    }
+    #coding-overlay.visible { opacity: 1; }
+    #coding-overlay .line { white-space: pre; text-shadow: 0 0 8px #0f0; }
+    #coding-overlay .cursor { animation: blink 0.8s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    #coding-overlay .lag-msg { color: #fa0; margin-top: 12px; }
+    #coding-overlay .fps { color: #0af; font-size: 12px; }
+    .scene.lag-freeze { animation: lagFreeze 0.15s steps(3) infinite; }
+    @keyframes lagFreeze {
+      0%, 100% { filter: none; }
+      50% { filter: brightness(0.95); }
+    }
+    #progress.lag-stutter { transition: none; }
+    #lag-badge {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: #c00;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 150;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    #lag-badge.visible { opacity: 1; animation: lagBadge 0.3s steps(2) infinite; }
+    @keyframes lagBadge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  </style>
+</head>
+<body>
+  <div id="lag-badge">LAG</div>
+  <div id="coding-overlay">
+    <div class="line" style="color:#0af;">// Animation vs Coding — lag simulation</div>
+    <div class="line">&gt; model = Pipeline([("kmeans", KMeans(n_clusters=64))])</div>
+    <div class="line">&gt; labels = model.fit_predict(X)</div>
+    <div class="line">&gt; dream_rgb = centroids[labels].reshape(h, w, 3)</div>
+    <div class="line">&gt; <span class="cursor">_</span></div>
+    <div class="lag-msg"></div>
+    <div class="fps"></div>
+  </div>
+  <div id="progress"></div>
+  <div id="stage">
+    <!-- Scene 1: Cat -->
+    <div class="scene" id="s1">
+      <span class="scene-title">1. THE CAT</span>
+      <span class="scene-num">Alan Becker style</span>
+      <span class="scene-sub">card.jpg → 1200×1200</span>
+      <div class="animator">
+        <svg width="80" height="100" viewBox="0 0 80 100">
+          <circle class="stick stick-head" cx="40" cy="18" r="12" stroke-width="2.5"/>
+          <line class="stick stick-body" x1="40" y1="30" x2="40" y2="58"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="20" y2="50"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="60" y2="50"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="28" y2="85"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="52" y2="85"/>
+        </svg>
+      </div>
+      <div class="stick-figure float-in" style="animation-delay: 0.3s;">
+        <svg width="120" height="140" viewBox="0 0 120 140">
+          <ellipse class="cat-ear" cx="35" cy="28" rx="18" ry="22"/>
+          <ellipse class="cat-ear" cx="85" cy="28" rx="18" ry="22"/>
+          <ellipse class="cat-face" cx="60" cy="55" rx="35" ry="32"/>
+          <circle class="pupil" cx="48" cy="52" r="5"/>
+          <circle class="pupil" cx="72" cy="52" r="5"/>
+          <path class="stick" stroke-width="2" d="M 58 78 Q 60 88 55 95 M 62 78 Q 60 88 65 95"/>
+          <line class="stick stick-body" x1="60" y1="85" x2="60" y2="115"/>
+          <line class="stick stick-legs" x1="60" y1="115" x2="45" y2="135"/>
+          <line class="stick stick-legs" x1="60" y1="115" x2="75" y2="135"/>
+        </svg>
+      </div>
+      <canvas id="canvas-cat" width="200" height="200" style="margin-top: 20px;"></canvas>
+    </div>
+    <!-- Scene 2: Mandelbrot -->
+    <div class="scene" id="s2">
+      <span class="scene-title">2. MANDELBROT FRACTAL</span>
+      <span class="scene-num">Alan Becker style</span>
+      <span class="scene-sub">no neural network — pure math</span>
+      <div class="animator">
+        <svg width="80" height="100" viewBox="0 0 80 100">
+          <circle class="stick stick-head" cx="40" cy="18" r="12" stroke-width="2.5"/>
+          <line class="stick stick-body" x1="40" y1="30" x2="40" y2="58"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="20" y2="50"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="60" y2="50"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="28" y2="85"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="52" y2="85"/>
+        </svg>
+      </div>
+      <canvas id="canvas-fractal" width="280" height="280"></canvas>
+    </div>
+    <!-- Scene 3: KMeans merge -->
+    <div class="scene" id="s3">
+      <span class="scene-title">3. KMEANS (64 clusters)</span>
+      <span class="scene-num">Alan Becker style</span>
+      <span class="scene-sub">fractal inside the cat</span>
+      <div class="animator">
+        <svg width="80" height="100" viewBox="0 0 80 100">
+          <circle class="stick stick-head" cx="40" cy="18" r="12" stroke-width="2.5"/>
+          <line class="stick stick-body" x1="40" y1="30" x2="40" y2="58"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="20" y2="50"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="60" y2="50"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="28" y2="85"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="52" y2="85"/>
+        </svg>
+      </div>
+      <div class="row" style="margin-top: 20px;">
+        <canvas id="canvas-cat-small" width="160" height="160"></canvas>
+        <span class="arrow">+</span>
+        <canvas id="canvas-mandel-small" width="160" height="160"></canvas>
+        <span class="arrow">→</span>
+        <div class="merge-glow" style="position:relative; width:180px; height:180px;">
+          <span class="kmeans-label">KMeans</span>
+          <canvas id="canvas-merge" width="180" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- Scene 4: Deep Dream result -->
+    <div class="scene" id="s4">
+      <span class="scene-title">4. DEEP DREAM — CAT + FRACTAL</span>
+      <span class="scene-num">Alan Becker style</span>
+      <span class="scene-sub">no neural network · KMeans only</span>
+      <div class="animator">
+        <svg width="80" height="100" viewBox="0 0 80 100">
+          <circle class="stick stick-head" cx="40" cy="18" r="12" stroke-width="2.5"/>
+          <line class="stick stick-body" x1="40" y1="30" x2="40" y2="58"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="20" y2="50"/>
+          <line class="stick stick-arms" x1="40" y1="38" x2="60" y2="50"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="28" y2="85"/>
+          <line class="stick stick-legs" x1="40" y1="58" x2="52" y2="85"/>
+        </svg>
+      </div>
+      <canvas id="canvas-dream" width="400" height="400"></canvas>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const stage = document.getElementById('stage');
+      const scenes = [document.getElementById('s1'), document.getElementById('s2'), document.getElementById('s3'), document.getElementById('s4')];
+      const progressBar = document.getElementById('progress');
+      const codingOverlay = document.getElementById('coding-overlay');
+      const lagBadge = document.getElementById('lag-badge');
+      const lagMsg = codingOverlay.querySelector('.lag-msg');
+      const fpsEl = codingOverlay.querySelector('.fps');
+      const SCENE_DURATION = 5000;
+      const TOTAL = scenes.length * SCENE_DURATION;
+      let startTime = null;
+      let lagFreezeUntil = 0;
+      let lagStartedAt = 0;
+      let elapsedWhenLagStarted = 0;
+      let displayedProgress = 0;
+      let lastTickTime = 0;
+      let frameCount = 0;
+      let fps = 60;
+      const LAG_MESSAGES = [
+        'RENDERING FRAME...',
+        'KMeans.fit_predict() running...',
+        'LAG 1200ms',
+        'BUFFER UNDERRUN',
+        'requestAnimationFrame delayed',
+        'Pipeline.step("kmeans")...'
+      ];
+
+      function drawMandelbrot(canvas, w, h, maxIter) {
+        const ctx = canvas.getContext('2d');
+        const imgData = ctx.createImageData(w, h);
+        const data = imgData.data;
+        const xMin = -2, xMax = 1, yMin = -1.25, yMax = 1.25;
+        for (let py = 0; py < h; py++) {
+          for (let px = 0; px < w; px++) {
+            const cx = xMin + (px / w) * (xMax - xMin);
+            const cy = yMin + (py / h) * (yMax - yMin);
+            let zx = 0, zy = 0;
+            let n = 0;
+            while (zx * zx + zy * zy <= 4 && n < maxIter) {
+              const nx = zx * zx - zy * zy + cx;
+              zy = 2 * zx * zy + cy;
+              zx = nx;
+              n++;
+            }
+            const t = n / maxIter;
+            const i = (py * w + px) * 4;
+            data[i] = Math.min(255, t * 400);
+            data[i + 1] = Math.min(255, t * 200);
+            data[i + 2] = Math.min(255, t * 80);
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      function drawCatPlaceholder(canvas) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = '#ffb366';
+        ctx.beginPath();
+        ctx.ellipse(w/2, h/2 + 10, w*0.35, h*0.32, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(w/2 - 15, h/2 - 5, 8, 0, Math.PI*2);
+        ctx.arc(w/2 + 15, h/2 - 5, 8, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#ff8c42';
+        ctx.beginPath();
+        ctx.ellipse(w/2 - 28, h/2 - 35, 12, 18, -0.3, 0, Math.PI*2);
+        ctx.ellipse(w/2 + 28, h/2 - 35, 12, 18, 0.3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      function drawDreamBlend(canvas) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        const imgData = ctx.createImageData(w, h);
+        const data = imgData.data;
+        const xMin = -2, xMax = 1, yMin = -1.25, yMax = 1.25;
+        for (let py = 0; py < h; py++) {
+          for (let px = 0; px < w; px++) {
+            const cx = xMin + (px / w) * (xMax - xMin);
+            const cy = yMin + (py / h) * (yMax - yMin);
+            let zx = 0, zy = 0;
+            let n = 0;
+            while (zx * zx + zy * zy <= 4 && n < 60) {
+              const nx = zx * zx - zy * zy + cx;
+              zy = 2 * zx * zy + cy;
+              zx = nx;
+              n++;
+            }
+            const t = n / 60;
+            const centerX = w/2, centerY = h/2;
+            const dist = Math.hypot(px - centerX, py - centerY);
+            const catMask = Math.max(0, 1 - dist / (w * 0.45));
+            const r = Math.min(255, (t * 280 + catMask * 120) | 0);
+            const g = Math.min(255, (t * 140 + catMask * 80) | 0);
+            const b = Math.min(255, (t * 60 + catMask * 60) | 0);
+            const i = (py * w + px) * 4;
+            data[i] = r;
+            data[i + 1] = g;
+            data[i + 2] = b;
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      function drawMergePreview(canvas) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        const imgData = ctx.createImageData(w, h);
+        const data = imgData.data;
+        const xMin = -2, xMax = 1, yMin = -1.25, yMax = 1.25;
+        for (let py = 0; py < h; py++) {
+          for (let px = 0; px < w; px++) {
+            const cx = xMin + (px / w) * (xMax - xMin);
+            const cy = yMin + (py / h) * (yMax - yMin);
+            let zx = 0, zy = 0;
+            let n = 0;
+            while (zx * zx + zy * zy <= 4 && n < 50) {
+              const nx = zx * zx - zy * zy + cx;
+              zy = 2 * zx * zy + cy;
+              zx = nx;
+              n++;
+            }
+            const t = n / 50;
+            const centerX = w/2, centerY = h/2;
+            const dist = Math.hypot(px - centerX, py - centerY);
+            const catMask = Math.max(0, 1 - dist / (w * 0.4));
+            const r = Math.min(255, (t * 220 + catMask * 100) | 0);
+            const g = Math.min(255, (t * 120 + catMask * 70) | 0);
+            const b = Math.min(255, (t * 50 + catMask * 50) | 0);
+            const i = (py * w + px) * 4;
+            data[i] = r;
+            data[i + 1] = g;
+            data[i + 2] = b;
+            data[i + 3] = 255;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      scenes.forEach(s => s.classList.remove('active'));
+      progressBar.style.width = '0%';
+
+      drawCatPlaceholder(document.getElementById('canvas-cat'));
+      drawCatPlaceholder(document.getElementById('canvas-cat-small'));
+      drawMandelbrot(document.getElementById('canvas-fractal'), 280, 280, 80);
+      drawMandelbrot(document.getElementById('canvas-mandel-small'), 160, 160, 60);
+      drawMergePreview(document.getElementById('canvas-merge'));
+      drawDreamBlend(document.getElementById('canvas-dream'));
+
+      function showScene(index) {
+        scenes.forEach((s, i) => s.classList.toggle('active', i === index));
+      }
+
+      function maybeTriggerLag(t, elapsed) {
+        if (t < lagFreezeUntil) return;
+        const r = Math.random();
+        if (r < 0.09) {
+          lagStartedAt = t;
+          elapsedWhenLagStarted = elapsed;
+          lagFreezeUntil = t + 600 + Math.random() * 1400;
+          lagBadge.classList.add('visible');
+          codingOverlay.classList.add('visible');
+          lagMsg.textContent = LAG_MESSAGES[Math.floor(Math.random() * LAG_MESSAGES.length)];
+        }
+      }
+
+      function endLag(t) {
+        if (t >= lagFreezeUntil && lagBadge.classList.contains('visible')) {
+          lagBadge.classList.remove('visible');
+          codingOverlay.classList.remove('visible');
+          lagMsg.textContent = '';
+        }
+      }
+
+      function tick(t) {
+        frameCount++;
+        if (lastTickTime > 0 && t - lastTickTime > 0)
+          fps = Math.round(1000 / (t - lastTickTime));
+        lastTickTime = t;
+        fpsEl.textContent = 'FPS: ' + Math.min(fps, 60) + (t < lagFreezeUntil ? ' (LAG)' : '');
+
+        if (!startTime) startTime = t;
+        const realElapsed = t - startTime;
+
+        maybeTriggerLag(t, realElapsed);
+        endLag(t);
+
+        var elapsed = realElapsed;
+        if (t < lagFreezeUntil) elapsed = elapsedWhenLagStarted;
+
+        if (t < lagFreezeUntil) {
+          progressBar.classList.add('lag-stutter');
+          displayedProgress += (realElapsed / TOTAL * 100 - displayedProgress) * 0.015;
+        } else {
+          progressBar.classList.remove('lag-stutter');
+          displayedProgress += (realElapsed / TOTAL * 100 - displayedProgress) * 0.06;
+          if (Math.random() < 0.04) displayedProgress = Math.max(0, displayedProgress - 0.8);
+        }
+        displayedProgress = Math.min(100, Math.max(0, displayedProgress));
+        progressBar.style.width = displayedProgress + '%';
+
+        const sceneIndex = Math.min(Math.floor(elapsed / SCENE_DURATION), scenes.length - 1);
+        showScene(sceneIndex);
+        if (t < lagFreezeUntil) scenes[sceneIndex].classList.add('lag-freeze');
+        else scenes.forEach(s => s.classList.remove('lag-freeze'));
+
+        if (realElapsed < TOTAL) requestAnimationFrame(tick);
+        else setTimeout(function () { startTime = null; lagFreezeUntil = 0; displayedProgress = 0; requestAnimationFrame(tick); }, 500);
+      }
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>

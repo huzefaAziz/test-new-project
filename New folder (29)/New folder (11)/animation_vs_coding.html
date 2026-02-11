@@ -1,0 +1,2683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animation vs Coding - Fractal Cat</title>
+  <style>
+    :root {
+      --bg: #0f1219;
+      --panel: #161b29;
+      --panel2: #1f2639;
+      --line: #2f3856;
+      --text: #dfe7ff;
+      --muted: #8b99c8;
+      --warn: #ff6d78;
+      --accent: #ffb347;
+      --blue: #72b4ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 82% 6%, #1e2742, var(--bg) 58%);
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--text);
+    }
+
+    #layout {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(380px, 40vw) 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    #editor {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #141927, #101522);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    #topbar {
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 12px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dots {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .d1 { background: #ff5f56; }
+    .d2 { background: #ffbd2e; }
+    .d3 { background: #27c93f; }
+
+    #codeWrap {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre;
+      background:
+        linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.22) 100%),
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 21px,
+          rgba(255, 255, 255, 0.02) 21px,
+          rgba(255, 255, 255, 0.02) 22px
+        );
+    }
+
+    #codeText {
+      margin: 0;
+      color: #dde5ff;
+    }
+
+    #cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #ffffff;
+      margin-left: 1px;
+      vertical-align: -3px;
+      animation: blink 1s steps(1, end) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    #status {
+      border-top: 1px solid var(--line);
+      background: var(--panel2);
+      color: var(--muted);
+      font-size: 12px;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    #stageWrap {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #090d14;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    #stage {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #hud {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #lagTag {
+      position: absolute;
+      top: 13px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 1px solid #ff9ba4;
+      background: rgba(84, 4, 10, 0.84);
+      color: #ffe7ea;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 8px 12px;
+      opacity: 0;
+      transition: opacity 120ms linear;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    #controls {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 12;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid #3e4a70;
+      color: var(--text);
+      background: rgba(14, 21, 34, 0.88);
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      border-color: #6777af;
+    }
+
+    .btn.warn {
+      border-color: #91434b;
+      color: #ffd8dd;
+    }
+
+    #lagSlider {
+      accent-color: var(--warn);
+      width: 120px;
+    }
+
+    #credit {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 12;
+      font-size: 12px;
+      color: #bbc6ec;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 7px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <section id="editor">
+      <div id="topbar">
+        <div class="dots">
+          <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+          <span>New Text Document (2).py</span>
+        </div>
+        <span id="fpsLabel">FPS: --</span>
+      </div>
+      <div id="codeWrap"><pre id="codeText"></pre><span id="cursor"></span></div>
+      <div id="status">
+        <span id="statusLeft">Phase: startup</span>
+        <span id="statusRight">Mandelbrot + cat + KMeans(64)</span>
+      </div>
+    </section>
+
+    <section id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="hud">
+        <div class="pill">Animation vs Coding</div>
+        <div class="pill" id="phaseTag">Booting scene...</div>
+      </div>
+      <div id="lagTag">LAG SPIKE DETECTED</div>
+      <div id="controls">
+        <button class="btn" id="playBtn">Pause</button>
+        <button class="btn" id="restartBtn">Restart</button>
+        <button class="btn" id="recordBtn">Record 20s WebM</button>
+        <button class="btn warn" id="lagBtn">Trigger Lag</button>
+        <label for="lagSlider">Lag</label>
+        <input id="lagSlider" type="range" min="0.6" max="2.0" step="0.1" value="1.2" />
+      </div>
+      <div id="credit">Made by Alan Becker fan-style HTML animation</div>
+    </section>
+  </div>
+
+  <script>
+    const SOURCE_LINES = [
+      "from functools import cache",
+      "import numpy as np",
+      "from sklearn.pipeline import Pipeline",
+      "from sklearn.cluster import KMeans",
+      "import matplotlib.pyplot as plt",
+      "",
+      "# -------------------------------",
+      "# 1. Load Cat Image (1200x1200)",
+      "# -------------------------------",
+      "cat_img = plt.imread('card.jpg')",
+      "if cat_img.ndim == 2:",
+      "    cat_arr = np.stack([cat_img] * 3, axis=-1)",
+      "else:",
+      "    cat_arr = np.array(cat_img)[:, :, :3].copy()",
+      "if cat_arr.max() > 1:",
+      "    cat_arr = cat_arr / 255.0",
+      "cat_arr = np.clip(cat_arr, 0, 1)",
+      "h, w = 1200, 1200",
+      "if cat_arr.shape[0] != h or cat_arr.shape[1] != w:",
+      "    y_idx = np.linspace(0, cat_arr.shape[0] - 1, h).astype(int)",
+      "    x_idx = np.linspace(0, cat_arr.shape[1] - 1, w).astype(int)",
+      "    cat_arr = cat_arr[np.ix_(y_idx, x_idx)]",
+      "",
+      "# -------------------------------",
+      "# 2. Mandelbrot Fractal (1200x1200)",
+      "# -------------------------------",
+      "def mandelbrot_grid(width, height, x_min=-2.0, x_max=1.0, y_min=-1.25, y_max=1.25, max_iter=80):",
+      "    x = np.linspace(x_min, x_max, width)",
+      "    y = np.linspace(y_min, y_max, height)",
+      "    cx, cy = np.meshgrid(x, y)",
+      "    c = cx + 1j * cy",
+      "    z = np.zeros_like(c)",
+      "    out = np.zeros((height, width))",
+      "    for n in range(max_iter):",
+      "        mask = np.abs(z) <= 2",
+      "        out[mask] = n / max_iter",
+      "        z[mask] = z[mask] * z[mask] + c[mask]",
+      "    out[np.abs(z) <= 2] = 1.0",
+      "    return out",
+      "",
+      "mandel = mandelbrot_grid(w, h)",
+      "",
+      "def fractal_to_rgb(m):",
+      "    m = np.clip(m, 0, 1)",
+      "    r = np.clip(2 * m, 0, 1)",
+      "    g = np.clip(2 * m - 0.5, 0, 1)",
+      "    b = np.clip(2 * m - 1.0, 0, 1)",
+      "    return np.stack([r, g, b], axis=-1)",
+      "",
+      "mandel_rgb = fractal_to_rgb(mandel)",
+      "lum = np.dot(cat_arr, [0.299, 0.587, 0.114])",
+      "lum = np.stack([lum, lum, lum], axis=-1)",
+      "alpha = np.clip(0.35 + 0.5 * lum, 0, 1)",
+      "fractal_inside_cat = np.clip((1 - alpha) * cat_arr + alpha * mandel_rgb, 0, 1)",
+      "",
+      "X = fractal_inside_cat.reshape(-1, 3)",
+      "model = Pipeline([",
+      "    ('kmeans', KMeans(n_clusters=64, random_state=0))",
+      "])",
+      "labels = model.fit_predict(X)",
+      "centroids = model.named_steps['kmeans'].cluster_centers_",
+      "dream_rgb = np.clip(centroids[labels].reshape(h, w, 3), 0, 1)",
+      "",
+      "plt.figure(figsize=(12, 12))",
+      "plt.imshow(dream_rgb)",
+      "plt.axis('off')",
+      "plt.tight_layout()",
+      "plt.savefig('deepdream_cat_mandelbrot.png', bbox_inches='tight', pad_inches=0, dpi=100)",
+      "plt.show()"
+    ];
+    const SOURCE_FULL = SOURCE_LINES.join("\n");
+
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const codeText = document.getElementById("codeText");
+    const fpsLabel = document.getElementById("fpsLabel");
+    const phaseTag = document.getElementById("phaseTag");
+    const statusLeft = document.getElementById("statusLeft");
+    const lagTag = document.getElementById("lagTag");
+    const playBtn = document.getElementById("playBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const lagBtn = document.getElementById("lagBtn");
+    const recordBtn = document.getElementById("recordBtn");
+    const lagSlider = document.getElementById("lagSlider");
+
+    const catImg = new Image();
+    catImg.src = "card.jpg";
+
+    let W = 0;
+    let H = 0;
+    let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    let paused = false;
+    let simTime = 0;
+    let typedTarget = 0;
+    let typedChars = 0;
+    let last = performance.now();
+    let manualLagUntil = 0;
+    let fpsSmooth = 60;
+
+    function resize() {
+      W = Math.floor(canvas.clientWidth || canvas.parentElement.clientWidth);
+      H = Math.floor(canvas.clientHeight || canvas.parentElement.clientHeight);
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    function phaseAt(t) {
+      if (t < 9) return { name: "Typing imports + setup", codeRate: 92, blend: 0.08, lag: 0.04, coder: "typing", anim: "idle" };
+      if (t < 18) return { name: "Mandelbrot function appears", codeRate: 45, blend: 0.38, lag: 0.14, coder: "typing", anim: "idle" };
+      if (t < 30) return { name: "Animation vs coding clash", codeRate: 18, blend: 0.68, lag: 0.45, coder: "run", anim: "run" };
+      if (t < 40) return { name: "Lag storm + glitch", codeRate: 8, blend: 0.95, lag: 0.95, coder: "shock", anim: "shock" };
+      if (t < 54) return { name: "KMeans stabilizes output", codeRate: 14, blend: 1.0, lag: 0.18, coder: "shock", anim: "idle" };
+      return { name: "Loop reset", codeRate: 90, blend: 0.0, lag: 0.0, coder: "typing", anim: "idle" };
+    }
+
+    function formatTyped(chars) {
+      const lines = SOURCE_FULL.slice(0, chars).split("\n");
+      const numbered = lines.map((line, i) => String(i + 1).padStart(2, " ") + " | " + line);
+      return numbered.join("\n");
+    }
+
+    function roundRectPath(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawStick(x, y, color, mode, t) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      const bob = mode === "shock" ? Math.sin(t * 12) * 3 : Math.sin(t * 4.5) * 2;
+      const headY = y - 44 + bob;
+      const bodyY = y - 14 + bob;
+
+      ctx.beginPath();
+      ctx.arc(x, headY - 8, 10, 0, Math.PI * 2);
+      ctx.moveTo(x, headY + 4);
+      ctx.lineTo(x, bodyY + 16);
+
+      if (mode === "typing") {
+        const swing = Math.sin(t * 18) * 9;
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 20, headY + 20 + swing);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 20, headY + 20 - swing);
+      } else if (mode === "run") {
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 20, headY + 30);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 20, headY + 30);
+      } else {
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 28, headY - 8);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 28, headY - 8);
+      }
+
+      const step = mode === "run" ? Math.sin(t * 16) * 10 : Math.sin(t * 6) * 4;
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x - 14, y + step);
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x + 14, y - step);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFractal(cx, cy, scale, t, alpha) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalAlpha = alpha;
+      for (let i = 0; i < 14; i++) {
+        const p = i / 14;
+        const radius = scale * (0.15 + p * 0.9);
+        const hue = (25 + i * 20 + t * 90) % 360;
+        ctx.strokeStyle = "hsla(" + hue + ", 92%, " + (46 + 14 * Math.sin(t + i)) + "%, 0.72)";
+        ctx.lineWidth = 2 + (1 - p) * 2;
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.12) {
+          const wobble = 1 + 0.14 * Math.sin(6 * a + t * 4.2 + i);
+          const r = radius * wobble;
+          const x = Math.cos(a + t * 0.22 + i * 0.06) * r;
+          const y = Math.sin(a - t * 0.28 - i * 0.04) * r;
+          if (a === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCatPanel(x, y, w, h, t, blend) {
+      ctx.save();
+      ctx.fillStyle = "rgba(7, 12, 20, 0.74)";
+      ctx.strokeStyle = "rgba(130, 158, 236, 0.34)";
+      ctx.lineWidth = 1.4;
+      roundRectPath(x, y, w, h, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.save();
+      roundRectPath(x + 6, y + 6, w - 12, h - 12, 8);
+      ctx.clip();
+      if (catImg.complete && catImg.naturalWidth > 0) {
+        ctx.drawImage(catImg, x + 6, y + 6, w - 12, h - 12);
+      } else {
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(x + 6, y + 6, w - 12, h - 12);
+      }
+
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = 0.15 + 0.58 * blend;
+      drawFractal(x + w * 0.54, y + h * 0.52, Math.min(w, h) * (0.28 + 0.33 * blend), t, 1);
+
+      ctx.globalCompositeOperation = "overlay";
+      ctx.globalAlpha = 0.2 + 0.44 * blend;
+      const blocks = 8 + Math.floor(16 * blend);
+      for (let i = 0; i < blocks; i++) {
+        const gx = x + 8 + ((i * 93 + Math.floor(t * 52)) % Math.max(16, w - 28));
+        const gy = y + 8 + ((i * 57 + Math.floor(t * 38)) % Math.max(16, h - 28));
+        const gs = 8 + (i % 4) * 5;
+        const hue = (i * 34 + t * 130) % 360;
+        ctx.fillStyle = "hsla(" + hue + ", 70%, 55%, 0.36)";
+        ctx.fillRect(gx, gy, gs, gs);
+      }
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function drawGlitch(strength, t) {
+      if (strength < 0.1) return;
+      const bars = 8 + Math.floor(strength * 26);
+      for (let i = 0; i < bars; i++) {
+        const y = (Math.sin(t * 19 + i * 4.6) * 0.5 + 0.5) * H;
+        const h = 2 + ((i * 5) % 9);
+        const shift = (Math.sin(t * 47 + i * 7.8) * 0.5 + 0.5) * 30 * strength;
+        ctx.drawImage(canvas, 0, y, W, h, shift * (i % 2 ? 1 : -1), y, W, h);
+      }
+
+      if (strength > 0.7) {
+        const px = 2 + Math.floor(strength * 4);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(canvas, 0, 0, W / px, H / px, 0, 0, W, H);
+        ctx.imageSmoothingEnabled = true;
+      }
+
+      ctx.fillStyle = "rgba(255, 62, 78, " + (0.05 * strength) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function render(now) {
+      requestAnimationFrame(render);
+      if (paused) return;
+
+      const dtRaw = Math.min(0.05, (now - last) / 1000);
+      last = now;
+
+      const p = phaseAt(simTime);
+      const sliderFactor = parseFloat(lagSlider.value);
+      let lagStrength = Math.min(1.5, p.lag * sliderFactor);
+      if (now < manualLagUntil) {
+        lagStrength = Math.min(1.5, lagStrength + 0.75);
+      }
+
+      let dt = dtRaw;
+      if (lagStrength > 0.4) {
+        if (Math.random() < lagStrength * 0.52) dt *= 0.15;
+        if (Math.random() < lagStrength * 0.22) dt = 0;
+        if (Math.random() < lagStrength * 0.12) return;
+      }
+
+      simTime += dt;
+      if (simTime > 60) {
+        simTime = 0;
+        typedTarget = 0;
+        typedChars = 0;
+      }
+
+      const phase = phaseAt(simTime);
+      typedTarget += phase.codeRate * dt;
+      typedChars = Math.min(SOURCE_FULL.length, Math.floor(typedTarget));
+      codeText.textContent = formatTyped(typedChars);
+
+      const fps = 1 / Math.max(0.0001, dtRaw);
+      fpsSmooth = fpsSmooth * 0.9 + fps * 0.1;
+      fpsLabel.textContent = "FPS: " + fpsSmooth.toFixed(1);
+      phaseTag.textContent = phase.name;
+      statusLeft.textContent = "Phase: " + phase.name;
+      lagTag.style.opacity = lagStrength > 0.6 ? "1" : "0";
+
+      ctx.clearRect(0, 0, W, H);
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, "#0f1423");
+      bg.addColorStop(1, "#090b11");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = "#44507c";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 30) {
+        ctx.beginPath();
+        ctx.moveTo(x, H * 0.68);
+        ctx.lineTo(x + H * 0.32, H);
+        ctx.stroke();
+      }
+      for (let y = H * 0.68; y < H; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const panelW = Math.min(540, W * 0.42);
+      const panelH = Math.min(530, H * 0.72);
+      const panelX = W * 0.52;
+      const panelY = H * 0.12;
+      drawCatPanel(panelX, panelY, panelW, panelH, simTime, phase.blend);
+
+      drawFractal(
+        panelX + panelW * 0.58,
+        panelY + panelH * 0.5,
+        Math.min(panelW, panelH) * 0.46 * (0.18 + phase.blend * 0.82),
+        simTime,
+        0.52 + phase.blend * 0.44
+      );
+
+      const coderX = W * 0.2 + Math.sin(simTime * 1.4) * (phase.coder === "run" ? 26 : 8);
+      const coderY = H * 0.8;
+      const animX = W * 0.36 + Math.sin(simTime * 1.7 + 2.2) * (phase.anim === "run" ? 32 : 10);
+      const animY = H * 0.8;
+      drawStick(coderX, coderY, "#ffb347", phase.coder, simTime);
+      drawStick(animX, animY, "#72b4ff", phase.anim, simTime + 0.7);
+
+      if (phase.blend > 0.5) {
+        ctx.save();
+        ctx.globalAlpha = 0.3 + 0.35 * phase.blend;
+        ctx.strokeStyle = "rgba(255, 180, 72, 0.8)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(animX + 12, animY - 36);
+        ctx.quadraticCurveTo(W * 0.44, H * 0.52, panelX + panelW * 0.12, panelY + panelH * 0.5);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawGlitch(lagStrength, simTime);
+    }
+    requestAnimationFrame(render);
+
+    playBtn.addEventListener("click", () => {
+      paused = !paused;
+      playBtn.textContent = paused ? "Play" : "Pause";
+      if (!paused) last = performance.now();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      simTime = 0;
+      typedTarget = 0;
+      typedChars = 0;
+      manualLagUntil = 0;
+      lagTag.style.opacity = "0";
+      if (paused) {
+        paused = false;
+        playBtn.textContent = "Pause";
+      }
+      last = performance.now();
+    });
+
+    lagBtn.addEventListener("click", () => {
+      manualLagUntil = performance.now() + 4500;
+    });
+
+    recordBtn.addEventListener("click", () => {
+      if (!("MediaRecorder" in window)) {
+        alert("MediaRecorder is not supported in this browser.");
+        return;
+      }
+
+      const stream = canvas.captureStream(30);
+      let rec;
+      try {
+        rec = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+      } catch (e) {
+        rec = new MediaRecorder(stream);
+      }
+      const chunks = [];
+
+      rec.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "animation_vs_coding_fractal_cat.webm";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      recordBtn.disabled = true;
+      recordBtn.textContent = "Recording...";
+      rec.start();
+      setTimeout(() => {
+        rec.stop();
+        recordBtn.disabled = false;
+        recordBtn.textContent = "Record 20s WebM";
+      }, 20000);
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animation vs Coding - Fractal Cat</title>
+  <style>
+    :root {
+      --bg: #0f121a;
+      --panel: #1a1e2b;
+      --panel-2: #21273a;
+      --line: #333b59;
+      --txt: #dbe2ff;
+      --muted: #8b97c2;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 85% 10%, #1c2238, var(--bg) 58%);
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--txt);
+    }
+
+    #layout {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(360px, 40vw) 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    #editor {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #171b27, #111521);
+      min-height: 0;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+    }
+
+    #topbar {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      gap: 8px;
+    }
+
+    .dots { display: flex; gap: 7px; align-items: center; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .d1 { background: #ff5f56; }
+    .d2 { background: #ffbd2e; }
+    .d3 { background: #27c93f; }
+
+    #codeView {
+      padding: 12px 14px;
+      white-space: pre;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.45;
+      background:
+        linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.22) 100%),
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 21px,
+          rgba(255, 255, 255, 0.018) 21px,
+          rgba(255, 255, 255, 0.018) 22px
+        );
+    }
+
+    #codeText { margin: 0; }
+    #cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      margin-left: 1px;
+      background: #f4f7ff;
+      vertical-align: -3px;
+      animation: blink 1s steps(1, end) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    #status {
+      border-top: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+
+    #stageWrap {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0a0d14;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+    }
+    #stage { width: 100%; height: 100%; display: block; }
+
+    #hud {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: 12px;
+      z-index: 10;
+    }
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+
+    #lagTag {
+      position: absolute;
+      left: 50%;
+      top: 14px;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ff9ea7;
+      background: rgba(95, 5, 12, 0.85);
+      color: #ffe9ec;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 120ms linear;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    #controls {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 12;
+    }
+    .btn {
+      border: 1px solid #3d466b;
+      background: rgba(18, 24, 37, 0.88);
+      color: var(--txt);
+      padding: 8px 11px;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: #606c9d; }
+    .warn { border-color: #89424a; color: #ffd8dc; }
+
+    #credit {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      font-size: 12px;
+      color: #bcc6ea;
+      background: rgba(0, 0, 0, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 7px 10px;
+      z-index: 12;
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <section id="editor">
+      <div id="topbar">
+        <div class="dots">
+          <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+          <span>New Text Document (2).py</span>
+        </div>
+        <span id="fpsLabel">FPS: --</span>
+      </div>
+      <div id="codeView"><pre id="codeText"></pre><span id="cursor"></span></div>
+      <div id="status">
+        <span id="statusLeft">Phase: startup</span>
+        <span>KMeans(64) + Mandelbrot + cat image</span>
+      </div>
+    </section>
+
+    <section id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="hud">
+        <div class="pill">Animation vs Coding</div>
+        <div class="pill" id="phaseTag">Booting...</div>
+      </div>
+      <div id="lagTag">LAG SPIKE DETECTED</div>
+      <div id="controls">
+        <button id="playBtn" class="btn">Pause</button>
+        <button id="restartBtn" class="btn">Restart</button>
+        <button id="recordBtn" class="btn">Record 20s WebM</button>
+        <button id="lagBtn" class="btn warn">Trigger Lag</button>
+      </div>
+      <div id="credit">Alan Becker inspired fan-made HTML animation</div>
+    </section>
+  </div>
+
+  <script>
+    const codeLines = [
+      "from functools import cache",
+      "import numpy as np",
+      "from sklearn.pipeline import Pipeline",
+      "from sklearn.cluster import KMeans",
+      "import matplotlib.pyplot as plt",
+      "",
+      "cat_img = plt.imread('card.jpg')",
+      "if cat_img.ndim == 2:",
+      "    cat_arr = np.stack([cat_img] * 3, axis=-1)",
+      "else:",
+      "    cat_arr = np.array(cat_img)[:, :, :3].copy()",
+      "if cat_arr.max() > 1:",
+      "    cat_arr = cat_arr / 255.0",
+      "cat_arr = np.clip(cat_arr, 0, 1)",
+      "",
+      "def mandelbrot_grid(width, height, max_iter=80):",
+      "    x = np.linspace(-2.0, 1.0, width)",
+      "    y = np.linspace(-1.25, 1.25, height)",
+      "    cx, cy = np.meshgrid(x, y)",
+      "    c = cx + 1j * cy",
+      "    z = np.zeros_like(c)",
+      "    out = np.zeros((height, width))",
+      "    for n in range(max_iter):",
+      "        mask = np.abs(z) <= 2",
+      "        out[mask] = n / max_iter",
+      "        z[mask] = z[mask] * z[mask] + c[mask]",
+      "    out[np.abs(z) <= 2] = 1.0",
+      "    return out",
+      "",
+      "X = fractal_inside_cat.reshape(-1, 3)",
+      "model = Pipeline([",
+      "    ('kmeans', KMeans(n_clusters=64, random_state=0))",
+      "])",
+      "labels = model.fit_predict(X)",
+      "centroids = model.named_steps['kmeans'].cluster_centers_",
+      "dream_rgb = centroids[labels].reshape(h, w, 3)",
+      "plt.savefig('deepdream_cat_mandelbrot.png', dpi=100)"
+    ];
+
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const codeText = document.getElementById("codeText");
+    const fpsLabel = document.getElementById("fpsLabel");
+    const phaseTag = document.getElementById("phaseTag");
+    const statusLeft = document.getElementById("statusLeft");
+    const lagTag = document.getElementById("lagTag");
+    const playBtn = document.getElementById("playBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const lagBtn = document.getElementById("lagBtn");
+    const recordBtn = document.getElementById("recordBtn");
+
+    let W = 0, H = 0;
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    let paused = false;
+    let forceLagUntil = 0;
+    let lagFreeze = 0;
+    let last = performance.now();
+    let sim = 0;
+    let typedTarget = 0;
+    let typedChars = 0;
+    let fpsSmooth = 60;
+
+    const catImg = new Image();
+    catImg.src = "card.jpg";
+
+    function resize() {
+      W = Math.floor(canvas.clientWidth || canvas.parentElement.clientWidth);
+      H = Math.floor(canvas.clientHeight || canvas.parentElement.clientHeight);
+      canvas.width = Math.floor(W * DPR);
+      canvas.height = Math.floor(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    function codeSlice(chars) {
+      const full = codeLines.join("\n");
+      return full.slice(0, chars);
+    }
+
+    function phaseAt(t) {
+      if (t < 9) return { name: "Typing imports + setup", codeRate: 85, blend: 0.1, lag: 0.0, pose: "typing" };
+      if (t < 17) return { name: "Mandelbrot function builds", codeRate: 48, blend: 0.4, lag: 0.1, pose: "typing" };
+      if (t < 26) return { name: "Animation vs coding clash", codeRate: 18, blend: 0.7, lag: 0.4, pose: "run" };
+      if (t < 34) return { name: "Lag storm / glitch battle", codeRate: 9, blend: 0.95, lag: 0.9, pose: "shock" };
+      if (t < 44) return { name: "KMeans result stabilizes", codeRate: 12, blend: 1.0, lag: 0.15, pose: "shock" };
+      return { name: "Loop reset", codeRate: 95, blend: 0.0, lag: 0.0, pose: "typing" };
+    }
+
+    function drawStick(x, y, mode, t) {
+      ctx.save();
+      ctx.strokeStyle = "#ffb347";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      const bob = mode === "shock" ? Math.sin(t * 12) * 3 : Math.sin(t * 4) * 2;
+      const headY = y - 42 + bob;
+      const bodyY = y - 14 + bob;
+      ctx.beginPath();
+      ctx.arc(x, headY - 8, 10, 0, Math.PI * 2);
+      ctx.moveTo(x, headY + 4);
+      ctx.lineTo(x, bodyY + 16);
+      if (mode === "typing") {
+        const arm = Math.sin(t * 18) * 9;
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 18, headY + 18 + arm);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 20, headY + 18 - arm);
+      } else if (mode === "shock") {
+        ctx.moveTo(x, headY + 10); ctx.lineTo(x - 26, headY - 8);
+        ctx.moveTo(x, headY + 10); ctx.lineTo(x + 26, headY - 8);
+      } else {
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 18, headY + 28);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 18, headY + 28);
+      }
+      const step = mode === "run" ? Math.sin(t * 15) * 10 : Math.sin(t * 6) * 4;
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x - 14, y + step);
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x + 14, y - step);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFractal(cx, cy, scale, t, alpha) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalAlpha = alpha;
+      for (let i = 0; i < 12; i++) {
+        const p = i / 12;
+        const radius = scale * (0.18 + p * 0.9);
+        const hue = (28 + i * 18 + t * 80) % 360;
+        ctx.strokeStyle = "hsla(" + hue + ", 90%, " + (48 + 12 * Math.sin(t + i)) + "%, 0.75)";
+        ctx.lineWidth = 2 + (1 - p) * 2;
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.12) {
+          const wobble = 1 + 0.12 * Math.sin(6 * a + t * 4 + i);
+          const r = radius * wobble;
+          const x = Math.cos(a + t * 0.2 + i * 0.07) * r;
+          const y = Math.sin(a - t * 0.25 - i * 0.04) * r;
+          if (a === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function roundRectPath(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawCatFrame(x, y, w, h, t, blend) {
+      ctx.save();
+      ctx.fillStyle = "rgba(8, 12, 22, 0.72)";
+      ctx.strokeStyle = "rgba(130, 160, 240, 0.35)";
+      ctx.lineWidth = 1.5;
+      roundRectPath(x, y, w, h, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      if (catImg.complete && catImg.naturalWidth > 0) {
+        ctx.save();
+        roundRectPath(x + 6, y + 6, w - 12, h - 12, 8);
+        ctx.clip();
+        ctx.drawImage(catImg, x + 6, y + 6, w - 12, h - 12);
+
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = 0.2 + 0.55 * blend;
+        drawFractal(x + w * 0.55, y + h * 0.5, Math.min(w, h) * (0.35 + 0.25 * blend), t * 0.9, 1);
+
+        ctx.globalCompositeOperation = "overlay";
+        ctx.globalAlpha = 0.25 + 0.45 * blend;
+        for (let i = 0; i < 8; i++) {
+          const gx = x + 8 + ((i * 97 + Math.floor(t * 48)) % (w - 22));
+          const gy = y + 8 + ((i * 57 + Math.floor(t * 34)) % (h - 22));
+          const gs = 10 + (i % 3) * 6;
+          ctx.fillStyle = "hsla(" + ((i * 35 + t * 120) % 360) + ",70%,55%,0.35)";
+          ctx.fillRect(gx, gy, gs, gs);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawGlitch(t, strength) {
+      if (strength <= 0.01) return;
+      const bars = 8 + Math.floor(strength * 22);
+      for (let i = 0; i < bars; i++) {
+        const y = (Math.sin(t * 20 + i * 4.2) * 0.5 + 0.5) * H;
+        const h = 2 + ((i * 7) % 8);
+        const shift = (Math.sin(t * 40 + i * 8.8) * 0.5 + 0.5) * 26 * strength;
+        ctx.drawImage(canvas, 0, y, W, h, shift * (i % 2 ? 1 : -1), y, W, h);
+      }
+      ctx.fillStyle = "rgba(255, 60, 80, " + (0.06 * strength) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function render(now) {
+      requestAnimationFrame(render);
+      if (paused) return;
+
+      const dtRaw = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      let dt = dtRaw;
+
+      const lagActive = now < forceLagUntil;
+      if (lagActive) {
+        if (lagFreeze <= 0) lagFreeze = 0.08 + Math.random() * 0.12;
+        lagFreeze -= dtRaw;
+        if (Math.random() < 0.45) dt = 0;
+      } else {
+        lagFreeze = 0;
+      }
+
+      sim += dt;
+      if (sim > 45) {
+        sim = 0;
+        typedTarget = 0;
+        typedChars = 0;
+      }
+
+      const p = phaseAt(sim);
+      typedTarget += p.codeRate * dt;
+      const full = codeLines.join("\n");
+      typedChars = Math.min(full.length, Math.floor(typedTarget));
+      codeText.textContent = codeSlice(typedChars);
+
+      const fpsNow = 1 / Math.max(0.0001, dtRaw);
+      fpsSmooth = fpsSmooth * 0.9 + fpsNow * 0.1;
+      fpsLabel.textContent = "FPS: " + fpsSmooth.toFixed(1);
+      phaseTag.textContent = p.name;
+      statusLeft.textContent = "Phase: " + p.name;
+
+      const lagLevel = Math.max(p.lag, lagActive ? 1 : 0);
+      lagTag.style.opacity = lagLevel > 0.55 ? "1" : "0";
+
+      ctx.clearRect(0, 0, W, H);
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, "#0f1422");
+      bg.addColorStop(1, "#090b11");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = "#44507c";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 28) {
+        ctx.beginPath();
+        ctx.moveTo(x, H * 0.68);
+        ctx.lineTo(x + (H * 0.32), H);
+        ctx.stroke();
+      }
+      for (let y = H * 0.68; y < H; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const panelW = Math.min(520, W * 0.42);
+      const panelH = Math.min(520, H * 0.7);
+      const panelX = W * 0.52;
+      const panelY = H * 0.13;
+      drawCatFrame(panelX, panelY, panelW, panelH, sim, p.blend);
+      drawFractal(panelX + panelW * 0.56, panelY + panelH * 0.5, Math.min(panelW, panelH) * 0.45 * (0.15 + p.blend * 0.85), sim, 0.55 + p.blend * 0.45);
+
+      const sx = W * 0.2 + Math.sin(sim * 1.5) * (p.pose === "run" ? 24 : 8);
+      const sy = H * 0.78;
+      drawStick(sx, sy, p.pose, sim);
+
+      drawGlitch(sim, lagLevel);
+    }
+    requestAnimationFrame(render);
+
+    playBtn.addEventListener("click", () => {
+      paused = !paused;
+      playBtn.textContent = paused ? "Play" : "Pause";
+      if (!paused) last = performance.now();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      sim = 0;
+      typedTarget = 0;
+      typedChars = 0;
+      forceLagUntil = 0;
+      lagTag.style.opacity = "0";
+      if (paused) {
+        paused = false;
+        playBtn.textContent = "Pause";
+      }
+      last = performance.now();
+    });
+
+    lagBtn.addEventListener("click", () => {
+      forceLagUntil = performance.now() + 3500;
+    });
+
+    recordBtn.addEventListener("click", () => {
+      if (!("MediaRecorder" in window)) {
+        alert("MediaRecorder is not supported in this browser.");
+        return;
+      }
+      const stream = canvas.captureStream(30);
+      const rec = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "animation_vs_coding_fractal_cat.webm";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      recordBtn.disabled = true;
+      recordBtn.textContent = "Recording...";
+      rec.start();
+      setTimeout(() => {
+        rec.stop();
+        recordBtn.disabled = false;
+        recordBtn.textContent = "Record 20s WebM";
+      }, 20000);
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animation vs Coding - Fractal Cat</title>
+  <style>
+    :root {
+      --bg: #0f121a;
+      --panel: #1a1e2b;
+      --panel-2: #21273a;
+      --line: #333b59;
+      --txt: #dbe2ff;
+      --muted: #8b97c2;
+      --warn: #ff6e7a;
+      --accent: #ffb347;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 85% 10%, #1c2238, var(--bg) 58%);
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--txt);
+    }
+
+    #layout {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(360px, 40vw) 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    #editor {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #171b27, #111521);
+      min-height: 0;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+    }
+
+    #topbar {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      gap: 8px;
+    }
+
+    .dots { display: flex; gap: 7px; align-items: center; }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .d1 { background: #ff5f56; }
+    .d2 { background: #ffbd2e; }
+    .d3 { background: #27c93f; }
+
+    #codeView {
+      padding: 12px 14px;
+      white-space: pre;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.45;
+      background:
+        linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.22) 100%),
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 21px,
+          rgba(255, 255, 255, 0.018) 21px,
+          rgba(255, 255, 255, 0.018) 22px
+        );
+    }
+
+    #codeText { margin: 0; }
+    #cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      margin-left: 1px;
+      background: #f4f7ff;
+      vertical-align: -3px;
+      animation: blink 1s steps(1, end) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    #status {
+      border-top: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+
+    #stageWrap {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0a0d14;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.45);
+    }
+    #stage {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #hud {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: 12px;
+      z-index: 10;
+    }
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+    #lagTag {
+      position: absolute;
+      left: 50%;
+      top: 14px;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ff9ea7;
+      background: rgba(95, 5, 12, 0.85);
+      color: #ffe9ec;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 120ms linear;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    #controls {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 12;
+    }
+    .btn {
+      border: 1px solid #3d466b;
+      background: rgba(18, 24, 37, 0.88);
+      color: var(--txt);
+      padding: 8px 11px;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: #606c9d; }
+    .warn { border-color: #89424a; color: #ffd8dc; }
+
+    #credit {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      font-size: 12px;
+      color: #bcc6ea;
+      background: rgba(0, 0, 0, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 7px 10px;
+      z-index: 12;
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <section id="editor">
+      <div id="topbar">
+        <div class="dots">
+          <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+          <span>New Text Document (2).py</span>
+        </div>
+        <span id="fpsLabel">FPS: --</span>
+      </div>
+      <div id="codeView"><pre id="codeText"></pre><span id="cursor"></span></div>
+      <div id="status">
+        <span id="statusLeft">Phase: startup</span>
+        <span>KMeans(64) + Mandelbrot + cat image</span>
+      </div>
+    </section>
+
+    <section id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="hud">
+        <div class="pill">Animation vs Coding</div>
+        <div class="pill" id="phaseTag">Booting...</div>
+      </div>
+      <div id="lagTag">LAG SPIKE DETECTED</div>
+      <div id="controls">
+        <button id="playBtn" class="btn">Pause</button>
+        <button id="restartBtn" class="btn">Restart</button>
+        <button id="recordBtn" class="btn">Record 20s WebM</button>
+        <button id="lagBtn" class="btn warn">Trigger Lag</button>
+      </div>
+      <div id="credit">Fan-made HTML animation inspired by Alan Becker</div>
+    </section>
+  </div>
+
+  <script>
+    const codeLines = [
+      "from functools import cache",
+      "import numpy as np",
+      "from sklearn.pipeline import Pipeline",
+      "from sklearn.cluster import KMeans",
+      "import matplotlib.pyplot as plt",
+      "",
+      "cat_img = plt.imread('card.jpg')",
+      "if cat_img.ndim == 2:",
+      "    cat_arr = np.stack([cat_img] * 3, axis=-1)",
+      "else:",
+      "    cat_arr = np.array(cat_img)[:, :, :3].copy()",
+      "if cat_arr.max() > 1:",
+      "    cat_arr = cat_arr / 255.0",
+      "cat_arr = np.clip(cat_arr, 0, 1)",
+      "",
+      "def mandelbrot_grid(width, height, max_iter=80):",
+      "    x = np.linspace(-2.0, 1.0, width)",
+      "    y = np.linspace(-1.25, 1.25, height)",
+      "    cx, cy = np.meshgrid(x, y)",
+      "    c = cx + 1j * cy",
+      "    z = np.zeros_like(c)",
+      "    out = np.zeros((height, width))",
+      "    for n in range(max_iter):",
+      "        mask = np.abs(z) <= 2",
+      "        out[mask] = n / max_iter",
+      "        z[mask] = z[mask] * z[mask] + c[mask]",
+      "    out[np.abs(z) <= 2] = 1.0",
+      "    return out",
+      "",
+      "X = fractal_inside_cat.reshape(-1, 3)",
+      "model = Pipeline([",
+      "    ('kmeans', KMeans(n_clusters=64, random_state=0))",
+      "])",
+      "labels = model.fit_predict(X)",
+      "centroids = model.named_steps['kmeans'].cluster_centers_",
+      "dream_rgb = centroids[labels].reshape(h, w, 3)",
+      "plt.savefig('deepdream_cat_mandelbrot.png', dpi=100)"
+    ];
+
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const codeText = document.getElementById("codeText");
+    const fpsLabel = document.getElementById("fpsLabel");
+    const phaseTag = document.getElementById("phaseTag");
+    const statusLeft = document.getElementById("statusLeft");
+    const lagTag = document.getElementById("lagTag");
+    const playBtn = document.getElementById("playBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const lagBtn = document.getElementById("lagBtn");
+    const recordBtn = document.getElementById("recordBtn");
+
+    let W = 0, H = 0;
+    let DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    let paused = false;
+    let forceLagUntil = 0;
+    let lagFreeze = 0;
+    let last = performance.now();
+    let sim = 0;
+    let typedTarget = 0;
+    let typedChars = 0;
+    let fpsSmooth = 60;
+
+    const catImg = new Image();
+    catImg.src = "card.jpg";
+
+    function resize() {
+      W = Math.floor(canvas.clientWidth || canvas.parentElement.clientWidth);
+      H = Math.floor(canvas.clientHeight || canvas.parentElement.clientHeight);
+      canvas.width = Math.floor(W * DPR);
+      canvas.height = Math.floor(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    function codeSlice(chars) {
+      const full = codeLines.join("\n");
+      return full.slice(0, chars);
+    }
+
+    function phaseAt(t) {
+      if (t < 9) return { name: "Typing imports + setup", codeRate: 85, blend: 0.1, lag: 0.0, pose: "typing" };
+      if (t < 17) return { name: "Mandelbrot function builds", codeRate: 48, blend: 0.4, lag: 0.1, pose: "typing" };
+      if (t < 26) return { name: "Animation vs coding clash", codeRate: 18, blend: 0.7, lag: 0.4, pose: "run" };
+      if (t < 34) return { name: "Lag storm / glitch battle", codeRate: 9, blend: 0.95, lag: 0.9, pose: "shock" };
+      if (t < 44) return { name: "KMeans result stabilizes", codeRate: 12, blend: 1.0, lag: 0.15, pose: "shock" };
+      return { name: "Loop reset", codeRate: 95, blend: 0.0, lag: 0.0, pose: "typing" };
+    }
+
+    function drawStick(x, y, mode, t) {
+      ctx.save();
+      ctx.strokeStyle = "#ffb347";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      const bob = mode === "shock" ? Math.sin(t * 12) * 3 : Math.sin(t * 4) * 2;
+      const headY = y - 42 + bob;
+      const bodyY = y - 14 + bob;
+      ctx.beginPath();
+      ctx.arc(x, headY - 8, 10, 0, Math.PI * 2);
+      ctx.moveTo(x, headY + 4);
+      ctx.lineTo(x, bodyY + 16);
+      if (mode === "typing") {
+        const arm = Math.sin(t * 18) * 9;
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 18, headY + 18 + arm);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 20, headY + 18 - arm);
+      } else if (mode === "shock") {
+        ctx.moveTo(x, headY + 10); ctx.lineTo(x - 26, headY - 8);
+        ctx.moveTo(x, headY + 10); ctx.lineTo(x + 26, headY - 8);
+      } else {
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 18, headY + 28);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 18, headY + 28);
+      }
+      const step = mode === "run" ? Math.sin(t * 15) * 10 : Math.sin(t * 6) * 4;
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x - 14, y + step);
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x + 14, y - step);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFractal(cx, cy, scale, t, alpha) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalAlpha = alpha;
+      for (let i = 0; i < 12; i++) {
+        const p = i / 12;
+        const radius = scale * (0.18 + p * 0.9);
+        const hue = (28 + i * 18 + t * 80) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 90%, ${48 + 12 * Math.sin(t + i)}%, 0.75)`;
+        ctx.lineWidth = 2 + (1 - p) * 2;
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.12) {
+          const wobble = 1 + 0.12 * Math.sin(6 * a + t * 4 + i);
+          const r = radius * wobble;
+          const x = Math.cos(a + t * 0.2 + i * 0.07) * r;
+          const y = Math.sin(a - t * 0.25 - i * 0.04) * r;
+          if (a === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCatFrame(x, y, w, h, t, blend) {
+      ctx.save();
+      ctx.fillStyle = "rgba(8, 12, 22, 0.72)";
+      ctx.strokeStyle = "rgba(130, 160, 240, 0.35)";
+      ctx.lineWidth = 1.5;
+      roundRectPath(x, y, w, h, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      if (catImg.complete && catImg.naturalWidth > 0) {
+        ctx.save();
+        roundRectPath(x + 6, y + 6, w - 12, h - 12, 8);
+        ctx.clip();
+        ctx.drawImage(catImg, x + 6, y + 6, w - 12, h - 12);
+
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = 0.2 + 0.55 * blend;
+        drawFractal(x + w * 0.55, y + h * 0.5, Math.min(w, h) * (0.35 + 0.25 * blend), t * 0.9, 1);
+
+        ctx.globalCompositeOperation = "overlay";
+        ctx.globalAlpha = 0.25 + 0.45 * blend;
+        for (let i = 0; i < 8; i++) {
+          const gx = x + 8 + ((i * 97 + Math.floor(t * 48)) % (w - 22));
+          const gy = y + 8 + ((i * 57 + Math.floor(t * 34)) % (h - 22));
+          const gs = 10 + (i % 3) * 6;
+          ctx.fillStyle = `hsla(${(i * 35 + t * 120) % 360},70%,55%,0.35)`;
+          ctx.fillRect(gx, gy, gs, gs);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function roundRectPath(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawGlitch(t, strength) {
+      if (strength <= 0.01) return;
+      const bars = 8 + Math.floor(strength * 22);
+      for (let i = 0; i < bars; i++) {
+        const y = (Math.sin(t * 20 + i * 4.2) * 0.5 + 0.5) * H;
+        const h = 2 + ((i * 7) % 8);
+        const shift = (Math.sin(t * 40 + i * 8.8) * 0.5 + 0.5) * 26 * strength;
+        ctx.drawImage(canvas, 0, y, W, h, shift * (i % 2 ? 1 : -1), y, W, h);
+      }
+      ctx.fillStyle = `rgba(255, 60, 80, ${0.06 * strength})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function render(now) {
+      requestAnimationFrame(render);
+      if (paused) return;
+
+      const dtRaw = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      let dt = dtRaw;
+
+      const lagActive = now < forceLagUntil;
+      if (lagActive) {
+        if (lagFreeze <= 0) lagFreeze = 0.08 + Math.random() * 0.12;
+        lagFreeze -= dtRaw;
+        if (Math.random() < 0.45) dt = 0;
+      } else {
+        lagFreeze = 0;
+      }
+
+      sim += dt;
+      if (sim > 45) {
+        sim = 0;
+        typedTarget = 0;
+        typedChars = 0;
+      }
+
+      const p = phaseAt(sim);
+      typedTarget += p.codeRate * dt;
+      const full = codeLines.join("\n");
+      typedChars = Math.min(full.length, Math.floor(typedTarget));
+      codeText.textContent = codeSlice(typedChars);
+
+      const fpsNow = 1 / Math.max(0.0001, dtRaw);
+      fpsSmooth = fpsSmooth * 0.9 + fpsNow * 0.1;
+      fpsLabel.textContent = `FPS: ${fpsSmooth.toFixed(1)}`;
+      phaseTag.textContent = p.name;
+      statusLeft.textContent = `Phase: ${p.name}`;
+
+      const lagLevel = Math.max(p.lag, lagActive ? 1 : 0);
+      lagTag.style.opacity = lagLevel > 0.55 ? "1" : "0";
+
+      ctx.clearRect(0, 0, W, H);
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, "#0f1422");
+      bg.addColorStop(1, "#090b11");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = "#44507c";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 28) {
+        ctx.beginPath();
+        ctx.moveTo(x, H * 0.68);
+        ctx.lineTo(x + (H * 0.32), H);
+        ctx.stroke();
+      }
+      for (let y = H * 0.68; y < H; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const panelW = Math.min(520, W * 0.42);
+      const panelH = Math.min(520, H * 0.7);
+      const panelX = W * 0.52;
+      const panelY = H * 0.13;
+      drawCatFrame(panelX, panelY, panelW, panelH, sim, p.blend);
+      drawFractal(panelX + panelW * 0.56, panelY + panelH * 0.5, Math.min(panelW, panelH) * 0.45 * (0.15 + p.blend * 0.85), sim, 0.55 + p.blend * 0.45);
+
+      const sx = W * 0.2 + Math.sin(sim * 1.5) * (p.pose === "run" ? 24 : 8);
+      const sy = H * 0.78;
+      drawStick(sx, sy, p.pose, sim);
+
+      drawGlitch(sim, lagLevel);
+    }
+    requestAnimationFrame(render);
+
+    playBtn.addEventListener("click", () => {
+      paused = !paused;
+      playBtn.textContent = paused ? "Play" : "Pause";
+      if (!paused) last = performance.now();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      sim = 0;
+      typedTarget = 0;
+      typedChars = 0;
+      forceLagUntil = 0;
+      lagTag.style.opacity = "0";
+      if (paused) {
+        paused = false;
+        playBtn.textContent = "Pause";
+      }
+      last = performance.now();
+    });
+
+    lagBtn.addEventListener("click", () => {
+      forceLagUntil = performance.now() + 3500;
+    });
+
+    recordBtn.addEventListener("click", () => {
+      if (!("MediaRecorder" in window)) {
+        alert("MediaRecorder is not supported in this browser.");
+        return;
+      }
+      const stream = canvas.captureStream(30);
+      const rec = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "animation_vs_coding_fractal_cat.webm";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      recordBtn.disabled = true;
+      recordBtn.textContent = "Recording...";
+      rec.start();
+      setTimeout(() => {
+        rec.stop();
+        recordBtn.disabled = false;
+        recordBtn.textContent = "Record 20s WebM";
+      }, 20000);
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animation vs Coding - Fractal Cat</title>
+  <style>
+    :root {
+      --bg: #111319;
+      --panel: #1a1d27;
+      --panel-2: #212534;
+      --text: #d6dcf3;
+      --muted: #8f9bc7;
+      --accent: #ffa726;
+      --danger: #ff4d5a;
+      --good: #69f0ae;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 80% 10%, #1c2133 0%, var(--bg) 60%);
+      overflow: hidden;
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--text);
+    }
+
+    #wrap {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(360px, 38vw) 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    #leftPanel {
+      background: linear-gradient(180deg, #181b26, #12141d);
+      border: 1px solid #2f3550;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 20px 40px rgba(0, 0, 0, 0.4);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 0;
+    }
+
+    #bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--panel);
+      border-bottom: 1px solid #2f3550;
+      font-size: 12px;
+    }
+
+    #bar .left {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot.red { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #27c93f; }
+
+    #codeViewport {
+      padding: 12px 14px;
+      white-space: pre;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.45;
+      position: relative;
+      background:
+        linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.2) 100%),
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 20px,
+          rgba(255, 255, 255, 0.018) 20px,
+          rgba(255, 255, 255, 0.018) 21px
+        );
+    }
+
+    #codeText {
+      margin: 0;
+      color: #dbe2ff;
+    }
+
+    #cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #f6f8ff;
+      vertical-align: -3px;
+      margin-left: 1px;
+      animation: blink 1s steps(1, end) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    #status {
+      border-top: 1px solid #2f3550;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    #stageWrap {
+      position: relative;
+      border: 1px solid #2f3550;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0e1118;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    #stage {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #hud {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: 12px;
+    }
+
+    #titleTag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #phaseTag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #f4f7ff;
+    }
+
+    #lagTag {
+      position: absolute;
+      left: 50%;
+      top: 14px;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ff9aa1;
+      background: rgba(80, 4, 8, 0.8);
+      color: #ffe4e7;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 120ms linear;
+      pointer-events: none;
+    }
+
+    #controls {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .btn {
+      border: 1px solid #39415e;
+      background: rgba(18, 22, 34, 0.85);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-size: 12px;
+      cursor: pointer;
+      backdrop-filter: blur(3px);
+    }
+
+    .btn:hover { border-color: #5f6998; }
+    .btn.danger { border-color: #8f3a41; color: #ffd5d9; }
+
+    #madeBy {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      font-size: 12px;
+      color: #bbc4ea;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 7px 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <section id="leftPanel">
+      <div id="bar">
+        <div class="left">
+          <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+          <span>New Text Document (2).py</span>
+        </div>
+        <span id="fpsLabel">FPS: --</span>
+      </div>
+      <div id="codeViewport">
+        <pre id="codeText"></pre><span id="cursor"></span>
+      </div>
+      <div id="status">
+        <span id="statusLeft">Phase: typing model code</span>
+        <span id="statusRight">Blend: cat + Mandelbrot + KMeans(64)</span>
+      </div>
+    </section>
+
+    <section id="stageWrap">
+      <canvas id="stage"></canvas>
+      <div id="hud">
+        <div id="titleTag">Animation vs Coding (inspired style)</div>
+        <div id="phaseTag">Booting scene...</div>
+      </div>
+      <div id="lagTag">LAG SPIKE DETECTED</div>
+      <div id="controls">
+        <button class="btn" id="playBtn">Pause</button>
+        <button class="btn" id="restartBtn">Restart</button>
+        <button class="btn" id="recordBtn">Record 20s WebM</button>
+        <button class="btn danger" id="lagBtn">Trigger Lag</button>
+      </div>
+      <div id="madeBy">Made by Alan Becker fan animation in HTML</div>
+    </section>
+  </div>
+
+  <script>
+    const codeLines = [
+      "from functools import cache",
+      "import numpy as np",
+      "from sklearn.pipeline import Pipeline",
+      "from sklearn.cluster import KMeans",
+      "import matplotlib.pyplot as plt",
+      "",
+      "cat_img = plt.imread('card.jpg')",
+      "if cat_img.ndim == 2:",
+      "    cat_arr = np.stack([cat_img] * 3, axis=-1)",
+      "else:",
+      "    cat_arr = np.array(cat_img)[:, :, :3].copy()",
+      "",
+      "def mandelbrot_grid(width, height, max_iter=80):",
+      "    x = np.linspace(-2.0, 1.0, width)",
+      "    y = np.linspace(-1.25, 1.25, height)",
+      "    cx, cy = np.meshgrid(x, y)",
+      "    c = cx + 1j * cy",
+      "    z = np.zeros_like(c)",
+      "    out = np.zeros((height, width))",
+      "    for n in range(max_iter):",
+      "        mask = np.abs(z) <= 2",
+      "        out[mask] = n / max_iter",
+      "        z[mask] = z[mask] * z[mask] + c[mask]",
+      "    out[np.abs(z) <= 2] = 1.0",
+      "    return out",
+      "",
+      "X = fractal_inside_cat.reshape(-1, 3)",
+      "model = Pipeline([",
+      "    ('kmeans', KMeans(n_clusters=64, random_state=0))",
+      "])",
+      "labels = model.fit_predict(X)",
+      "dream_rgb = centroids[labels].reshape(h, w, 3)",
+      "plt.savefig('deepdream_cat_mandelbrot.png', dpi=100)"
+    ];
+
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const codeText = document.getElementById("codeText");
+    const lagTag = document.getElementById("lagTag");
+    const fpsLabel = document.getElementById("fpsLabel");
+    const phaseTag = document.getElementById("phaseTag");
+    const statusLeft = document.getElementById("statusLeft");
+    const playBtn = document.getElementById("playBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const recordBtn = document.getElementById("recordBtn");
+    const lagBtn = document.getElementById("lagBtn");
+
+    let W = 0, H = 0, DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    let paused = false;
+    let forceLagUntil = 0;
+    let last = performance.now();
+    let simTime = 0;
+    let typedChars = 0;
+    let typedTarget = 0;
+    let lagFreeze = 0;
+    let fpsSmoother = 60;
+    let frame = 0;
+
+    const catImg = new Image();
+    catImg.src = "card.jpg";
+
+    function resize() {
+      W = Math.floor(canvas.clientWidth || canvas.parentElement.clientWidth);
+      H = Math.floor(canvas.clientHeight || canvas.parentElement.clientHeight);
+      canvas.width = Math.floor(W * DPR);
+      canvas.height = Math.floor(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    function getCodeString(chars) {
+      const full = codeLines.join("\n");
+      return full.slice(0, chars);
+    }
+
+    function drawStick(x, y, color, mode = "idle", t = 0) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      const bob = mode === "shock" ? Math.sin(t * 12) * 3 : Math.sin(t * 4) * 2;
+      const headY = y - 42 + bob;
+      const bodyY = y - 14 + bob;
+      ctx.beginPath();
+      ctx.arc(x, headY - 8, 10, 0, Math.PI * 2);
+      ctx.moveTo(x, headY + 4);
+      ctx.lineTo(x, bodyY + 16);
+      if (mode === "typing") {
+        const a = Math.sin(t * 18) * 9;
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 18, headY + 18 + a);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 20, headY + 18 - a);
+      } else if (mode === "shock") {
+        ctx.moveTo(x, headY + 10); ctx.lineTo(x - 26, headY - 8);
+        ctx.moveTo(x, headY + 10); ctx.lineTo(x + 26, headY - 8);
+      } else {
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x - 18, headY + 28);
+        ctx.moveTo(x, headY + 12); ctx.lineTo(x + 18, headY + 28);
+      }
+      const step = mode === "run" ? Math.sin(t * 15) * 10 : Math.sin(t * 6) * 4;
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x - 14, y + step);
+      ctx.moveTo(x, bodyY + 16); ctx.lineTo(x + 14, y - step);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawFractal(cx, cy, scale, t, alpha) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalAlpha = alpha;
+      for (let i = 0; i < 12; i++) {
+        const p = i / 12;
+        const radius = scale * (0.18 + p * 0.9);
+        const hue = (30 + i * 18 + t * 80) % 360;
+        ctx.strokeStyle = `hsla(${hue}, 90%, ${48 + 12 * Math.sin(t + i)}%, 0.75)`;
+        ctx.lineWidth = 2 + (1 - p) * 2;
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.12) {
+          const wobble = 1 + 0.12 * Math.sin(6 * a + t * 4 + i);
+          const r = radius * wobble;
+          const x = Math.cos(a + t * 0.2 + i * 0.07) * r;
+          const y = Math.sin(a - t * 0.25 - i * 0.04) * r;
+          if (a === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCatPanel(x, y, w, h, t, blendAmt) {
+      ctx.save();
+      ctx.fillStyle = "rgba(8, 12, 22, 0.72)";
+      ctx.strokeStyle = "rgba(130, 160, 240, 0.35)";
+      ctx.lineWidth = 1.5;
+      const r = 10;
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      if (catImg.complete && catImg.naturalWidth > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x + 6, y + 6);
+        ctx.lineTo(x + w - 6, y + 6);
+        ctx.lineTo(x + w - 6, y + h - 6);
+        ctx.lineTo(x + 6, y + h - 6);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(catImg, x + 6, y + 6, w - 12, h - 12);
+
+        // Fractal layers "inside the cat" and KMeans blocky look
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = 0.2 + 0.55 * blendAmt;
+        drawFractal(x + w * 0.54, y + h * 0.5, Math.min(w, h) * (0.35 + 0.25 * blendAmt), t * 0.9, 1);
+
+        ctx.globalCompositeOperation = "overlay";
+        ctx.globalAlpha = 0.2 + 0.5 * blendAmt;
+        for (let i = 0; i < 7; i++) {
+          const gx = x + 8 + ((i * 97 + Math.floor(t * 50)) % (w - 20));
+          const gy = y + 8 + ((i * 57 + Math.floor(t * 35)) % (h - 20));
+          const gs = 10 + (i % 3) * 6;
+          ctx.fillStyle = `hsla(${(i * 35 + t * 120) % 360},70%,55%,0.35)`;
+          ctx.fillRect(gx, gy, gs, gs);
+        }
+        ctx.restore();
+      } else {
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.fillRect(x + 8, y + 8, w - 16, h - 16);
+        ctx.fillStyle = "#d0d8ff";
+        ctx.fillText("card.jpg not loaded", x + 14, y + 26);
+      }
+      ctx.restore();
+    }
+
+    function drawGlitch(t, strength) {
+      if (strength <= 0.01) return;
+      const bars = 8 + Math.floor(strength * 22);
+      for (let i = 0; i < bars; i++) {
+        const y = (Math.sin(t * 20 + i * 4.2) * 0.5 + 0.5) * H;
+        const h = 2 + ((i * 7) % 8);
+        const shift = (Math.sin(t * 40 + i * 8.8) * 0.5 + 0.5) * 26 * strength;
+        ctx.drawImage(canvas, 0, y, W, h, shift * (i % 2 ? 1 : -1), y, W, h);
+      }
+      ctx.fillStyle = `rgba(255,60,80,${0.06 * strength})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function phaseData(t) {
+      if (t < 10) return { name: "Typing Python + KMeans", codeRate: 78, blend: 0.05, lag: 0.0, stick: "typing" };
+      if (t < 18) return { name: "Mandelbrot appears", codeRate: 45, blend: (t - 10) / 8 * 0.45 + 0.1, lag: 0.08, stick: "typing" };
+      if (t < 26) return { name: "Animation fights code", codeRate: 18, blend: 0.55 + (t - 18) / 8 * 0.30, lag: 0.35, stick: "run" };
+      if (t < 34) return { name: "Lag storm / glitch mode", codeRate: 8, blend: 0.90, lag: 0.85, stick: "shock" };
+      if (t < 44) return { name: "Cat + fractal stabilized", codeRate: 12, blend: 1.0, lag: 0.12, stick: "shock" };
+      return { name: "Loop reset", codeRate: 80, blend: 0.0, lag: 0.0, stick: "typing" };
+    }
+
+    function render(now) {
+      requestAnimationFrame(render);
+      if (paused) return;
+
+      const dtRaw = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      let dt = dtRaw;
+
+      // Manual lag spikes: freeze and skip updates
+      const lagActive = now < forceLagUntil;
+      if (lagActive) {
+        if (lagFreeze <= 0) lagFreeze = 0.08 + Math.random() * 0.12;
+        lagFreeze -= dtRaw;
+        if (Math.random() < 0.45) dt = 0; // visible stutter
+      } else {
+        lagFreeze = 0;
+      }
+
+      simTime += dt;
+      if (simTime > 45) {
+        simTime = 0;
+        typedChars = 0;
+      }
+
+      const pd = phaseData(simTime);
+      typedTarget += pd.codeRate * dt;
+      const allCode = codeLines.join("\n");
+      typedChars = Math.min(allCode.length, Math.floor(typedTarget));
+      codeText.textContent = getCodeString(typedChars);
+
+      // FPS display
+      const fpsNow = 1 / Math.max(0.0001, dtRaw);
+      fpsSmoother = fpsSmoother * 0.9 + fpsNow * 0.1;
+      fpsLabel.textContent = `FPS: ${fpsSmoother.toFixed(1)}`;
+      phaseTag.textContent = pd.name;
+      statusLeft.textContent = `Phase: ${pd.name}`;
+
+      const lagLevel = Math.max(pd.lag, lagActive ? 1 : 0);
+      lagTag.style.opacity = lagLevel > 0.55 ? "1" : "0";
+
+      // Background
+      ctx.clearRect(0, 0, W, H);
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, "#0f1422");
+      grad.addColorStop(1, "#090b11");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid floor
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = "#44507c";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 28) {
+        ctx.beginPath(); ctx.moveTo(x, H * 0.68); ctx.lineTo(x + (H * 0.32), H); ctx.stroke();
+      }
+      for (let y = H * 0.68; y < H; y += 18) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      ctx.restore();
+
+      const panelW = Math.min(520, W * 0.42);
+      const panelH = Math.min(520, H * 0.7);
+      const panelX = W * 0.52;
+      const panelY = H * 0.13;
+      drawCatPanel(panelX, panelY, panelW, panelH, simTime, pd.blend);
+
+      // Energy and fractal bloom
+      const bloom = 0.15 + pd.blend * 0.85;
+      drawFractal(panelX + panelW * 0.56, panelY + panelH * 0.5, Math.min(panelW, panelH) * 0.45 * bloom, simTime, 0.55 + pd.blend * 0.45);
+
+      // Stick figure
+      const sx = W * 0.2 + Math.sin(simTime * 1.5) * (pd.stick === "run" ? 24 : 8);
+      const sy = H * 0.78;
+      drawStick(sx, sy, "#ffab40", pd.stick, simTime);
+
+      drawGlitch(simTime, lagLevel);
+      frame++;
+    }
+    requestAnimationFrame(render);
+
+    playBtn.addEventListener("click", () => {
+      paused = !paused;
+      playBtn.textContent = paused ? "Play" : "Pause";
+      if (!paused) last = performance.now();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      simTime = 0;
+      typedChars = 0;
+      typedTarget = 0;
+      forceLagUntil = 0;
+      lagTag.style.opacity = "0";
+      if (paused) {
+        paused = false;
+        playBtn.textContent = "Pause";
+      }
+      last = performance.now();
+    });
+
+    lagBtn.addEventListener("click", () => {
+      forceLagUntil = performance.now() + 3500;
+    });
+
+    recordBtn.addEventListener("click", async () => {
+      if (!("MediaRecorder" in window)) {
+        alert("MediaRecorder is not supported in this browser.");
+        return;
+      }
+      const stream = canvas.captureStream(30);
+      const rec = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+      const chunks = [];
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "animation_vs_coding_fractal_cat.webm";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      recordBtn.disabled = true;
+      recordBtn.textContent = "Recording...";
+      rec.start();
+      setTimeout(() => {
+        rec.stop();
+        recordBtn.disabled = false;
+        recordBtn.textContent = "Record 20s WebM";
+      }, 20000);
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation vs. Fractal Coding</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1e1e1e;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #code-editor {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 400px;
+            height: 500px;
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid #333;
+            color: #d4d4d4;
+            padding: 10px;
+            font-size: 12px;
+            white-space: pre;
+            overflow: hidden;
+            pointer-events: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background: #fff;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        #ui-overlay {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+
+<div id="code-editor"></div>
+<div id="canvas-container">
+    <canvas id="animationCanvas"></canvas>
+</div>
+<div id="ui-overlay">Alan Becker Style: Animation vs. Fractal Coding</div>
+
+<script>
+    const canvas = document.getElementById('animationCanvas');
+    const ctx = canvas.getContext('2d');
+    const codeEditor = document.getElementById('code-editor');
+
+    let width, height;
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const pythonCode = [
+        "import numpy as np",
+        "from sklearn.cluster import KMeans",
+        "",
+        "def mandelbrot(w, h):",
+        "    # Generating fractal...",
+        "    x = np.linspace(-2, 1, w)",
+        "    y = np.linspace(-1, 1, h)",
+        "    ...",
+        "",
+        "model = KMeans(n_clusters=64)",
+        "model.fit(cat_features)",
+        "",
+        "# DEEP DREAM INITIATED",
+        "dream_rgb = centroids[labels]"
+    ];
+
+    class StickFigure {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.vx = 0;
+            this.vy = 0;
+            this.angle = 0;
+            this.state = 'idle'; // idle, typing, fighting, amazed
+            this.frame = 0;
+        }
+
+        draw() {
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+
+            const headY = this.y - 50;
+            const torsoY = this.y - 20;
+            
+            // Head
+            ctx.arc(this.x, headY - 10, 10, 0, Math.PI * 2);
+            
+            // Body
+            ctx.moveTo(this.x, headY);
+            ctx.lineTo(this.x, torsoY);
+
+            // Arms
+            if (this.state === 'typing') {
+                const armMove = Math.sin(this.frame * 0.5) * 10;
+                ctx.moveTo(this.x, headY + 10);
+                ctx.lineTo(this.x - 20, headY + 20 + armMove);
+                ctx.moveTo(this.x, headY + 10);
+                ctx.lineTo(this.x + 20, headY + 20 - armMove);
+            } else if (this.state === 'amazed') {
+                ctx.moveTo(this.x, headY + 10);
+                ctx.lineTo(this.x - 25, headY - 10);
+                ctx.moveTo(this.x, headY + 10);
+                ctx.lineTo(this.x + 25, headY - 10);
+            } else {
+                ctx.moveTo(this.x, headY + 10);
+                ctx.lineTo(this.x - 20, headY + 30);
+                ctx.moveTo(this.x, headY + 10);
+                ctx.lineTo(this.x + 20, headY + 30);
+            }
+
+            // Legs
+            const legMove = this.state === 'idle' ? 0 : Math.sin(this.frame * 0.2) * 10;
+            ctx.moveTo(this.x, torsoY);
+            ctx.lineTo(this.x - 15, this.y + legMove);
+            ctx.moveTo(this.x, torsoY);
+            ctx.lineTo(this.x + 15, this.y - legMove);
+
+            ctx.stroke();
+            this.frame++;
+        }
+    }
+
+    const orange = new StickFigure(width / 2, height - 100, '#ff9800');
+    let codeIndex = 0;
+    let charIndex = 0;
+    let currentCode = "";
+
+    // Fractal Background simulation
+    let fractalProgress = 0;
+    function drawMandelbrot(progress) {
+        if (progress < 0.1) return;
+        
+        const centerX = width / 2 + 100;
+        const centerY = height / 2;
+        const size = 200 * progress;
+        
+        ctx.save();
+        ctx.globalAlpha = Math.min(progress, 0.7);
+        ctx.translate(centerX, centerY);
+        
+        for (let i = 0; i < 8; i++) {
+            ctx.rotate(Math.PI / 4);
+            ctx.fillStyle = `hsl(${(progress * 360 + i * 45) % 360}, 70%, 50%)`;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.bezierCurveTo(size, size, size * 1.5, -size, 0, -size * 0.5);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    // Cat image simulation (placeholder)
+    function drawCat(progress) {
+        if (progress < 0.5) return;
+        const alpha = Math.min((progress - 0.5) * 2, 1);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        
+        const cx = width / 2 + 100;
+        const cy = height / 2;
+        
+        // Simple cat silhouette
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 20, 80, 100, 0, 0, Math.PI * 2); // Body
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy - 80, 50, 0, Math.PI * 2); // Head
+        ctx.fill();
+        
+        // Ears
+        ctx.beginPath();
+        ctx.moveTo(cx - 40, cy - 110); ctx.lineTo(cx - 60, cy - 160); ctx.lineTo(cx - 10, cy - 125);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + 40, cy - 110); ctx.lineTo(cx + 60, cy - 160); ctx.lineTo(cx + 10, cy - 125);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Update Code Editor
+        if (codeIndex < pythonCode.length) {
+            orange.state = 'typing';
+            orange.x = 220;
+            orange.y = 550;
+            
+            if (charIndex < pythonCode[codeIndex].length) {
+                currentCode += pythonCode[codeIndex][charIndex];
+                charIndex++;
+            } else {
+                currentCode += "\n";
+                codeIndex++;
+                charIndex = 0;
+            }
+            codeEditor.innerHTML = currentCode + '<span class="cursor"></span>';
+        } else {
+            orange.state = 'amazed';
+            orange.x = width / 2 - 200;
+            orange.y = height - 100;
+            fractalProgress += 0.005;
+        }
+
+        // Scene Logic
+        if (fractalProgress > 0) {
+            drawMandelbrot(fractalProgress);
+            drawCat(fractalProgress);
+            
+            if (fractalProgress > 1.5) {
+                // Reset or Loop
+                // fractalProgress = 0;
+            }
+        }
+
+        orange.draw();
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+</script>
+
+</body>
+</html>
