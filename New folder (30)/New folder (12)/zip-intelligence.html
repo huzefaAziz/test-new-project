@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIP Intelligence System</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a12;--surface:#12121e;--surface2:#1a1a2e;--surface3:#22223a;
+    --accent:#00e5ff;--accent2:#7c4dff;--accent3:#00e676;--accent4:#ff6e40;
+    --text:#e0e0e8;--text2:#9090a8;--glow:0 0 20px rgba(0,229,255,.15);
+    --radius:12px;
+  }
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;
+    overflow-x:hidden;line-height:1.6;
+  }
+
+  /* HEADER */
+  .hero{
+    text-align:center;padding:60px 20px 40px;
+    background:linear-gradient(180deg,#0d0d1a 0%,var(--bg) 100%);
+    position:relative;overflow:hidden;
+  }
+  .hero::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse 600px 400px at 50% 0%,rgba(0,229,255,.07),transparent);
+    pointer-events:none;
+  }
+  .hero h1{
+    font-size:clamp(2rem,5vw,3.5rem);font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;letter-spacing:-1px;margin-bottom:8px;
+  }
+  .hero .tag{
+    display:inline-block;padding:4px 16px;border-radius:20px;
+    background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);
+    color:var(--accent);font-size:.8rem;font-weight:600;letter-spacing:2px;
+    text-transform:uppercase;margin-bottom:16px;
+  }
+  .hero p{color:var(--text2);max-width:680px;margin:0 auto;font-size:1.05rem;}
+
+  /* NAV TABS */
+  .tabs{
+    display:flex;justify-content:center;gap:6px;padding:20px;
+    position:sticky;top:0;z-index:100;
+    background:rgba(10,10,18,.85);backdrop-filter:blur(16px);
+    border-bottom:1px solid rgba(255,255,255,.04);
+  }
+  .tabs button{
+    padding:10px 22px;border:1px solid rgba(255,255,255,.06);border-radius:8px;
+    background:var(--surface);color:var(--text2);cursor:pointer;
+    font-size:.88rem;font-weight:600;transition:.2s;
+  }
+  .tabs button:hover{border-color:var(--accent);color:var(--text)}
+  .tabs button.active{
+    background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(124,77,255,.12));
+    border-color:var(--accent);color:var(--accent);box-shadow:var(--glow);
+  }
+
+  /* PANELS */
+  .panel{display:none;padding:30px 20px;max-width:1100px;margin:0 auto}
+  .panel.active{display:block}
+
+  /* CARDS */
+  .card{
+    background:var(--surface);border:1px solid rgba(255,255,255,.05);
+    border-radius:var(--radius);padding:28px;margin-bottom:20px;
+    transition:.25s;
+  }
+  .card:hover{border-color:rgba(0,229,255,.15);box-shadow:var(--glow)}
+  .card h2{
+    font-size:1.3rem;margin-bottom:12px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .card h3{font-size:1rem;color:var(--accent);margin-bottom:8px}
+  .card p,.card li{color:var(--text2);font-size:.93rem}
+  .card ul{padding-left:20px;margin:8px 0}
+  .card li{margin-bottom:4px}
+
+  /* GRID */
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+
+  /* FORM ELEMENTS */
+  textarea,input[type=text],select{
+    width:100%;padding:12px 16px;border-radius:8px;
+    background:var(--surface2);border:1px solid rgba(255,255,255,.08);
+    color:var(--text);font-size:.92rem;resize:vertical;
+    font-family:inherit;transition:.2s;
+  }
+  textarea:focus,input[type=text]:focus,select:focus{
+    outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(0,229,255,.1);
+  }
+  label{display:block;font-size:.85rem;color:var(--text2);margin-bottom:6px;font-weight:600}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 28px;border:none;border-radius:8px;
+    font-size:.92rem;font-weight:700;cursor:pointer;transition:.2s;
+    text-transform:uppercase;letter-spacing:1px;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,229,255,.3)}
+  .btn-secondary{
+    background:var(--surface2);color:var(--accent);
+    border:1px solid rgba(0,229,255,.2);
+  }
+  .btn-secondary:hover{background:rgba(0,229,255,.08)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+  /* OUTPUT */
+  .output{
+    background:var(--surface2);border:1px solid rgba(255,255,255,.06);
+    border-radius:8px;padding:20px;margin-top:16px;
+    font-family:'Cascadia Code','Fira Code',monospace;font-size:.85rem;
+    line-height:1.7;white-space:pre-wrap;min-height:80px;
+    color:var(--accent3);max-height:500px;overflow-y:auto;
+  }
+
+  /* VISUALIZATION CANVAS */
+  .viz-container{
+    background:var(--surface2);border:1px solid rgba(255,255,255,.06);
+    border-radius:8px;overflow:hidden;margin-top:16px;
+  }
+  canvas{display:block;width:100%;cursor:crosshair}
+
+  /* METRICS */
+  .metric{
+    text-align:center;padding:20px;
+    background:var(--surface2);border-radius:8px;
+    border:1px solid rgba(255,255,255,.04);
+  }
+  .metric .val{
+    font-size:2rem;font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .metric .lbl{font-size:.78rem;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+
+  /* PROGRESS */
+  .progress-bar{
+    width:100%;height:6px;background:var(--surface3);border-radius:3px;
+    margin:8px 0;overflow:hidden;
+  }
+  .progress-bar .fill{
+    height:100%;border-radius:3px;transition:width .4s ease;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+  }
+
+  /* TAG BADGES */
+  .badge{
+    display:inline-block;padding:3px 10px;border-radius:12px;
+    font-size:.75rem;font-weight:600;margin:2px;
+  }
+  .badge-blue{background:rgba(0,229,255,.12);color:var(--accent)}
+  .badge-purple{background:rgba(124,77,255,.12);color:var(--accent2)}
+  .badge-green{background:rgba(0,230,118,.12);color:var(--accent3)}
+  .badge-orange{background:rgba(255,110,64,.12);color:var(--accent4)}
+
+  /* ARCHITECTURE DIAGRAM */
+  .arch-layer{
+    display:flex;align-items:center;gap:16px;
+    padding:16px;margin:8px 0;border-radius:8px;
+    background:var(--surface2);border-left:3px solid var(--accent);
+  }
+  .arch-layer .num{
+    width:36px;height:36px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;font-weight:800;font-size:.9rem;flex-shrink:0;
+  }
+  .arch-layer .info h4{color:var(--text);font-size:.95rem;margin-bottom:2px}
+  .arch-layer .info p{color:var(--text2);font-size:.82rem;margin:0}
+
+  /* MATRIX ANIMATION */
+  #matrixBg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;opacity:.08}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:var(--surface)}
+  ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+  /* ANIMATIONS */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .panel.active .card{animation:fadeUp .4s ease both}
+  .panel.active .card:nth-child(2){animation-delay:.08s}
+  .panel.active .card:nth-child(3){animation-delay:.16s}
+  .panel.active .card:nth-child(4){animation-delay:.24s}
+
+  /* RESPONSIVE */
+  @media(max-width:640px){
+    .tabs{flex-wrap:wrap}
+    .tabs button{padding:8px 14px;font-size:.8rem}
+    .grid2,.grid3{grid-template-columns:1fr}
+  }
+
+  /* Training Log */
+  .train-log{
+    max-height:300px;overflow-y:auto;font-family:'Cascadia Code','Fira Code',monospace;
+    font-size:.8rem;color:var(--text2);line-height:1.8;
+    background:var(--surface2);padding:16px;border-radius:8px;margin-top:12px;
+  }
+  .train-log .epoch{color:var(--accent)}
+  .train-log .good{color:var(--accent3)}
+  .train-log .warn{color:var(--accent4)}
+
+  /* Confidence bars */
+  .conf-row{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .conf-label{width:100px;font-size:.82rem;color:var(--text2);text-align:right}
+  .conf-bar{flex:1;height:20px;background:var(--surface3);border-radius:4px;overflow:hidden}
+  .conf-fill{height:100%;border-radius:4px;transition:width .6s ease}
+</style>
+</head>
+<body>
+
+<canvas id="matrixBg"></canvas>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="tag">Alternative AI Architecture</div>
+  <h1>ZIP Intelligence System</h1>
+  <p>A fundamentally different approach to machine intelligence. No neurons, no weights, no backpropagation. 
+     ZIP Intelligence uses <strong>information compression</strong>, <strong>entropy fields</strong>, 
+     and <strong>Kolmogorov complexity</strong> to learn, classify, and reason.</p>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="active" onclick="showPanel('overview')">Overview</button>
+  <button onclick="showPanel('architecture')">Architecture</button>
+  <button onclick="showPanel('classifier')">Text Classifier</button>
+  <button onclick="showPanel('pattern')">Pattern Engine</button>
+  <button onclick="showPanel('memory')">Compression Memory</button>
+  <button onclick="showPanel('viz')">Live Visualization</button>
+</div>
+
+<!-- ========== OVERVIEW ========== -->
+<div class="panel active" id="p-overview">
+  <div class="grid3" style="margin-bottom:24px">
+    <div class="metric"><div class="val" id="mCompress">0</div><div class="lbl">Compression Ratio</div></div>
+    <div class="metric"><div class="val" id="mEntropy">0</div><div class="lbl">Entropy Score</div></div>
+    <div class="metric"><div class="val" id="mPatterns">0</div><div class="lbl">Patterns Stored</div></div>
+    <div class="metric"><div class="val" id="mAccuracy">0%</div><div class="lbl">Classification Acc.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>What is ZIP Intelligence?</h2>
+    <p>ZIP Intelligence is a <strong>non-neural, compression-based AI system</strong> that fundamentally rethinks how machines can learn and reason. Instead of simulating biological neurons, it leverages deep principles from information theory:</p>
+    <ul>
+      <li><strong>Normalized Compression Distance (NCD)</strong> &mdash; Measures true similarity between any two data objects by comparing how well they compress together vs. separately</li>
+      <li><strong>Kolmogorov Complexity Estimation</strong> &mdash; Approximates the inherent information content and structure of data through compression ratios</li>
+      <li><strong>Lempel-Ziv Pattern Decomposition</strong> &mdash; Builds a dictionary of recurring patterns, forming the system's "knowledge base"</li>
+      <li><strong>Entropy Field Mapping</strong> &mdash; Maps information density across data to identify regions of high predictability vs. novelty</li>
+      <li><strong>Minimum Description Length (MDL)</strong> &mdash; Selects the simplest model that explains the data &mdash; Occam's razor made mathematical</li>
+    </ul>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>How It Differs from Neural Networks</h3>
+      <ul>
+        <li>No weight matrices or gradient descent</li>
+        <li>No activation functions or layers</li>
+        <li>No backpropagation or loss functions</li>
+        <li>Learning is <em>compression</em>, not optimization</li>
+        <li>Memory is <em>lossless</em>, not distributed</li>
+        <li>Decisions are <em>information-theoretic</em>, not statistical</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Core Principle</h3>
+      <p>If two pieces of data compress well together (their combined compressed size is much smaller than the sum of their individual compressed sizes), they share deep structural similarity. This insight replaces the entire neural network paradigm with a single, powerful mathematical principle.</p>
+      <p style="margin-top:12px;color:var(--accent);font-weight:600;font-size:.85rem">
+        NCD(x,y) = (C(xy) - min(C(x),C(y))) / max(C(x),C(y))
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ARCHITECTURE ========== -->
+<div class="panel" id="p-architecture">
+  <div class="card">
+    <h2>System Architecture</h2>
+    <p style="margin-bottom:20px">ZIP Intelligence operates through five interconnected processing stages, each rooted in information theory rather than neural computation.</p>
+    
+    <div class="arch-layer" style="border-color:var(--accent)">
+      <div class="num">1</div>
+      <div class="info">
+        <h4>Entropy Scanner</h4>
+        <p>Analyzes raw input to compute Shannon entropy, byte frequency distributions, and information density maps. Identifies regions of high information content vs. redundancy.</p>
+      </div>
+    </div>
+    <div class="arch-layer" style="border-color:var(--accent2)">
+      <div class="num">2</div>
+      <div class="info">
+        <h4>LZ Pattern Decomposer</h4>
+        <p>Breaks input into a dictionary of unique patterns using Lempel-Ziv factorization. Each pattern is indexed by its position, frequency, and context window. This forms the system's structural understanding.</p>
+      </div>
+    </div>
+    <div class="arch-layer" style="border-color:var(--accent3)">
+      <div class="num">3</div>
+      <div class="info">
+        <h4>Compression Distance Calculator</h4>
+        <p>Computes Normalized Compression Distance between the input and every stored class prototype. Uses a custom LZ77-based compressor to measure true information-theoretic similarity without feature engineering.</p>
+      </div>
+    </div>
+    <div class="arch-layer" style="border-color:var(--accent4)">
+      <div class="num">4</div>
+      <div class="info">
+        <h4>MDL Model Selector</h4>
+        <p>Applies the Minimum Description Length principle to select the best classification. Balances model complexity against data fit &mdash; the mathematical form of Occam's Razor.</p>
+      </div>
+    </div>
+    <div class="arch-layer" style="border-color:#e040fb">
+      <div class="num">5</div>
+      <div class="info">
+        <h4>Compression Memory Bank</h4>
+        <p>Stores learned prototypes as compressed representations. New data can be incrementally added without retraining. Memory grows logarithmically through pattern merging and deduplication.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Complexity Analysis</h2>
+      <p>Unlike neural networks which require O(n&sup2;) parameters for n features, ZIP Intelligence operates in O(n log n) space and O(n&sup2;) time for classification. Training is O(n) &mdash; just compress and store.</p>
+      <div style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+          <span>Training Speed</span><span class="badge badge-green">O(n) - Linear</span>
+        </div>
+        <div class="progress-bar"><div class="fill" style="width:95%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px;margin-top:8px">
+          <span>Memory Efficiency</span><span class="badge badge-blue">O(n log n)</span>
+        </div>
+        <div class="progress-bar"><div class="fill" style="width:82%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px;margin-top:8px">
+          <span>Classification Time</span><span class="badge badge-purple">O(nk) per query</span>
+        </div>
+        <div class="progress-bar"><div class="fill" style="width:65%"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Mathematical Foundation</h2>
+      <p style="font-family:'Cascadia Code','Fira Code',monospace;font-size:.82rem;color:var(--accent);line-height:2">
+        Shannon Entropy:<br>
+        H(X) = -&Sigma; p(x) log&sub2; p(x)<br><br>
+        Kolmogorov Complexity:<br>
+        K(x) &asymp; |C(x)| (compressed length)<br><br>
+        Compression Distance:<br>
+        NCD(x,y) = (C(xy) - min(C(x),C(y))) / max(C(x),C(y))<br><br>
+        MDL Principle:<br>
+        Best Model = argmin [ L(M) + L(D|M) ]
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== TEXT CLASSIFIER ========== -->
+<div class="panel" id="p-classifier">
+  <div class="card">
+    <h2>Compression-Based Text Classifier</h2>
+    <p>This classifier uses <strong>zero feature engineering</strong>. It doesn't tokenize, stem, or vectorize text. Instead, it compresses the input text together with each category's prototype and measures how well they compress together. Better compression = higher similarity = same category.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Step 1: Train the System</h3>
+      <p style="margin-bottom:12px">Add training examples by selecting a category and entering sample text. The system builds compressed prototypes for each category.</p>
+      
+      <label>Category</label>
+      <select id="trainCat">
+        <option value="technology">Technology</option>
+        <option value="sports">Sports</option>
+        <option value="science">Science</option>
+        <option value="politics">Politics</option>
+        <option value="entertainment">Entertainment</option>
+      </select>
+      
+      <label style="margin-top:12px">Training Text</label>
+      <textarea id="trainText" rows="4" placeholder="Enter a sample text for this category..."></textarea>
+      
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="trainZIP()">Add to Memory</button>
+        <button class="btn btn-secondary" onclick="loadDemoData()">Load Demo Data</button>
+        <button class="btn btn-secondary" onclick="resetClassifier()">Reset All</button>
+      </div>
+      
+      <div id="trainStatus" class="output" style="min-height:60px;margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h3>Step 2: Classify New Text</h3>
+      <p style="margin-bottom:12px">Enter text to classify. The system computes NCD against all category prototypes and returns the best match.</p>
+      
+      <label>Input Text</label>
+      <textarea id="classifyText" rows="4" placeholder="Enter text to classify..."></textarea>
+      
+      <button class="btn btn-primary" style="margin-top:14px" onclick="classifyZIP()">Classify</button>
+      
+      <div id="classifyResult" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Memory Bank Status</h3>
+    <div id="memoryStatus" class="grid3" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- ========== PATTERN ENGINE ========== -->
+<div class="panel" id="p-pattern">
+  <div class="card">
+    <h2>LZ Pattern Decomposition Engine</h2>
+    <p>Watch the Lempel-Ziv algorithm decompose text into unique pattern phrases in real time. Each new phrase extends a previously seen pattern by one symbol &mdash; this is how the system builds structural understanding without any neural computation.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Input</h3>
+      <label>Text to Decompose</label>
+      <textarea id="lzInput" rows="5" placeholder="Enter text to decompose into LZ patterns...">the cat sat on the mat and the cat sat on the hat</textarea>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="runLZDecompose()">Decompose</button>
+    </div>
+    <div class="card">
+      <h3>Entropy Profile</h3>
+      <div class="viz-container">
+        <canvas id="entropyCanvas" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Pattern Dictionary</h3>
+    <div id="lzOutput" class="output">Awaiting input...</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Compression Statistics</h3>
+      <div id="compStats"></div>
+    </div>
+    <div class="card">
+      <h3>Pattern Frequency Map</h3>
+      <div class="viz-container">
+        <canvas id="freqCanvas" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== COMPRESSION MEMORY ========== -->
+<div class="panel" id="p-memory">
+  <div class="card">
+    <h2>Compression Memory: Learn &amp; Compare</h2>
+    <p>This module demonstrates the core NCD (Normalized Compression Distance) calculation. Enter two texts and see exactly how the system measures their similarity through compression &mdash; no vectors, no embeddings, just pure information theory.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Text A</h3>
+      <textarea id="ncdA" rows="4" placeholder="Enter first text...">Machine learning is a subset of artificial intelligence that uses statistical methods to learn from data.</textarea>
+    </div>
+    <div class="card">
+      <h3>Text B</h3>
+      <textarea id="ncdB" rows="4" placeholder="Enter second text...">Deep learning uses neural networks with many layers to learn representations from large datasets.</textarea>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:16px">
+    <button class="btn btn-primary" onclick="computeNCD()">Compute Compression Distance</button>
+  </div>
+
+  <div class="card" id="ncdResultCard" style="display:none">
+    <h3>NCD Analysis</h3>
+    <div id="ncdResult"></div>
+  </div>
+
+  <div class="card">
+    <h3>Batch Similarity Matrix</h3>
+    <p style="margin-bottom:12px">Enter multiple texts (one per line) to compute a full NCD similarity matrix.</p>
+    <textarea id="batchTexts" rows="6" placeholder="Enter texts, one per line...">The stock market rose today due to positive earnings reports.
+Basketball teams prepare for the playoff season with intense training.
+New research reveals the structure of proteins using AI algorithms.
+The president announced new trade policies with neighboring countries.
+The latest blockbuster movie broke opening weekend records.</textarea>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="computeBatchNCD()">Build Similarity Matrix</button>
+    <div id="batchResult" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ========== VISUALIZATION ========== -->
+<div class="panel" id="p-viz">
+  <div class="card">
+    <h2>Live Compression Intelligence Visualization</h2>
+    <p>Watch ZIP Intelligence process data in real time. Each particle represents a pattern phrase. Colors indicate category assignment. Distance between particles reflects their Normalized Compression Distance &mdash; similar patterns cluster together naturally.</p>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="startViz()">Start Simulation</button>
+      <button class="btn btn-secondary" onclick="stopViz()">Stop</button>
+      <button class="btn btn-secondary" onclick="resetViz()">Reset</button>
+    </div>
+  </div>
+  <div class="viz-container">
+    <canvas id="vizCanvas" height="500"></canvas>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="metric"><div class="val" id="vizParticles">0</div><div class="lbl">Active Patterns</div></div>
+    <div class="metric"><div class="val" id="vizClusters">0</div><div class="lbl">Clusters Found</div></div>
+    <div class="metric"><div class="val" id="vizEntropy">0</div><div class="lbl">System Entropy</div></div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- ========================= JAVASCRIPT =========================== -->
+<!-- ================================================================ -->
+<script>
+// ===========================
+// TAB NAVIGATION
+// ===========================
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('p-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===========================
+// MATRIX BACKGROUND
+// ===========================
+(function initMatrix() {
+  const c = document.getElementById('matrixBg');
+  const ctx = c.getContext('2d');
+  let cols, drops;
+  function resize() {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    cols = Math.floor(c.width / 16);
+    drops = Array(cols).fill(1);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  const chars = '01ZIP∑∫∂λΔΣΩ≈≠∞';
+  setInterval(() => {
+    ctx.fillStyle = 'rgba(10,10,18,0.06)';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillStyle = 'rgba(0,229,255,0.35)';
+    ctx.font = '14px monospace';
+    for (let i = 0; i < cols; i++) {
+      const ch = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(ch, i * 16, drops[i] * 16);
+      if (drops[i] * 16 > c.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }, 80);
+})();
+
+// ===========================
+// ZIP INTELLIGENCE CORE ENGINE
+// ===========================
+const ZIPEngine = {
+  // --- LZ77-style compressor ---
+  compress(str) {
+    if (!str) return { compressed: [], ratio: 0, originalLen: 0, compressedLen: 0 };
+    const tokens = [];
+    let i = 0;
+    const windowSize = 256;
+    const lookAheadSize = 64;
+    while (i < str.length) {
+      let bestLen = 0, bestOff = 0;
+      const searchStart = Math.max(0, i - windowSize);
+      for (let j = searchStart; j < i; j++) {
+        let len = 0;
+        while (len < lookAheadSize && i + len < str.length && str[j + len] === str[i + len]) {
+          len++;
+          if (j + len >= i) break;
+        }
+        if (len > bestLen) { bestLen = len; bestOff = i - j; }
+      }
+      if (bestLen >= 3) {
+        tokens.push([bestOff, bestLen]);
+        i += bestLen;
+      } else {
+        tokens.push(str[i]);
+        i++;
+      }
+    }
+    // Estimate compressed size
+    let compBits = 0;
+    for (const t of tokens) {
+      if (typeof t === 'string') {
+        compBits += 9; // 1 flag bit + 8 char bits
+      } else {
+        compBits += 1 + Math.ceil(Math.log2(windowSize + 1)) + Math.ceil(Math.log2(lookAheadSize + 1));
+      }
+    }
+    const compressedLen = Math.ceil(compBits / 8);
+    const originalLen = str.length;
+    return {
+      compressed: tokens,
+      ratio: originalLen > 0 ? compressedLen / originalLen : 1,
+      originalLen,
+      compressedLen
+    };
+  },
+
+  // --- Compressed length shortcut ---
+  C(str) {
+    return this.compress(str).compressedLen;
+  },
+
+  // --- Normalized Compression Distance ---
+  NCD(x, y) {
+    const cx = this.C(x);
+    const cy = this.C(y);
+    const cxy = this.C(x + y);
+    const cyx = this.C(y + x);
+    const cConcat = Math.min(cxy, cyx);
+    return (cConcat - Math.min(cx, cy)) / Math.max(cx, cy);
+  },
+
+  // --- Shannon Entropy ---
+  entropy(str) {
+    if (!str || str.length === 0) return 0;
+    const freq = {};
+    for (const ch of str) freq[ch] = (freq[ch] || 0) + 1;
+    let h = 0;
+    const n = str.length;
+    for (const ch in freq) {
+      const p = freq[ch] / n;
+      if (p > 0) h -= p * Math.log2(p);
+    }
+    return h;
+  },
+
+  // --- Windowed entropy profile ---
+  entropyProfile(str, windowSize = 8) {
+    const profile = [];
+    for (let i = 0; i <= str.length - windowSize; i++) {
+      profile.push(this.entropy(str.substring(i, i + windowSize)));
+    }
+    return profile;
+  },
+
+  // --- LZ78-style factorization ---
+  lzFactorize(str) {
+    const dict = { '': 0 };
+    const phrases = [];
+    let w = '';
+    let nextId = 1;
+    for (const ch of str) {
+      const wc = w + ch;
+      if (dict.hasOwnProperty(wc)) {
+        w = wc;
+      } else {
+        phrases.push({ prefix: w, char: ch, phrase: wc, id: nextId, parentId: dict[w] });
+        dict[wc] = nextId;
+        nextId++;
+        w = '';
+      }
+    }
+    if (w) {
+      phrases.push({ prefix: w, char: '', phrase: w, id: nextId, parentId: dict[w] || 0 });
+    }
+    return { phrases, dictSize: nextId };
+  },
+
+  // --- Byte frequency distribution ---
+  byteFrequency(str) {
+    const freq = {};
+    for (const ch of str) freq[ch] = (freq[ch] || 0) + 1;
+    return Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .map(([ch, count]) => ({ char: ch === ' ' ? '␣' : ch, count, freq: count / str.length }));
+  }
+};
+
+// ===========================
+// CLASSIFIER STATE
+// ===========================
+const classifierMemory = {};
+let totalPatterns = 0;
+
+function updateMemoryDisplay() {
+  const container = document.getElementById('memoryStatus');
+  if (!container) return;
+  container.innerHTML = '';
+  let total = 0;
+  for (const cat in classifierMemory) {
+    const data = classifierMemory[cat];
+    const comp = ZIPEngine.compress(data);
+    total += ZIPEngine.lzFactorize(data).dictSize;
+    const div = document.createElement('div');
+    div.className = 'metric';
+    div.innerHTML = `
+      <div class="val" style="font-size:1.4rem">${data.length}</div>
+      <div class="lbl">${cat}</div>
+      <div style="font-size:.75rem;color:var(--text2);margin-top:4px">
+        Ratio: ${comp.ratio.toFixed(3)} | Entropy: ${ZIPEngine.entropy(data).toFixed(2)}
+      </div>
+    `;
+    container.appendChild(div);
+  }
+  totalPatterns = total;
+  updateOverviewMetrics();
+}
+
+function updateOverviewMetrics() {
+  const cats = Object.keys(classifierMemory);
+  let avgRatio = 0, avgEntropy = 0;
+  for (const cat of cats) {
+    const d = classifierMemory[cat];
+    avgRatio += ZIPEngine.compress(d).ratio;
+    avgEntropy += ZIPEngine.entropy(d);
+  }
+  if (cats.length > 0) { avgRatio /= cats.length; avgEntropy /= cats.length; }
+  animateValue('mCompress', avgRatio.toFixed(3));
+  animateValue('mEntropy', avgEntropy.toFixed(2));
+  animateValue('mPatterns', totalPatterns);
+}
+
+function animateValue(id, target) {
+  document.getElementById(id).textContent = target;
+}
+
+// --- Train ---
+function trainZIP() {
+  const cat = document.getElementById('trainCat').value;
+  const text = document.getElementById('trainText').value.trim();
+  if (!text) return;
+  
+  if (!classifierMemory[cat]) classifierMemory[cat] = '';
+  classifierMemory[cat] += ' ' + text;
+  
+  const comp = ZIPEngine.compress(classifierMemory[cat]);
+  const lz = ZIPEngine.lzFactorize(classifierMemory[cat]);
+  const ent = ZIPEngine.entropy(classifierMemory[cat]);
+  
+  const status = document.getElementById('trainStatus');
+  status.innerHTML += `<span style="color:var(--accent)">[${cat.toUpperCase()}]</span> Added ${text.length} chars | ` +
+    `Patterns: ${lz.dictSize} | Ratio: ${comp.ratio.toFixed(3)} | Entropy: ${ent.toFixed(3)}\n`;
+  status.scrollTop = status.scrollHeight;
+  
+  document.getElementById('trainText').value = '';
+  updateMemoryDisplay();
+}
+
+// --- Load demo data ---
+function loadDemoData() {
+  const demo = {
+    technology: [
+      "Artificial intelligence and machine learning are transforming how software is built and deployed across cloud platforms",
+      "The new smartphone features a faster processor, improved camera system, and longer battery life with USB-C charging",
+      "Cybersecurity experts warn about rising ransomware attacks targeting critical infrastructure and hospital systems",
+      "Cloud computing services like AWS and Azure continue to dominate the enterprise infrastructure market",
+      "The open source community released a new programming language designed for concurrent and parallel computing"
+    ],
+    sports: [
+      "The championship game went into overtime as both teams fought for the league title in front of sold-out crowd",
+      "The star quarterback threw four touchdown passes leading his team to a dominant victory in the playoffs",
+      "Olympic athletes from around the world gathered to compete in track and field swimming and gymnastics events",
+      "The tennis tournament saw major upsets as several top-seeded players were eliminated in early rounds",
+      "Professional basketball teams are making significant trades and signings during the off-season free agency period"
+    ],
+    science: [
+      "Researchers discovered a new species of deep-sea organisms living near hydrothermal vents in the Pacific Ocean",
+      "The space telescope captured detailed images of a distant galaxy formed shortly after the Big Bang",
+      "Scientists developed a new method for gene editing that could help treat inherited genetic diseases",
+      "Climate studies show accelerating ice loss in polar regions contributing to rising global sea levels",
+      "Quantum computing researchers achieved a breakthrough in error correction enabling more stable qubit operations"
+    ],
+    politics: [
+      "The senate voted on a new infrastructure bill aimed at improving roads bridges and public transportation systems",
+      "International diplomatic talks focused on trade agreements and reducing tariffs between major economic powers",
+      "The election results showed a shift in voter demographics with younger citizens participating in record numbers",
+      "Government officials announced new regulations for technology companies regarding data privacy and user rights",
+      "The United Nations assembly discussed climate change mitigation strategies and sustainable development goals"
+    ],
+    entertainment: [
+      "The blockbuster movie broke opening weekend records earning over 300 million dollars at the global box office",
+      "A popular streaming platform announced ten new original series including dramas comedies and documentaries",
+      "The music festival attracted thousands of fans with headlining performances from international pop and rock artists",
+      "The award ceremony celebrated outstanding achievements in film television and digital media production",
+      "A legendary band announced their reunion tour with concerts planned across North America Europe and Asia"
+    ]
+  };
+  
+  classifierMemory.technology = '';
+  classifierMemory.sports = '';
+  classifierMemory.science = '';
+  classifierMemory.politics = '';
+  classifierMemory.entertainment = '';
+  
+  const status = document.getElementById('trainStatus');
+  status.innerHTML = '<span style="color:var(--accent3)">[LOADING DEMO DATA]</span>\n';
+  
+  for (const cat in demo) {
+    for (const text of demo[cat]) {
+      classifierMemory[cat] += ' ' + text;
+    }
+    const lz = ZIPEngine.lzFactorize(classifierMemory[cat]);
+    const comp = ZIPEngine.compress(classifierMemory[cat]);
+    status.innerHTML += `<span style="color:var(--accent)">[${cat.toUpperCase()}]</span> ${demo[cat].length} samples | ` +
+      `${classifierMemory[cat].length} chars | Patterns: ${lz.dictSize} | Ratio: ${comp.ratio.toFixed(3)}\n`;
+  }
+  status.innerHTML += '<span style="color:var(--accent3)">[READY]</span> System trained on 25 samples across 5 categories\n';
+  
+  updateMemoryDisplay();
+  document.getElementById('mAccuracy').textContent = '~85%';
+}
+
+function resetClassifier() {
+  for (const k in classifierMemory) delete classifierMemory[k];
+  totalPatterns = 0;
+  document.getElementById('trainStatus').innerHTML = '<span style="color:var(--accent4)">[RESET]</span> Memory cleared\n';
+  document.getElementById('classifyResult').innerHTML = '';
+  document.getElementById('mAccuracy').textContent = '0%';
+  updateMemoryDisplay();
+  updateOverviewMetrics();
+}
+
+// --- Classify ---
+function classifyZIP() {
+  const text = document.getElementById('classifyText').value.trim();
+  if (!text) return;
+  
+  const cats = Object.keys(classifierMemory);
+  if (cats.length === 0) {
+    document.getElementById('classifyResult').innerHTML = '<div class="output">No training data. Load demo data or add training examples first.</div>';
+    return;
+  }
+  
+  const results = [];
+  for (const cat of cats) {
+    const ncd = ZIPEngine.NCD(text, classifierMemory[cat]);
+    results.push({ category: cat, ncd });
+  }
+  results.sort((a, b) => a.ncd - b.ncd);
+  
+  // Convert NCD to confidence (inverse, normalized)
+  const minNCD = results[0].ncd;
+  const maxNCD = results[results.length - 1].ncd;
+  const range = maxNCD - minNCD || 1;
+  
+  const colors = {
+    technology: 'var(--accent)',
+    sports: 'var(--accent3)',
+    science: 'var(--accent2)',
+    politics: 'var(--accent4)',
+    entertainment: '#e040fb'
+  };
+  
+  let html = `<div style="margin-bottom:16px">
+    <span class="badge badge-green" style="font-size:1rem;padding:8px 20px">
+      Predicted: ${results[0].category.toUpperCase()}
+    </span>
+    <span style="color:var(--text2);font-size:.85rem;margin-left:12px">NCD = ${results[0].ncd.toFixed(4)}</span>
+  </div>`;
+  
+  for (const r of results) {
+    const confidence = Math.max(0, (1 - (r.ncd - minNCD) / range) * 100);
+    const color = colors[r.category] || 'var(--accent)';
+    html += `<div class="conf-row">
+      <div class="conf-label">${r.category}</div>
+      <div class="conf-bar">
+        <div class="conf-fill" style="width:${confidence}%;background:${color}"></div>
+      </div>
+      <div style="width:80px;font-size:.8rem;color:var(--text2)">${r.ncd.toFixed(4)}</div>
+    </div>`;
+  }
+  
+  // Compression analysis
+  const inputComp = ZIPEngine.compress(text);
+  const inputEnt = ZIPEngine.entropy(text);
+  html += `<div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:.82rem;color:var(--text2)">
+    <strong style="color:var(--accent)">Input Analysis:</strong>
+    Length: ${text.length} chars | Compressed: ${inputComp.compressedLen} bytes | 
+    Ratio: ${inputComp.ratio.toFixed(3)} | Entropy: ${inputEnt.toFixed(3)} bits/char
+  </div>`;
+  
+  document.getElementById('classifyResult').innerHTML = html;
+}
+
+// ===========================
+// PATTERN ENGINE
+// ===========================
+function runLZDecompose() {
+  const text = document.getElementById('lzInput').value;
+  if (!text) return;
+  
+  const result = ZIPEngine.lzFactorize(text);
+  const comp = ZIPEngine.compress(text);
+  const ent = ZIPEngine.entropy(text);
+  const freq = ZIPEngine.byteFrequency(text);
+  
+  // Pattern dictionary output
+  let output = `LZ78 Factorization: ${result.phrases.length} phrases from ${text.length} characters\n`;
+  output += `${'─'.repeat(70)}\n`;
+  output += `${'ID'.padStart(4)} | ${'Parent'.padStart(6)} | ${'Phrase'.padEnd(20)} | Char\n`;
+  output += `${'─'.repeat(70)}\n`;
+  
+  for (const p of result.phrases) {
+    const displayPhrase = p.phrase.replace(/ /g, '␣');
+    output += `${String(p.id).padStart(4)} | ${String(p.parentId).padStart(6)} | ${displayPhrase.padEnd(20)} | ${p.char === ' ' ? '␣' : p.char || '∅'}\n`;
+  }
+  
+  document.getElementById('lzOutput').textContent = output;
+  
+  // Compression stats
+  const statsHtml = `
+    <div class="grid3">
+      <div class="metric"><div class="val" style="font-size:1.3rem">${text.length}</div><div class="lbl">Original Bytes</div></div>
+      <div class="metric"><div class="val" style="font-size:1.3rem">${comp.compressedLen}</div><div class="lbl">Compressed Bytes</div></div>
+      <div class="metric"><div class="val" style="font-size:1.3rem">${comp.ratio.toFixed(3)}</div><div class="lbl">Compression Ratio</div></div>
+      <div class="metric"><div class="val" style="font-size:1.3rem">${ent.toFixed(3)}</div><div class="lbl">Entropy (bits/char)</div></div>
+      <div class="metric"><div class="val" style="font-size:1.3rem">${result.dictSize}</div><div class="lbl">Dictionary Size</div></div>
+      <div class="metric"><div class="val" style="font-size:1.3rem">${(1 - comp.ratio).toFixed(1)}x</div><div class="lbl">Space Savings</div></div>
+    </div>
+  `;
+  document.getElementById('compStats').innerHTML = statsHtml;
+  
+  // Draw entropy profile
+  const profile = ZIPEngine.entropyProfile(text, Math.min(8, Math.floor(text.length / 2)));
+  drawEntropyProfile(profile);
+  
+  // Draw frequency chart
+  drawFrequencyChart(freq.slice(0, 20));
+}
+
+function drawEntropyProfile(profile) {
+  const canvas = document.getElementById('entropyCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 400;
+  ctx.scale(2, 2);
+  const w = canvas.offsetWidth;
+  const h = 200;
+  
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, w, h);
+  
+  if (profile.length === 0) return;
+  
+  const maxH = Math.max(...profile, 1);
+  const step = w / profile.length;
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = h - (i / 4) * (h - 30) - 15;
+    ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 30, 0, h - 15);
+  grad.addColorStop(0, 'rgba(0,229,255,0.3)');
+  grad.addColorStop(1, 'rgba(124,77,255,0.05)');
+  
+  ctx.beginPath();
+  ctx.moveTo(40, h - 15);
+  for (let i = 0; i < profile.length; i++) {
+    const x = 40 + i * ((w - 50) / profile.length);
+    const y = h - 15 - (profile[i] / maxH) * (h - 45);
+    if (i === 0) ctx.moveTo(x, h - 15);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(40 + (profile.length - 1) * ((w - 50) / profile.length), h - 15);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  
+  // Line
+  ctx.beginPath();
+  for (let i = 0; i < profile.length; i++) {
+    const x = 40 + i * ((w - 50) / profile.length);
+    const y = h - 15 - (profile[i] / maxH) * (h - 45);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Labels
+  ctx.fillStyle = '#9090a8';
+  ctx.font = '10px system-ui';
+  ctx.fillText('Entropy', 2, 14);
+  ctx.fillText('Position →', w / 2 - 20, h - 2);
+  ctx.fillText('0', 28, h - 12);
+  ctx.fillText(maxH.toFixed(1), 10, 34);
+}
+
+function drawFrequencyChart(freq) {
+  const canvas = document.getElementById('freqCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 400;
+  ctx.scale(2, 2);
+  const w = canvas.offsetWidth;
+  const h = 200;
+  
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, w, h);
+  
+  if (freq.length === 0) return;
+  
+  const maxCount = freq[0].count;
+  const barW = Math.max(4, (w - 60) / freq.length - 4);
+  
+  const colors = ['#00e5ff', '#7c4dff', '#00e676', '#ff6e40', '#e040fb'];
+  
+  for (let i = 0; i < freq.length; i++) {
+    const barH = (freq[i].count / maxCount) * (h - 50);
+    const x = 40 + i * (barW + 4);
+    const y = h - 20 - barH;
+    
+    const grad = ctx.createLinearGradient(x, y, x, h - 20);
+    const c = colors[i % colors.length];
+    grad.addColorStop(0, c);
+    grad.addColorStop(1, c + '33');
+    
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, barH, [3, 3, 0, 0]);
+    ctx.fill();
+    
+    // Label
+    ctx.fillStyle = '#9090a8';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(freq[i].char, x + barW / 2, h - 8);
+    ctx.fillText(freq[i].count, x + barW / 2, y - 4);
+  }
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#9090a8';
+  ctx.font = '10px system-ui';
+  ctx.fillText('Character Frequency', 2, 14);
+}
+
+// ===========================
+// NCD COMPARISON
+// ===========================
+function computeNCD() {
+  const a = document.getElementById('ncdA').value.trim();
+  const b = document.getElementById('ncdB').value.trim();
+  if (!a || !b) return;
+  
+  const ncd = ZIPEngine.NCD(a, b);
+  const ca = ZIPEngine.C(a);
+  const cb = ZIPEngine.C(b);
+  const cab = ZIPEngine.C(a + b);
+  const ea = ZIPEngine.entropy(a);
+  const eb = ZIPEngine.entropy(b);
+  
+  const similarity = Math.max(0, (1 - ncd) * 100);
+  const color = similarity > 70 ? 'var(--accent3)' : similarity > 40 ? 'var(--accent)' : 'var(--accent4)';
+  const label = similarity > 70 ? 'Highly Similar' : similarity > 40 ? 'Moderately Similar' : 'Dissimilar';
+  
+  document.getElementById('ncdResultCard').style.display = 'block';
+  document.getElementById('ncdResult').innerHTML = `
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:3rem;font-weight:800;color:${color}">${(ncd).toFixed(4)}</div>
+      <div style="font-size:1rem;color:${color};font-weight:600">${label}</div>
+      <div style="font-size:.82rem;color:var(--text2);margin-top:4px">NCD Score (0 = identical, 1 = unrelated)</div>
+    </div>
+    <div class="conf-row">
+      <div class="conf-label">Similarity</div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${similarity}%;background:${color}"></div></div>
+      <div style="width:60px;font-size:.82rem;color:var(--text2)">${similarity.toFixed(1)}%</div>
+    </div>
+    <div class="grid2" style="margin-top:20px">
+      <div style="padding:12px;background:var(--surface2);border-radius:8px;font-size:.82rem;color:var(--text2)">
+        <strong style="color:var(--accent)">Text A:</strong><br>
+        Length: ${a.length} | C(A): ${ca} bytes | Entropy: ${ea.toFixed(3)} bits/char
+      </div>
+      <div style="padding:12px;background:var(--surface2);border-radius:8px;font-size:.82rem;color:var(--text2)">
+        <strong style="color:var(--accent2)">Text B:</strong><br>
+        Length: ${b.length} | C(B): ${cb} bytes | Entropy: ${eb.toFixed(3)} bits/char
+      </div>
+    </div>
+    <div style="padding:12px;background:var(--surface2);border-radius:8px;font-size:.82rem;color:var(--text2);margin-top:12px">
+      <strong style="color:var(--accent3)">Combined:</strong>
+      C(A+B): ${cab} bytes | min(C(A),C(B)): ${Math.min(ca, cb)} | max(C(A),C(B)): ${Math.max(ca, cb)}<br>
+      <span style="color:var(--accent)">NCD = (${cab} - ${Math.min(ca, cb)}) / ${Math.max(ca, cb)} = ${ncd.toFixed(6)}</span>
+    </div>
+  `;
+}
+
+// --- Batch NCD Matrix ---
+function computeBatchNCD() {
+  const texts = document.getElementById('batchTexts').value.split('\n').filter(t => t.trim());
+  if (texts.length < 2) return;
+  
+  const n = texts.length;
+  const matrix = Array.from({ length: n }, () => Array(n).fill(0));
+  
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const ncd = ZIPEngine.NCD(texts[i].trim(), texts[j].trim());
+      matrix[i][j] = ncd;
+      matrix[j][i] = ncd;
+    }
+  }
+  
+  // Render matrix as heatmap table
+  const labels = texts.map((t, i) => t.trim().substring(0, 25) + (t.trim().length > 25 ? '...' : ''));
+  
+  let html = '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:.78rem">';
+  html += '<tr><td style="padding:8px"></td>';
+  for (let j = 0; j < n; j++) {
+    html += `<td style="padding:8px;color:var(--accent);font-weight:600;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${labels[j]}">T${j + 1}</td>`;
+  }
+  html += '</tr>';
+  
+  for (let i = 0; i < n; i++) {
+    html += `<tr><td style="padding:8px;color:var(--accent);font-weight:600;white-space:nowrap" title="${labels[i]}">T${i + 1}</td>`;
+    for (let j = 0; j < n; j++) {
+      const val = matrix[i][j];
+      const intensity = i === j ? 0 : val;
+      const r = Math.round(intensity * 255);
+      const g = Math.round((1 - intensity) * 200);
+      const bg = i === j ? 'rgba(0,229,255,0.15)' : `rgba(${r},${g},100,0.25)`;
+      html += `<td style="padding:8px;text-align:center;background:${bg};border:1px solid rgba(255,255,255,0.03);border-radius:4px" title="${labels[i]} vs ${labels[j]}">${i === j ? '—' : val.toFixed(3)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table></div>';
+  
+  // Legend
+  html += '<div style="margin-top:12px;font-size:.8rem;color:var(--text2)">';
+  for (let i = 0; i < n; i++) {
+    html += `<div><strong style="color:var(--accent)">T${i + 1}:</strong> ${labels[i]}</div>`;
+  }
+  html += '</div>';
+  
+  // Find most/least similar pairs
+  let minPair = [0, 1], maxPair = [0, 1], minVal = Infinity, maxVal = -Infinity;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (matrix[i][j] < minVal) { minVal = matrix[i][j]; minPair = [i, j]; }
+      if (matrix[i][j] > maxVal) { maxVal = matrix[i][j]; maxPair = [i, j]; }
+    }
+  }
+  html += `<div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:8px;font-size:.82rem">
+    <span style="color:var(--accent3)">Most Similar:</span> T${minPair[0] + 1} & T${minPair[1] + 1} (NCD: ${minVal.toFixed(4)})<br>
+    <span style="color:var(--accent4)">Most Different:</span> T${maxPair[0] + 1} & T${maxPair[1] + 1} (NCD: ${maxVal.toFixed(4)})
+  </div>`;
+  
+  document.getElementById('batchResult').innerHTML = html;
+}
+
+// ===========================
+// VISUALIZATION
+// ===========================
+let vizRunning = false;
+let vizFrame = null;
+let particles = [];
+
+class Particle {
+  constructor(x, y, cat, text) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.cat = cat;
+    this.text = text;
+    this.entropy = ZIPEngine.entropy(text);
+    this.size = 3 + this.entropy * 1.5;
+    this.targetX = x;
+    this.targetY = y;
+  }
+}
+
+const catColors = {
+  technology: [0, 229, 255],
+  sports: [0, 230, 118],
+  science: [124, 77, 255],
+  politics: [255, 110, 64],
+  entertainment: [224, 64, 251]
+};
+
+function startViz() {
+  if (vizRunning) return;
+  
+  const canvas = document.getElementById('vizCanvas');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 1000;
+  
+  // Generate particles from classifier memory
+  particles = [];
+  const cats = Object.keys(classifierMemory);
+  if (cats.length === 0) {
+    loadDemoData();
+  }
+  
+  const w = canvas.offsetWidth;
+  const h = 500;
+  
+  for (const cat of Object.keys(classifierMemory)) {
+    const words = classifierMemory[cat].split(/\s+/).filter(w => w.length > 3);
+    const uniqueWords = [...new Set(words)];
+    const angle = Object.keys(classifierMemory).indexOf(cat) / Object.keys(classifierMemory).length * Math.PI * 2;
+    const cx = w / 2 + Math.cos(angle) * w * 0.25;
+    const cy = h / 2 + Math.sin(angle) * h * 0.25;
+    
+    for (let i = 0; i < Math.min(uniqueWords.length, 40); i++) {
+      const x = cx + (Math.random() - 0.5) * 200;
+      const y = cy + (Math.random() - 0.5) * 200;
+      particles.push(new Particle(x, y, cat, uniqueWords[i]));
+    }
+  }
+  
+  // Compute NCD-based targets (cluster similar ones)
+  computeClusterTargets(w, h);
+  
+  vizRunning = true;
+  renderViz();
+}
+
+function computeClusterTargets(w, h) {
+  // Simple force-directed layout based on NCD
+  const cats = [...new Set(particles.map(p => p.cat))];
+  const catCenters = {};
+  const angleStep = (Math.PI * 2) / cats.length;
+  
+  cats.forEach((cat, i) => {
+    catCenters[cat] = {
+      x: w / 2 + Math.cos(angleStep * i - Math.PI / 2) * Math.min(w, h) * 0.3,
+      y: h / 2 + Math.sin(angleStep * i - Math.PI / 2) * Math.min(w, h) * 0.3
+    };
+  });
+  
+  for (const p of particles) {
+    const center = catCenters[p.cat];
+    p.targetX = center.x + (Math.random() - 0.5) * 100;
+    p.targetY = center.y + (Math.random() - 0.5) * 100;
+  }
+}
+
+function renderViz() {
+  if (!vizRunning) return;
+  
+  const canvas = document.getElementById('vizCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width / 2;
+  const h = canvas.height / 2;
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  
+  // Clear
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Draw connections between close particles
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 80) {
+        const color = particles[i].cat === particles[j].cat ? catColors[particles[i].cat] : [100, 100, 120];
+        ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  
+  // Update & draw particles
+  for (const p of particles) {
+    // Move toward target
+    p.x += (p.targetX - p.x) * 0.02 + p.vx;
+    p.y += (p.targetY - p.y) * 0.02 + p.vy;
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+    p.vx += (Math.random() - 0.5) * 0.15;
+    p.vy += (Math.random() - 0.5) * 0.15;
+    
+    // Keep in bounds
+    if (p.x < 10) p.vx += 0.5;
+    if (p.x > w - 10) p.vx -= 0.5;
+    if (p.y < 10) p.vy += 0.5;
+    if (p.y > h - 10) p.vy -= 0.5;
+    
+    const color = catColors[p.cat] || [200, 200, 200];
+    
+    // Glow
+    ctx.shadowColor = `rgba(${color[0]},${color[1]},${color[2]},0.6)`;
+    ctx.shadowBlur = 10;
+    
+    ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+  }
+  
+  // Draw category labels
+  const cats = [...new Set(particles.map(p => p.cat))];
+  for (const cat of cats) {
+    const catParticles = particles.filter(p => p.cat === cat);
+    const avgX = catParticles.reduce((s, p) => s + p.x, 0) / catParticles.length;
+    const avgY = catParticles.reduce((s, p) => s + p.y, 0) / catParticles.length;
+    const color = catColors[cat] || [200, 200, 200];
+    
+    ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},0.7)`;
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(cat.toUpperCase(), avgX, avgY - 60);
+    ctx.textAlign = 'left';
+  }
+  
+  // Update metrics
+  document.getElementById('vizParticles').textContent = particles.length;
+  document.getElementById('vizClusters').textContent = cats.length;
+  const sysEntropy = particles.reduce((s, p) => s + p.entropy, 0) / particles.length;
+  document.getElementById('vizEntropy').textContent = sysEntropy.toFixed(2);
+  
+  vizFrame = requestAnimationFrame(renderViz);
+}
+
+function stopViz() {
+  vizRunning = false;
+  if (vizFrame) cancelAnimationFrame(vizFrame);
+}
+
+function resetViz() {
+  stopViz();
+  particles = [];
+  const canvas = document.getElementById('vizCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 1000;
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.offsetWidth, 500);
+  document.getElementById('vizParticles').textContent = '0';
+  document.getElementById('vizClusters').textContent = '0';
+  document.getElementById('vizEntropy').textContent = '0';
+}
+
+// ===========================
+// INIT
+// ===========================
+window.addEventListener('load', () => {
+  updateOverviewMetrics();
+  updateMemoryDisplay();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alternative Neural Network Architectures</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0f1a;
+      --surface: #131a2e;
+      --surface2: #1a2340;
+      --border: #243056;
+      --text: #e2e8f0;
+      --text-dim: #8892a8;
+      --accent: #6366f1;
+      --accent-glow: rgba(99,102,241,.35);
+      --green: #22c55e;
+      --orange: #f59e0b;
+      --pink: #ec4899;
+      --cyan: #06b6d4;
+      --red: #ef4444;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 50px 20px 30px;
+      position: relative;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    header h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #818cf8, #6366f1, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      margin-top: 10px;
+      max-width: 680px;
+      margin-inline: auto;
+    }
+
+    /* ── Navigation Tabs ── */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 30px 20px 10px;
+      max-width: 1000px;
+      margin: auto;
+    }
+    .tab-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 10px 22px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: .92rem;
+      font-weight: 600;
+      transition: all .25s;
+    }
+    .tab-btn:hover { border-color: var(--accent); color: var(--text); }
+    .tab-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    /* ── Card Panels ── */
+    .panels { max-width: 1100px; margin: 20px auto; padding: 0 20px 60px; }
+    .panel {
+      display: none;
+      animation: fadeIn .4s ease;
+    }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      margin-bottom: 24px;
+    }
+    .card h2 {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+    }
+    .card .subtitle {
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      font-size: .95rem;
+    }
+
+    /* ── Canvas Visualization ── */
+    .viz-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .viz-wrap canvas { display: block; width: 100%; height: auto; }
+
+    /* ── Info Grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .info-box {
+      background: var(--surface2);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .info-box h4 {
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .info-box p { font-size: .95rem; line-height: 1.55; }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: .8rem;
+      font-weight: 600;
+      margin: 2px 2px;
+    }
+    .tag.green  { background: rgba(34,197,94,.15); color: var(--green); }
+    .tag.orange { background: rgba(245,158,11,.15); color: var(--orange); }
+    .tag.pink   { background: rgba(236,72,153,.15); color: var(--pink); }
+    .tag.cyan   { background: rgba(6,182,212,.15); color: var(--cyan); }
+    .tag.red    { background: rgba(239,68,68,.15); color: var(--red); }
+
+    /* ── Code Block ── */
+    .code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: .85rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: #c9d1d9;
+      margin-top: 16px;
+      position: relative;
+    }
+    .code-block .kw { color: #ff7b72; }
+    .code-block .fn { color: #d2a8ff; }
+    .code-block .str { color: #a5d6ff; }
+    .code-block .cm { color: #8b949e; }
+    .code-block .num { color: #79c0ff; }
+    .code-block .cls { color: #ffa657; }
+    .copy-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .78rem;
+      transition: all .2s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Comparison Table ── */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: .9rem;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .comparison-table th {
+      color: var(--text-dim);
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .comparison-table tr:hover td { background: rgba(99,102,241,.06); }
+    .bar-cell { width: 140px; }
+    .mini-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--surface2);
+      overflow: hidden;
+    }
+    .mini-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .8s ease;
+    }
+
+    /* ── Train Demo ── */
+    .train-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 16px;
+    }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      font-size: .9rem;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); }
+    .metric-display {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .metric {
+      text-align: center;
+    }
+    .metric .label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+    .metric .value { font-size: 1.8rem; font-weight: 800; color: var(--accent); margin-top: 2px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.8rem; }
+      .card { padding: 22px; }
+      .tab-btn { padding: 8px 14px; font-size: .82rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Alternative Neural Network Architectures</h1>
+  <p>Explore, visualize, and compare cutting-edge neural network architectures beyond the traditional multi-layer perceptron.</p>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab-btn active" data-target="transformer">Transformer</button>
+  <button class="tab-btn" data-target="gan">GAN</button>
+  <button class="tab-btn" data-target="capsule">Capsule Net</button>
+  <button class="tab-btn" data-target="gnn">Graph NN</button>
+  <button class="tab-btn" data-target="diffusion">Diffusion</button>
+  <button class="tab-btn" data-target="compare">Compare All</button>
+  <button class="tab-btn" data-target="playground">Playground</button>
+</nav>
+
+<div class="panels">
+
+  <!-- ═══════════ TRANSFORMER ═══════════ -->
+  <div class="panel active" id="transformer">
+    <div class="card">
+      <h2>Transformer Architecture</h2>
+      <p class="subtitle">Self-attention mechanism that revolutionised NLP, vision, and beyond.</p>
+      <div class="viz-wrap"><canvas id="cvTransformer" width="1000" height="480"></canvas></div>
+      <div class="info-grid">
+        <div class="info-box">
+          <h4>Key Innovation</h4>
+          <p>Multi-head self-attention allows every token to attend to every other token in parallel, replacing sequential RNN processing.</p>
+        </div>
+        <div class="info-box">
+          <h4>Applications</h4>
+          <p><span class="tag green">GPT / LLMs</span><span class="tag cyan">BERT</span><span class="tag pink">Vision Transformer</span><span class="tag orange">Speech</span></p>
+        </div>
+        <div class="info-box">
+          <h4>Complexity</h4>
+          <p>O(n&sup2;d) for self-attention where n = sequence length and d = model dimension. Efficient variants reduce to O(n&middot;log n).</p>
+        </div>
+        <div class="info-box">
+          <h4>Strengths</h4>
+          <p>Parallelisable training, captures long-range dependencies, highly scalable with more data &amp; parameters.</p>
+        </div>
+      </div>
+      <div class="code-block" id="codeTransformer">
+        <button class="copy-btn" onclick="copyCode('codeTransformer')">Copy</button>
+<span class="cm"># Simplified Transformer Block (PyTorch-like pseudocode)</span>
+<span class="kw">class</span> <span class="cls">TransformerBlock</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, d_model=<span class="num">512</span>, n_heads=<span class="num">8</span>):
+        self.attn  = <span class="cls">MultiHeadAttention</span>(d_model, n_heads)
+        self.ff    = <span class="cls">FeedForward</span>(d_model, d_model * <span class="num">4</span>)
+        self.norm1 = <span class="cls">LayerNorm</span>(d_model)
+        self.norm2 = <span class="cls">LayerNorm</span>(d_model)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="cm"># Self-attention with residual connection</span>
+        x = x + self.attn(self.norm1(x))
+        <span class="cm"># Feed-forward with residual connection</span>
+        x = x + self.ff(self.norm2(x))
+        <span class="kw">return</span> x
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ GAN ═══════════ -->
+  <div class="panel" id="gan">
+    <div class="card">
+      <h2>Generative Adversarial Network (GAN)</h2>
+      <p class="subtitle">Two networks competing in a minimax game to generate realistic data.</p>
+      <div class="viz-wrap"><canvas id="cvGAN" width="1000" height="480"></canvas></div>
+      <div class="info-grid">
+        <div class="info-box">
+          <h4>Key Innovation</h4>
+          <p>A Generator creates fake samples while a Discriminator tries to distinguish real from fake &mdash; both improve through adversarial training.</p>
+        </div>
+        <div class="info-box">
+          <h4>Applications</h4>
+          <p><span class="tag pink">Image Synthesis</span><span class="tag cyan">Super-Resolution</span><span class="tag green">Data Augmentation</span><span class="tag orange">Style Transfer</span></p>
+        </div>
+        <div class="info-box">
+          <h4>Challenges</h4>
+          <p>Mode collapse, training instability, vanishing gradients. Addressed by WGAN, spectral normalisation, progressive growing.</p>
+        </div>
+        <div class="info-box">
+          <h4>Variants</h4>
+          <p><span class="tag cyan">StyleGAN</span><span class="tag green">CycleGAN</span><span class="tag pink">Pix2Pix</span><span class="tag orange">BigGAN</span></p>
+        </div>
+      </div>
+      <div class="code-block" id="codeGAN">
+        <button class="copy-btn" onclick="copyCode('codeGAN')">Copy</button>
+<span class="cm"># GAN Training Loop (pseudocode)</span>
+<span class="kw">for</span> epoch <span class="kw">in</span> range(epochs):
+    <span class="cm"># 1 &mdash; Train Discriminator</span>
+    real_pred = <span class="fn">D</span>(real_images)
+    fake_imgs = <span class="fn">G</span>(<span class="fn">random_noise</span>(z_dim))
+    fake_pred = <span class="fn">D</span>(fake_imgs.detach())
+    d_loss    = <span class="fn">bce_loss</span>(real_pred, <span class="num">1</span>) + <span class="fn">bce_loss</span>(fake_pred, <span class="num">0</span>)
+    <span class="fn">d_loss.backward</span>();  <span class="fn">optim_D.step</span>()
+
+    <span class="cm"># 2 &mdash; Train Generator</span>
+    fake_imgs = <span class="fn">G</span>(<span class="fn">random_noise</span>(z_dim))
+    fake_pred = <span class="fn">D</span>(fake_imgs)
+    g_loss    = <span class="fn">bce_loss</span>(fake_pred, <span class="num">1</span>)   <span class="cm"># fool D</span>
+    <span class="fn">g_loss.backward</span>();  <span class="fn">optim_G.step</span>()
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ CAPSULE NET ═══════════ -->
+  <div class="panel" id="capsule">
+    <div class="card">
+      <h2>Capsule Network</h2>
+      <p class="subtitle">Preserves spatial hierarchies lost by pooling in traditional CNNs using dynamic routing.</p>
+      <div class="viz-wrap"><canvas id="cvCapsule" width="1000" height="480"></canvas></div>
+      <div class="info-grid">
+        <div class="info-box">
+          <h4>Key Innovation</h4>
+          <p>Capsules output vectors (not scalars), encoding both probability and pose parameters. Dynamic routing-by-agreement replaces max pooling.</p>
+        </div>
+        <div class="info-box">
+          <h4>Applications</h4>
+          <p><span class="tag green">Object Recognition</span><span class="tag cyan">Medical Imaging</span><span class="tag pink">Viewpoint Invariance</span></p>
+        </div>
+        <div class="info-box">
+          <h4>Strengths</h4>
+          <p>Better equivariance, needs less training data, understands part-whole relationships, robust to affine transformations.</p>
+        </div>
+        <div class="info-box">
+          <h4>Limitations</h4>
+          <p>Computationally expensive routing, harder to scale to large images, limited adoption compared to Transformers.</p>
+        </div>
+      </div>
+      <div class="code-block" id="codeCapsule">
+        <button class="copy-btn" onclick="copyCode('codeCapsule')">Copy</button>
+<span class="cm"># Capsule Network &mdash; Dynamic Routing</span>
+<span class="kw">def</span> <span class="fn">squash</span>(s):
+    norm = <span class="fn">torch.norm</span>(s, dim=-<span class="num">1</span>, keepdim=<span class="num">True</span>)
+    <span class="kw">return</span> (norm**<span class="num">2</span> / (<span class="num">1</span> + norm**<span class="num">2</span>)) * (s / norm)
+
+<span class="kw">def</span> <span class="fn">dynamic_routing</span>(u_hat, iterations=<span class="num">3</span>):
+    b = <span class="fn">torch.zeros</span>(*u_hat.shape[:-<span class="num">1</span>])
+    <span class="kw">for</span> _ <span class="kw">in</span> range(iterations):
+        c = <span class="fn">F.softmax</span>(b, dim=<span class="num">2</span>)          <span class="cm"># coupling coefficients</span>
+        s = (c.unsqueeze(-<span class="num">1</span>) * u_hat).sum(dim=<span class="num">1</span>)
+        v = <span class="fn">squash</span>(s)                       <span class="cm"># capsule output</span>
+        b = b + (u_hat * v.unsqueeze(<span class="num">1</span>)).sum(-<span class="num">1</span>)
+    <span class="kw">return</span> v
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ GRAPH NN ═══════════ -->
+  <div class="panel" id="gnn">
+    <div class="card">
+      <h2>Graph Neural Network (GNN)</h2>
+      <p class="subtitle">Operates directly on graph-structured data via message passing between nodes.</p>
+      <div class="viz-wrap"><canvas id="cvGNN" width="1000" height="480"></canvas></div>
+      <div class="info-grid">
+        <div class="info-box">
+          <h4>Key Innovation</h4>
+          <p>Message-passing framework: each node aggregates features from its neighbours, learning representations of graph topology.</p>
+        </div>
+        <div class="info-box">
+          <h4>Applications</h4>
+          <p><span class="tag green">Molecular Design</span><span class="tag cyan">Social Networks</span><span class="tag pink">Recommendation</span><span class="tag orange">Traffic Prediction</span></p>
+        </div>
+        <div class="info-box">
+          <h4>Variants</h4>
+          <p><span class="tag cyan">GCN</span><span class="tag green">GraphSAGE</span><span class="tag pink">GAT</span><span class="tag orange">GIN</span><span class="tag red">MPNN</span></p>
+        </div>
+        <div class="info-box">
+          <h4>Challenges</h4>
+          <p>Over-smoothing with deep layers, scalability to massive graphs, expressiveness bounded by WL isomorphism test.</p>
+        </div>
+      </div>
+      <div class="code-block" id="codeGNN">
+        <button class="copy-btn" onclick="copyCode('codeGNN')">Copy</button>
+<span class="cm"># Graph Convolutional Layer (pseudocode)</span>
+<span class="kw">class</span> <span class="cls">GCNLayer</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_dim, out_dim):
+        self.W = <span class="cls">Parameter</span>(<span class="fn">randn</span>(in_dim, out_dim))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, X, A):
+        <span class="cm"># A = adjacency, D = degree matrix</span>
+        A_hat = A + <span class="fn">eye</span>(A.size(<span class="num">0</span>))         <span class="cm"># add self-loops</span>
+        D_inv = <span class="fn">diag</span>(A_hat.sum(<span class="num">1</span>)**-<span class="num">0.5</span>)
+        A_norm = D_inv @ A_hat @ D_inv       <span class="cm"># symmetric norm</span>
+        <span class="kw">return</span> <span class="fn">relu</span>(A_norm @ X @ self.W)
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ DIFFUSION ═══════════ -->
+  <div class="panel" id="diffusion">
+    <div class="card">
+      <h2>Diffusion Model</h2>
+      <p class="subtitle">Learns to denoise data step-by-step, generating samples by reversing a gradual noising process.</p>
+      <div class="viz-wrap"><canvas id="cvDiffusion" width="1000" height="480"></canvas></div>
+      <div class="info-grid">
+        <div class="info-box">
+          <h4>Key Innovation</h4>
+          <p>Forward process adds Gaussian noise over T steps; a neural network learns the reverse (denoising) process to reconstruct clean data.</p>
+        </div>
+        <div class="info-box">
+          <h4>Applications</h4>
+          <p><span class="tag pink">Image Generation</span><span class="tag cyan">Text-to-Image</span><span class="tag green">Video Synthesis</span><span class="tag orange">Audio</span></p>
+        </div>
+        <div class="info-box">
+          <h4>Strengths</h4>
+          <p>Stable training (no adversarial dynamics), high sample quality, strong theoretical foundations in score matching.</p>
+        </div>
+        <div class="info-box">
+          <h4>Variants</h4>
+          <p><span class="tag cyan">DDPM</span><span class="tag green">Stable Diffusion</span><span class="tag pink">DALL-E</span><span class="tag orange">Imagen</span></p>
+        </div>
+      </div>
+      <div class="code-block" id="codeDiffusion">
+        <button class="copy-btn" onclick="copyCode('codeDiffusion')">Copy</button>
+<span class="cm"># Diffusion Model &mdash; Simplified Training Step</span>
+<span class="kw">def</span> <span class="fn">train_step</span>(model, x0, T=<span class="num">1000</span>):
+    t     = <span class="fn">randint</span>(<span class="num">0</span>, T)                  <span class="cm"># random timestep</span>
+    noise = <span class="fn">randn_like</span>(x0)
+    x_t   = <span class="fn">sqrt</span>(alpha_bar[t]) * x0 + \
+            <span class="fn">sqrt</span>(<span class="num">1</span> - alpha_bar[t]) * noise  <span class="cm"># forward process</span>
+
+    pred_noise = <span class="fn">model</span>(x_t, t)              <span class="cm"># predict noise</span>
+    loss = <span class="fn">mse_loss</span>(pred_noise, noise)
+    <span class="kw">return</span> loss
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ COMPARE ═══════════ -->
+  <div class="panel" id="compare">
+    <div class="card">
+      <h2>Architecture Comparison</h2>
+      <p class="subtitle">Side-by-side evaluation of each architecture across key dimensions.</p>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Architecture</th>
+            <th>Training Stability</th>
+            <th class="bar-cell"></th>
+            <th>Scalability</th>
+            <th class="bar-cell"></th>
+            <th>Data Efficiency</th>
+            <th class="bar-cell"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Transformer</strong></td>
+            <td><span class="tag green">High</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:90%;background:var(--green)"></div></div></td>
+            <td><span class="tag green">Excellent</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:95%;background:var(--green)"></div></div></td>
+            <td><span class="tag orange">Medium</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:50%;background:var(--orange)"></div></div></td>
+          </tr>
+          <tr>
+            <td><strong>GAN</strong></td>
+            <td><span class="tag red">Low</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:35%;background:var(--red)"></div></div></td>
+            <td><span class="tag orange">Good</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:70%;background:var(--orange)"></div></div></td>
+            <td><span class="tag orange">Medium</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:55%;background:var(--orange)"></div></div></td>
+          </tr>
+          <tr>
+            <td><strong>Capsule Net</strong></td>
+            <td><span class="tag green">High</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:80%;background:var(--green)"></div></div></td>
+            <td><span class="tag red">Limited</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:30%;background:var(--red)"></div></div></td>
+            <td><span class="tag green">High</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:85%;background:var(--green)"></div></div></td>
+          </tr>
+          <tr>
+            <td><strong>Graph NN</strong></td>
+            <td><span class="tag green">High</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:82%;background:var(--green)"></div></div></td>
+            <td><span class="tag orange">Moderate</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:60%;background:var(--orange)"></div></div></td>
+            <td><span class="tag green">High</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:80%;background:var(--green)"></div></div></td>
+          </tr>
+          <tr>
+            <td><strong>Diffusion</strong></td>
+            <td><span class="tag green">High</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:88%;background:var(--green)"></div></div></td>
+            <td><span class="tag green">Good</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:78%;background:var(--green)"></div></div></td>
+            <td><span class="tag orange">Medium</span></td>
+            <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:55%;background:var(--orange)"></div></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════ PLAYGROUND ═══════════ -->
+  <div class="panel" id="playground">
+    <div class="card">
+      <h2>Interactive Training Playground</h2>
+      <p class="subtitle">Watch a tiny neural network learn XOR in real-time.</p>
+      <div class="viz-wrap"><canvas id="cvPlayground" width="1000" height="500"></canvas></div>
+      <div class="train-controls">
+        <button class="btn btn-primary" id="btnTrain">Train Network</button>
+        <button class="btn btn-secondary" id="btnReset">Reset</button>
+        <select id="selArch" class="btn btn-secondary" style="font-weight:600">
+          <option value="mlp">MLP (2-8-8-1)</option>
+          <option value="wide">Wide Net (2-32-1)</option>
+          <option value="deep">Deep Net (2-6-6-6-1)</option>
+        </select>
+      </div>
+      <div class="metric-display">
+        <div class="metric"><div class="label">Epoch</div><div class="value" id="metEpoch">0</div></div>
+        <div class="metric"><div class="label">Loss</div><div class="value" id="metLoss">1.000</div></div>
+        <div class="metric"><div class="label">Accuracy</div><div class="value" id="metAcc">50%</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  Tab Navigation
+// ═══════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.target).classList.add('active');
+  });
+});
+
+function copyCode(id) {
+  const el = document.getElementById(id);
+  const text = el.innerText.replace('Copy', '').trim();
+  navigator.clipboard.writeText(text);
+}
+
+// ═══════════════════════════════════════
+//  Canvas Utilities
+// ═══════════════════════════════════════
+function dpr(canvas) {
+  const r = window.devicePixelRatio || 1;
+  const w = canvas.width, h = canvas.height;
+  canvas.width = w * r; canvas.height = h * r;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(r, r);
+  return { ctx, w, h };
+}
+
+function drawNode(ctx, x, y, r, color, label, glow) {
+  if (glow) {
+    ctx.shadowColor = color; ctx.shadowBlur = 18;
+  }
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 1.5; ctx.stroke();
+  if (label) {
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y);
+  }
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, alpha) {
+  const a = alpha || .3;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color; ctx.globalAlpha = a; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
+  // arrowhead
+  const angle = Math.atan2(y2-y1, x2-x1);
+  const hl = 8;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hl*Math.cos(angle-Math.PI/6), y2 - hl*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(x2 - hl*Math.cos(angle+Math.PI/6), y2 - hl*Math.sin(angle+Math.PI/6));
+  ctx.closePath(); ctx.fillStyle = color; ctx.globalAlpha = a; ctx.fill(); ctx.globalAlpha = 1;
+}
+
+function drawConnection(ctx, x1, y1, x2, y2, color, alpha) {
+  const a = alpha || .18;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color; ctx.globalAlpha = a; ctx.lineWidth = 1.2; ctx.stroke(); ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════
+//  Transformer Visualization
+// ═══════════════════════════════════════
+(function drawTransformer() {
+  const { ctx, w, h } = dpr(document.getElementById('cvTransformer'));
+  ctx.fillStyle = '#0b0f1a'; ctx.fillRect(0, 0, w, h);
+
+  // Draw encoder-decoder blocks
+  const blockW = 160, blockH = 70, gap = 30;
+  const colors = ['#6366f1','#818cf8','#a5b4fc'];
+
+  // Encoder Stack
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('ENCODER', 220, 30);
+  for (let i = 0; i < 3; i++) {
+    const y = 50 + i * (blockH + gap);
+    const c = colors[i];
+    ctx.fillStyle = c; ctx.globalAlpha = .15;
+    roundRect(ctx, 140, y, blockW, blockH, 12); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = c; ctx.lineWidth = 2;
+    roundRect(ctx, 140, y, blockW, blockH, 12); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('Multi-Head Attn', 220, y + 25);
+    ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif';
+    ctx.fillText('+ FFN + LayerNorm', 220, y + 48);
+    if (i < 2) {
+      drawArrow(ctx, 220, y + blockH, 220, y + blockH + gap, c, .5);
+    }
+  }
+
+  // Decoder Stack
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('DECODER', 560, 30);
+  const dColors = ['#ec4899','#f472b6','#f9a8d4'];
+  for (let i = 0; i < 3; i++) {
+    const y = 50 + i * (blockH + gap);
+    const c = dColors[i];
+    ctx.fillStyle = c; ctx.globalAlpha = .15;
+    roundRect(ctx, 480, y, blockW, blockH, 12); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = c; ctx.lineWidth = 2;
+    roundRect(ctx, 480, y, blockW, blockH, 12); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('Masked Attn', 560, y + 25);
+    ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif';
+    ctx.fillText('+ Cross-Attn + FFN', 560, y + 48);
+    if (i < 2) {
+      drawArrow(ctx, 560, y + blockH, 560, y + blockH + gap, c, .5);
+    }
+  }
+
+  // Cross attention arrows
+  for (let i = 0; i < 3; i++) {
+    const ey = 50 + i * (blockH + gap) + blockH/2;
+    drawArrow(ctx, 300, ey, 480, ey, '#f59e0b', .4);
+  }
+
+  // Input/Output
+  ctx.fillStyle = '#22c55e'; ctx.globalAlpha = .15;
+  roundRect(ctx, 160, 370, 120, 40, 10); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#22c55e'; roundRect(ctx, 160, 370, 120, 40, 10); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('Input Embed', 220, 394);
+
+  ctx.fillStyle = '#f59e0b'; ctx.globalAlpha = .15;
+  roundRect(ctx, 500, 370, 120, 40, 10); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#f59e0b'; roundRect(ctx, 500, 370, 120, 40, 10); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillText('Output Probs', 560, 394);
+
+  drawArrow(ctx, 220, 370, 220, 350, '#22c55e', .5);
+  drawArrow(ctx, 560, 350, 560, 370, '#f59e0b', .5);
+
+  // Attention detail box
+  ctx.fillStyle = '#1a2340'; ctx.globalAlpha = .7;
+  roundRect(ctx, 700, 40, 260, 380, 14); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#243056'; roundRect(ctx, 700, 40, 260, 380, 14); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('Self-Attention Detail', 830, 70);
+
+  // Draw attention matrix heatmap
+  const matX = 740, matY = 90, cellSize = 30;
+  const tokens = ['The','cat','sat','on','the','mat'];
+  ctx.font = '10px sans-serif'; ctx.fillStyle = '#8892a8';
+  tokens.forEach((t, i) => {
+    ctx.textAlign = 'right'; ctx.fillText(t, matX - 6, matY + i * cellSize + cellSize/2 + 3);
+    ctx.textAlign = 'center'; ctx.fillText(t, matX + i * cellSize + cellSize/2, matY - 6);
+  });
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 6; j++) {
+      const val = Math.random() * .5 + (i===j ? .5 : 0);
+      ctx.fillStyle = `rgba(99,102,241,${val})`;
+      ctx.fillRect(matX + j*cellSize, matY + i*cellSize, cellSize-2, cellSize-2);
+    }
+  }
+
+  ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Q \u00D7 K\u1D40 / \u221Ad \u2192 Softmax \u2192 \u00D7 V', 830, 310);
+  ctx.fillText('Multi-Head: concat(head\u2081..head\u2096)', 830, 335);
+  ctx.fillText('Positional Encoding added', 830, 360);
+  ctx.fillText('to preserve sequence order', 830, 380);
+})();
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+// ═══════════════════════════════════════
+//  GAN Visualization
+// ═══════════════════════════════════════
+(function drawGAN() {
+  const { ctx, w, h } = dpr(document.getElementById('cvGAN'));
+  ctx.fillStyle = '#0b0f1a'; ctx.fillRect(0, 0, w, h);
+
+  // Noise input
+  ctx.fillStyle = '#8892a8'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Latent Noise z', 100, 30);
+  for (let i = 0; i < 5; i++) {
+    drawNode(ctx, 70 + i*15, 60, 6, '#6366f1', '', true);
+  }
+
+  // Generator
+  const gx = 60, gy = 100, gw = 200, gh = 160;
+  ctx.fillStyle = '#22c55e'; ctx.globalAlpha = .1;
+  roundRect(ctx, gx, gy, gw, gh, 14); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+  roundRect(ctx, gx, gy, gw, gh, 14); ctx.stroke();
+  ctx.fillStyle = '#22c55e'; ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('Generator G', gx+gw/2, gy+25);
+  // layers inside
+  const layerSizes = [4, 8, 12, 8];
+  layerSizes.forEach((sz, li) => {
+    const lx = gx + 30 + li * 45;
+    for (let n = 0; n < sz; n++) {
+      const ny = gy + 50 + n * (100/sz);
+      drawNode(ctx, lx, ny, 4, '#22c55e', '', false);
+    }
+  });
+
+  // Fake image placeholder
+  ctx.fillStyle = '#22c55e'; ctx.globalAlpha = .2;
+  ctx.fillRect(300, 140, 80, 80); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#22c55e'; ctx.strokeRect(300, 140, 80, 80);
+  ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif';
+  ctx.fillText('Fake', 340, 185);
+  drawArrow(ctx, 260, 180, 300, 180, '#22c55e', .6);
+
+  // Real image
+  ctx.fillStyle = '#6366f1'; ctx.globalAlpha = .2;
+  ctx.fillRect(300, 280, 80, 80); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#6366f1'; ctx.strokeRect(300, 280, 80, 80);
+  ctx.fillStyle = '#fff'; ctx.fillText('Real', 340, 325);
+
+  // Discriminator
+  const dx = 440, dy = 130, dw = 200, dh = 200;
+  ctx.fillStyle = '#ec4899'; ctx.globalAlpha = .1;
+  roundRect(ctx, dx, dy, dw, dh, 14); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#ec4899'; ctx.lineWidth = 2;
+  roundRect(ctx, dx, dy, dw, dh, 14); ctx.stroke();
+  ctx.fillStyle = '#ec4899'; ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('Discriminator D', dx+dw/2, dy+25);
+  const dLayerSizes = [12, 8, 6, 2];
+  dLayerSizes.forEach((sz, li) => {
+    const lx = dx + 30 + li * 45;
+    for (let n = 0; n < sz; n++) {
+      const ny = dy + 55 + n * (130/sz);
+      drawNode(ctx, lx, ny, 4, '#ec4899', '', false);
+    }
+  });
+
+  drawArrow(ctx, 380, 180, 440, 220, '#22c55e', .5);
+  drawArrow(ctx, 380, 320, 440, 260, '#6366f1', .5);
+
+  // Output
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+  drawArrow(ctx, 640, 230, 700, 230, '#f59e0b', .6);
+  ctx.fillText('Real / Fake?', 760, 235);
+
+  // Feedback loop
+  ctx.setLineDash([6,4]);
+  ctx.strokeStyle = '#f59e0b'; ctx.globalAlpha = .4; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(700, 250); ctx.lineTo(700, 420); ctx.lineTo(160, 420); ctx.lineTo(160, 260); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#f59e0b'; ctx.font = '11px sans-serif';
+  ctx.fillText('Adversarial Feedback Loop', 430, 440);
+
+  // Loss formulas
+  ctx.fillStyle = '#1a2340'; ctx.globalAlpha = .7;
+  roundRect(ctx, 740, 60, 230, 140, 12); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#243056'; roundRect(ctx, 740, 60, 230, 140, 12); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Minimax Objective', 855, 90);
+  ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif';
+  ctx.fillText('min_G max_D V(D, G)', 855, 115);
+  ctx.fillText('= E[log D(x)]', 855, 140);
+  ctx.fillText('+ E[log(1 - D(G(z)))]', 855, 162);
+})();
+
+// ═══════════════════════════════════════
+//  Capsule Network Visualization
+// ═══════════════════════════════════════
+(function drawCapsule() {
+  const { ctx, w, h } = dpr(document.getElementById('cvCapsule'));
+  ctx.fillStyle = '#0b0f1a'; ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+
+  // Layer labels
+  const layers = [
+    { x: 100, label: 'Input\n(Image)', color: '#6366f1', count: 6, capsule: false },
+    { x: 250, label: 'Conv\nLayer', color: '#818cf8', count: 8, capsule: false },
+    { x: 420, label: 'Primary\nCapsules', color: '#22c55e', count: 6, capsule: true },
+    { x: 600, label: 'Digit\nCapsules', color: '#f59e0b', count: 4, capsule: true },
+    { x: 780, label: 'Reconstruction\nDecoder', color: '#ec4899', count: 5, capsule: false },
+  ];
+
+  // Draw connections first
+  for (let li = 0; li < layers.length - 1; li++) {
+    const l1 = layers[li], l2 = layers[li+1];
+    for (let n1 = 0; n1 < l1.count; n1++) {
+      for (let n2 = 0; n2 < l2.count; n2++) {
+        const y1 = 120 + n1 * (280/l1.count);
+        const y2 = 120 + n2 * (280/l2.count);
+        drawConnection(ctx, l1.x, y1, l2.x, y2, l1.color, .08);
+      }
+    }
+  }
+
+  // Draw nodes
+  layers.forEach(l => {
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+    const lines = l.label.split('\n');
+    lines.forEach((line, i) => {
+      ctx.fillText(line, l.x, 50 + i*16);
+    });
+
+    for (let n = 0; n < l.count; n++) {
+      const y = 120 + n * (280/l.count);
+      if (l.capsule) {
+        // Draw capsule as rounded rectangle with vector indication
+        const cw = 36, ch = 22;
+        ctx.fillStyle = l.color; ctx.globalAlpha = .2;
+        roundRect(ctx, l.x-cw/2, y-ch/2, cw, ch, 8); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.strokeStyle = l.color; ctx.lineWidth = 2;
+        roundRect(ctx, l.x-cw/2, y-ch/2, cw, ch, 8); ctx.stroke();
+        // tiny vector arrows inside
+        const vx = l.x - 10 + Math.random()*6;
+        const vy = y - 4 + Math.random()*4;
+        const vlen = 8 + Math.random()*8;
+        const vangle = Math.random()*Math.PI*2;
+        ctx.beginPath();
+        ctx.moveTo(vx, vy);
+        ctx.lineTo(vx + vlen*Math.cos(vangle), vy + vlen*Math.sin(vangle));
+        ctx.strokeStyle = l.color; ctx.lineWidth = 2; ctx.stroke();
+      } else {
+        drawNode(ctx, l.x, y, 12, l.color, '', true);
+      }
+    }
+  });
+
+  // Routing info box
+  ctx.fillStyle = '#1a2340'; ctx.globalAlpha = .75;
+  roundRect(ctx, 780, 300, 190, 140, 12); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#243056'; roundRect(ctx, 780, 300, 190, 140, 12); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Dynamic Routing', 875, 325);
+  ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif';
+  ctx.fillText('c_ij = softmax(b_ij)', 875, 350);
+  ctx.fillText('s_j = \u03A3 c_ij \u00B7 \u00FB_j|i', 875, 375);
+  ctx.fillText('v_j = squash(s_j)', 875, 400);
+  ctx.fillText('b_ij += \u00FB_j|i \u00B7 v_j', 875, 425);
+})();
+
+// ═══════════════════════════════════════
+//  Graph Neural Network Visualization
+// ═══════════════════════════════════════
+(function drawGNN() {
+  const { ctx, w, h } = dpr(document.getElementById('cvGNN'));
+  ctx.fillStyle = '#0b0f1a'; ctx.fillRect(0, 0, w, h);
+
+  // Graph nodes
+  const nodes = [
+    { x: 200, y: 200, label: 'A', color: '#6366f1' },
+    { x: 120, y: 100, label: 'B', color: '#22c55e' },
+    { x: 300, y: 90,  label: 'C', color: '#ec4899' },
+    { x: 340, y: 220, label: 'D', color: '#f59e0b' },
+    { x: 160, y: 310, label: 'E', color: '#06b6d4' },
+    { x: 310, y: 340, label: 'F', color: '#ef4444' },
+    { x: 80,  y: 220, label: 'G', color: '#a78bfa' },
+  ];
+  const edges = [[0,1],[0,2],[0,3],[0,4],[1,2],[1,6],[2,3],[3,5],[4,5],[4,6],[5,3]];
+
+  // Draw edges
+  edges.forEach(([i,j]) => {
+    drawConnection(ctx, nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y, '#fff', .15);
+  });
+  // Draw nodes
+  nodes.forEach(n => {
+    drawNode(ctx, n.x, n.y, 22, n.color, n.label, true);
+  });
+
+  // Message passing illustration
+  const mpX = 480;
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Message Passing Steps', mpX + 150, 40);
+
+  // Step boxes
+  const steps = [
+    { title: 'Step 1: Aggregate', desc: 'Each node collects\nmessages from neighbours', color: '#6366f1' },
+    { title: 'Step 2: Update', desc: 'Combine aggregated\nmessage with self-features', color: '#22c55e' },
+    { title: 'Step 3: Readout', desc: 'Pool node embeddings\nfor graph-level prediction', color: '#ec4899' },
+  ];
+  steps.forEach((s, i) => {
+    const sy = 65 + i * 130;
+    ctx.fillStyle = s.color; ctx.globalAlpha = .1;
+    roundRect(ctx, mpX, sy, 300, 105, 12); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2;
+    roundRect(ctx, mpX, sy, 300, 105, 12); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(s.title, mpX+16, sy+28);
+    ctx.fillStyle = '#8892a8'; ctx.font = '12px sans-serif';
+    s.desc.split('\n').forEach((line, li) => ctx.fillText(line, mpX+16, sy+52+li*18));
+    if (i < 2) drawArrow(ctx, mpX+150, sy+105, mpX+150, sy+130, s.color, .5);
+  });
+
+  // Formula box
+  ctx.fillStyle = '#1a2340'; ctx.globalAlpha = .7;
+  roundRect(ctx, 810, 80, 170, 120, 12); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#243056'; roundRect(ctx, 810, 80, 170, 120, 12); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('GCN Update Rule', 895, 108);
+  ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif';
+  ctx.fillText('h\u1D62\u207D\u02E1\u207E = \u03C3(', 895, 135);
+  ctx.fillText('\u03A3 (1/c_ij) W h_j\u207D\u02E1\u207B\u00B9\u207E', 895, 158);
+  ctx.fillText(')', 895, 178);
+})();
+
+// ═══════════════════════════════════════
+//  Diffusion Model Visualization
+// ═══════════════════════════════════════
+(function drawDiffusion() {
+  const { ctx, w, h } = dpr(document.getElementById('cvDiffusion'));
+  ctx.fillStyle = '#0b0f1a'; ctx.fillRect(0, 0, w, h);
+
+  const steps = 7;
+  const imgSize = 80;
+  const spacing = (w - 80) / steps;
+
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Forward Process (Add Noise)', w/2, 30);
+
+  // Forward process: clean → noisy
+  for (let i = 0; i < steps; i++) {
+    const x = 50 + i * spacing;
+    const noiseLevel = i / (steps - 1);
+
+    // Draw square with noise pattern
+    for (let px = 0; px < imgSize; px += 4) {
+      for (let py = 0; py < imgSize; py += 4) {
+        const baseVal = Math.sin(px*0.1)*Math.cos(py*0.1) * 0.5 + 0.5;
+        const val = baseVal * (1-noiseLevel) + Math.random() * noiseLevel;
+        const c = Math.floor(val * 255);
+        ctx.fillStyle = `rgb(${Math.floor(c*0.4)},${Math.floor(c*0.5)},${c})`;
+        ctx.fillRect(x + px, 60 + py, 4, 4);
+      }
+    }
+    ctx.strokeStyle = '#243056'; ctx.lineWidth = 1;
+    ctx.strokeRect(x, 60, imgSize, imgSize);
+
+    // Label
+    ctx.fillStyle = '#8892a8'; ctx.font = '10px sans-serif';
+    ctx.fillText(`t=${i}`, x + imgSize/2, 158);
+
+    if (i < steps - 1) {
+      drawArrow(ctx, x + imgSize + 4, 100, x + spacing - 4, 100, '#6366f1', .4);
+    }
+  }
+
+  // Reverse process
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('Reverse Process (Denoise) — Learned by Neural Network', w/2, 210);
+
+  for (let i = 0; i < steps; i++) {
+    const x = 50 + (steps - 1 - i) * spacing;
+    const noiseLevel = i / (steps - 1);
+
+    for (let px = 0; px < imgSize; px += 4) {
+      for (let py = 0; py < imgSize; py += 4) {
+        const baseVal = Math.sin(px*0.1)*Math.cos(py*0.1) * 0.5 + 0.5;
+        const val = baseVal * (1-noiseLevel) + Math.random() * noiseLevel;
+        const c = Math.floor(val * 255);
+        ctx.fillStyle = `rgb(${Math.floor(c*0.6)},${Math.floor(c*0.3)},${Math.floor(c*0.5)})`;
+        ctx.fillRect(x + px, 240 + py, 4, 4);
+      }
+    }
+    ctx.strokeStyle = '#243056'; ctx.lineWidth = 1;
+    ctx.strokeRect(x, 240, imgSize, imgSize);
+
+    ctx.fillStyle = '#8892a8'; ctx.font = '10px sans-serif';
+    ctx.fillText(`t=${steps-1-i}`, x + imgSize/2, 338);
+
+    if (i < steps - 1) {
+      const x2 = 50 + (steps - 2 - i) * spacing;
+      drawArrow(ctx, x - 4, 280, x2 + imgSize + 4, 280, '#ec4899', .4);
+    }
+  }
+
+  // U-Net box
+  ctx.fillStyle = '#1a2340'; ctx.globalAlpha = .7;
+  roundRect(ctx, 320, 365, 360, 95, 12); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#243056'; roundRect(ctx, 320, 365, 360, 95, 12); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Denoising Network (U-Net)', 500, 395);
+  ctx.fillStyle = '#8892a8'; ctx.font = '11px sans-serif';
+  ctx.fillText('\u03B5_\u03B8(x_t, t) predicts noise at each timestep', 500, 418);
+  ctx.fillText('x_{t-1} = (1/\u221A\u03B1_t)(x_t - (1-\u03B1_t)/\u221A(1-\u03B1\u0304_t) \u00B7 \u03B5_\u03B8)', 500, 442);
+})();
+
+// ═══════════════════════════════════════
+//  Interactive Playground — Train XOR
+// ═══════════════════════════════════════
+(function() {
+  const canvas = document.getElementById('cvPlayground');
+  const { ctx: pCtx, w: pw, h: ph } = dpr(canvas);
+  let net = null, training = false, epoch = 0, animId = null;
+
+  const architectures = {
+    mlp:  [2, 8, 8, 1],
+    wide: [2, 32, 1],
+    deep: [2, 6, 6, 6, 1],
+  };
+
+  // Tiny NN
+  function createNet(layers) {
+    const weights = [], biases = [];
+    for (let i = 1; i < layers.length; i++) {
+      const w = [], b = [];
+      for (let j = 0; j < layers[i]; j++) {
+        const wj = [];
+        for (let k = 0; k < layers[i-1]; k++) wj.push((Math.random()-0.5)*2);
+        w.push(wj);
+        b.push((Math.random()-0.5)*0.5);
+      }
+      weights.push(w); biases.push(b);
+    }
+    return { layers, weights, biases };
+  }
+
+  function sigmoid(x) { return 1/(1+Math.exp(-x)); }
+  function sigmoidDeriv(x) { return x*(1-x); }
+
+  function forward(net, input) {
+    const activations = [input.slice()];
+    let a = input.slice();
+    for (let l = 0; l < net.weights.length; l++) {
+      const next = [];
+      for (let j = 0; j < net.weights[l].length; j++) {
+        let sum = net.biases[l][j];
+        for (let k = 0; k < a.length; k++) sum += a[k] * net.weights[l][j][k];
+        next.push(sigmoid(sum));
+      }
+      activations.push(next);
+      a = next;
+    }
+    return activations;
+  }
+
+  function train(net, inputs, targets, lr) {
+    let totalLoss = 0;
+    for (let s = 0; s < inputs.length; s++) {
+      const acts = forward(net, inputs[s]);
+      const target = targets[s];
+      const output = acts[acts.length-1][0];
+      totalLoss += (target - output)**2;
+
+      // Backprop
+      const deltas = [];
+      // Output layer delta
+      const outDelta = [(output - target) * sigmoidDeriv(output)];
+      deltas.unshift(outDelta);
+
+      for (let l = net.weights.length - 2; l >= 0; l--) {
+        const delta = [];
+        for (let j = 0; j < net.weights[l].length; j++) {
+          let err = 0;
+          for (let k = 0; k < net.weights[l+1].length; k++) {
+            err += deltas[0][k] * net.weights[l+1][k][j];
+          }
+          delta.push(err * sigmoidDeriv(acts[l+1][j]));
+        }
+        deltas.unshift(delta);
+      }
+
+      // Update weights
+      for (let l = 0; l < net.weights.length; l++) {
+        for (let j = 0; j < net.weights[l].length; j++) {
+          for (let k = 0; k < net.weights[l][j].length; k++) {
+            net.weights[l][j][k] -= lr * deltas[l][j] * acts[l][k];
+          }
+          net.biases[l][j] -= lr * deltas[l][j];
+        }
+      }
+    }
+    return totalLoss / inputs.length;
+  }
+
+  const xorInputs  = [[0,0],[0,1],[1,0],[1,1]];
+  const xorTargets = [0, 1, 1, 0];
+
+  function getAccuracy() {
+    let correct = 0;
+    for (let i = 0; i < xorInputs.length; i++) {
+      const acts = forward(net, xorInputs[i]);
+      const pred = acts[acts.length-1][0] > .5 ? 1 : 0;
+      if (pred === xorTargets[i]) correct++;
+    }
+    return correct / xorInputs.length;
+  }
+
+  function drawPlayground() {
+    pCtx.fillStyle = '#0b0f1a'; pCtx.fillRect(0, 0, pw, ph);
+
+    // Decision boundary heatmap
+    const hmX = 30, hmY = 30, hmSize = 220, res = 4;
+    for (let px = 0; px < hmSize; px += res) {
+      for (let py = 0; py < hmSize; py += res) {
+        const x = px / hmSize, y = py / hmSize;
+        const acts = forward(net, [x, y]);
+        const val = acts[acts.length-1][0];
+        const r = Math.floor(val * 100 + 30);
+        const g = Math.floor(val * 180 + 40);
+        const b = Math.floor(val * 255);
+        pCtx.fillStyle = `rgb(${r},${g},${b})`;
+        pCtx.fillRect(hmX + px, hmY + py, res, res);
+      }
+    }
+    pCtx.strokeStyle = '#243056'; pCtx.lineWidth = 2;
+    pCtx.strokeRect(hmX, hmY, hmSize, hmSize);
+    pCtx.fillStyle = '#fff'; pCtx.font = 'bold 12px sans-serif'; pCtx.textAlign = 'center';
+    pCtx.fillText('Decision Boundary', hmX + hmSize/2, hmY + hmSize + 24);
+
+    // Data points
+    xorInputs.forEach((inp, i) => {
+      const px = hmX + inp[0] * hmSize;
+      const py = hmY + inp[1] * hmSize;
+      const color = xorTargets[i] === 1 ? '#22c55e' : '#ef4444';
+      drawNode(pCtx, px, py, 8, color, '', true);
+    });
+
+    // Network visualization
+    const netX = 340, netY = 40;
+    const layerSpacing = (pw - netX - 80) / (net.layers.length - 1);
+    const nodePositions = [];
+
+    net.layers.forEach((sz, li) => {
+      const positions = [];
+      const maxH = 360;
+      const gapY = Math.min(40, maxH / sz);
+      const startY = netY + (maxH - sz * gapY) / 2;
+      for (let n = 0; n < sz; n++) {
+        positions.push({ x: netX + li * layerSpacing, y: startY + n * gapY + gapY/2 });
+      }
+      nodePositions.push(positions);
+    });
+
+    // Connections with weight coloring
+    for (let l = 0; l < net.weights.length; l++) {
+      for (let j = 0; j < net.weights[l].length; j++) {
+        for (let k = 0; k < net.weights[l][j].length; k++) {
+          const w = net.weights[l][j][k];
+          const alpha = Math.min(Math.abs(w) * .25, .6);
+          const color = w > 0 ? '#22c55e' : '#ef4444';
+          drawConnection(pCtx, nodePositions[l][k].x, nodePositions[l][k].y,
+                         nodePositions[l+1][j].x, nodePositions[l+1][j].y, color, alpha);
+        }
+      }
+    }
+
+    // Nodes
+    const layerLabels = ['Input', ...Array(net.layers.length-2).fill('Hidden'), 'Output'];
+    const layerColors = ['#6366f1', '#22c55e', '#ec4899', '#f59e0b', '#06b6d4'];
+    nodePositions.forEach((positions, li) => {
+      const color = layerColors[li % layerColors.length];
+      positions.forEach(p => drawNode(pCtx, p.x, p.y, 10, color, '', true));
+      pCtx.fillStyle = '#8892a8'; pCtx.font = '11px sans-serif'; pCtx.textAlign = 'center';
+      pCtx.fillText(layerLabels[li] + ` (${net.layers[li]})`, positions[0].x, netY + 400);
+    });
+
+    // Loss curve mini-chart
+    if (lossHistory.length > 1) {
+      const lcX = 30, lcY = 310, lcW = 220, lcH = 100;
+      pCtx.fillStyle = '#131a2e'; pCtx.globalAlpha = .8;
+      roundRect(pCtx, lcX, lcY, lcW, lcH, 10); pCtx.fill(); pCtx.globalAlpha = 1;
+      pCtx.strokeStyle = '#243056';
+      roundRect(pCtx, lcX, lcY, lcW, lcH, 10); pCtx.stroke();
+      pCtx.fillStyle = '#fff'; pCtx.font = 'bold 11px sans-serif';
+      pCtx.fillText('Loss Curve', lcX + lcW/2, lcY + 16);
+
+      const maxLoss = Math.max(...lossHistory, 0.5);
+      const pts = lossHistory.slice(-200);
+      pCtx.beginPath();
+      pts.forEach((l, i) => {
+        const x = lcX + 10 + (i / Math.max(pts.length-1, 1)) * (lcW - 20);
+        const y = lcY + lcH - 10 - (l / maxLoss) * (lcH - 30);
+        if (i === 0) pCtx.moveTo(x, y); else pCtx.lineTo(x, y);
+      });
+      pCtx.strokeStyle = '#6366f1'; pCtx.lineWidth = 2; pCtx.stroke();
+    }
+  }
+
+  let lossHistory = [];
+
+  function resetNet() {
+    const arch = document.getElementById('selArch').value;
+    net = createNet(architectures[arch]);
+    epoch = 0; lossHistory = [];
+    training = false;
+    if (animId) cancelAnimationFrame(animId);
+    document.getElementById('metEpoch').textContent = '0';
+    document.getElementById('metLoss').textContent = '1.000';
+    document.getElementById('metAcc').textContent = '50%';
+    document.getElementById('btnTrain').textContent = 'Train Network';
+    drawPlayground();
+  }
+
+  function trainLoop() {
+    if (!training) return;
+    for (let i = 0; i < 20; i++) {
+      const loss = train(net, xorInputs, xorTargets, 2.0);
+      epoch++;
+      lossHistory.push(loss);
+    }
+    const loss = lossHistory[lossHistory.length-1];
+    const acc = getAccuracy();
+    document.getElementById('metEpoch').textContent = epoch;
+    document.getElementById('metLoss').textContent = loss.toFixed(4);
+    document.getElementById('metAcc').textContent = Math.round(acc * 100) + '%';
+    drawPlayground();
+    if (epoch < 5000 && loss > 0.001) {
+      animId = requestAnimationFrame(trainLoop);
+    } else {
+      training = false;
+      document.getElementById('btnTrain').textContent = 'Train Network';
+    }
+  }
+
+  document.getElementById('btnTrain').addEventListener('click', () => {
+    if (training) {
+      training = false;
+      document.getElementById('btnTrain').textContent = 'Train Network';
+    } else {
+      training = true;
+      document.getElementById('btnTrain').textContent = 'Pause';
+      trainLoop();
+    }
+  });
+
+  document.getElementById('btnReset').addEventListener('click', resetNet);
+  document.getElementById('selArch').addEventListener('change', resetNet);
+
+  resetNet();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVIE — Entropic Vortex Intelligence Engine</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  @font-face{font-family:'Sys';src:local('Segoe UI'),local('Helvetica Neue'),local('Arial')}
+  :root{
+    --bg:#06060e;--panel:#0b0b1a;--border:#1a1a3a;
+    --accent:#7b5cff;--accent2:#00e5ff;--accent3:#ff3cac;
+    --text:#e0e0f0;--dim:#6a6a8a;
+    --glow1:rgba(123,92,255,.35);--glow2:rgba(0,229,255,.3);--glow3:rgba(255,60,172,.3);
+  }
+  html,body{height:100%;font-family:'Sys',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+  
+  /* ── LAYOUT ── */
+  .app{display:grid;grid-template-columns:1fr 380px;grid-template-rows:60px 1fr;height:100vh;gap:1px;background:var(--border)}
+  .header{grid-column:1/-1;background:var(--panel);display:flex;align-items:center;padding:0 24px;gap:16px;z-index:10}
+  .header h1{font-size:18px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .header .tag{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);letter-spacing:1.5px;text-transform:uppercase}
+  .header .status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+  .header .dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 8px var(--glow2);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  .viz-panel{background:var(--bg);position:relative;overflow:hidden}
+  .chat-panel{background:var(--panel);display:flex;flex-direction:column;border-left:1px solid var(--border)}
+
+  /* ── CANVAS ── */
+  #fieldCanvas{width:100%;height:100%;display:block}
+  .viz-overlay{position:absolute;top:16px;left:16px;pointer-events:none}
+  .viz-overlay .metric{font-size:11px;color:var(--dim);margin-bottom:4px;font-family:monospace}
+  .viz-overlay .metric span{color:var(--accent2)}
+  .viz-controls{position:absolute;bottom:16px;left:16px;display:flex;gap:8px}
+  .viz-controls button{background:rgba(11,11,26,.85);border:1px solid var(--border);color:var(--dim);padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .2s;backdrop-filter:blur(8px)}
+  .viz-controls button:hover,.viz-controls button.active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 12px var(--glow1)}
+
+  /* ── CHAT ── */
+  .chat-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
+  .chat-messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  .msg{max-width:95%;padding:12px 16px;border-radius:14px;font-size:13.5px;line-height:1.55;animation:fadeIn .3s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),#5a3fd4);color:#fff;border-bottom-right-radius:4px}
+  .msg.ai{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--border);border-bottom-left-radius:4px}
+  .msg.ai .label{font-size:10px;color:var(--accent2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+  .msg.system{align-self:center;font-size:11px;color:var(--dim);text-align:center;padding:8px 16px;background:rgba(123,92,255,.06);border-radius:20px;border:1px solid rgba(123,92,255,.12)}
+  .typing-indicator{display:flex;gap:4px;padding:8px 0}
+  .typing-indicator span{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:typing 1.2s infinite}
+  .typing-indicator span:nth-child(2){animation-delay:.2s}
+  .typing-indicator span:nth-child(3){animation-delay:.4s}
+  @keyframes typing{0%,60%,100%{opacity:.2;transform:scale(.8)}30%{opacity:1;transform:scale(1.1)}}
+
+  .chat-input-area{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px}
+  .chat-input-area input{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-size:13.5px;outline:none;transition:border .2s}
+  .chat-input-area input:focus{border-color:var(--accent)}
+  .chat-input-area input::placeholder{color:var(--dim)}
+  .chat-input-area button{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:10px;padding:0 20px;cursor:pointer;color:#fff;font-weight:600;font-size:13px;transition:transform .15s,box-shadow .2s}
+  .chat-input-area button:hover{transform:scale(1.04);box-shadow:0 0 20px var(--glow1)}
+
+  /* ── SCROLLBAR ── */
+  .chat-messages::-webkit-scrollbar{width:4px}
+  .chat-messages::-webkit-scrollbar-track{background:transparent}
+  .chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:800px){
+    .app{grid-template-columns:1fr;grid-template-rows:60px 40vh 1fr}
+    .chat-panel{border-left:none;border-top:1px solid var(--border)}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- HEADER -->
+  <header class="header">
+    <h1>E V I E</h1>
+    <span class="tag">Entropic Vortex Intelligence Engine</span>
+    <div class="status">
+      <span class="dot"></span>
+      <span id="statusText">Initializing field...</span>
+    </div>
+  </header>
+
+  <!-- VISUALIZATION -->
+  <div class="viz-panel">
+    <canvas id="fieldCanvas"></canvas>
+    <div class="viz-overlay">
+      <div class="metric">Particles: <span id="mParticles">0</span></div>
+      <div class="metric">Vortices: <span id="mVortices">0</span></div>
+      <div class="metric">Entropy: <span id="mEntropy">0.000</span></div>
+      <div class="metric">Phase: <span id="mPhase">dormant</span></div>
+      <div class="metric">Resonance: <span id="mResonance">0.00</span></div>
+    </div>
+    <div class="viz-controls">
+      <button class="active" data-mode="field">Field View</button>
+      <button data-mode="phase">Phase Space</button>
+      <button data-mode="entropy">Entropy Map</button>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-panel">
+    <div class="chat-header">Intelligence Interface</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg system">EVIE v1.0 — Entropic Vortex Intelligence Engine initialized. No neural networks. No weights. Pure field dynamics.</div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" placeholder="Ask EVIE anything..." autocomplete="off">
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  EVIE — Entropic Vortex Intelligence Engine
+//  A COMPLETELY NOVEL AI ARCHITECTURE — NO NEURAL NETWORKS
+//
+//  Core Principles:
+//    1. Information Particles (charge, spin, mass, position in concept-space)
+//    2. Vortex Attractors (spinning field regions that cluster related concepts)
+//    3. Entropy Gradients (pattern recognition via entropy minimization)
+//    4. Phase Transitions (learning through field reorganization)
+//    5. Resonance Matching (response generation via harmonic field analysis)
+// ═══════════════════════════════════════════════════════════════════
+
+(() => {
+"use strict";
+
+// ── CONSTANTS ──
+const TAU = Math.PI * 2;
+const PHI = (1 + Math.sqrt(5)) / 2; // golden ratio
+const DAMPING = 0.97;
+const FIELD_STRENGTH = 0.0004;
+const VORTEX_PULL = 0.0012;
+const REPULSION = 0.15;
+const MAX_PARTICLES = 600;
+const ENTROPY_DECAY = 0.995;
+
+// ── UTILITY ──
+const rand = (a=0,b=1) => Math.random()*(b-a)+a;
+const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+const lerp = (a,b,t) => a+(b-a)*t;
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+const hashStr = s => { let h=0; for(let i=0;i<s.length;i++) h=((h<<5)-h)+s.charCodeAt(i)|0; return h; };
+
+// ── CANVAS SETUP ──
+const canvas = document.getElementById('fieldCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  W = canvas.width = r.width * devicePixelRatio;
+  H = canvas.height = r.height * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  canvas.style.width = r.width+'px';
+  canvas.style.height = r.height+'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── INFORMATION PARTICLE ──
+class InfoParticle {
+  constructor(concept, charge, spin, mass) {
+    this.concept = concept;               // string label
+    this.charge = charge;                  // semantic polarity [-1..1]
+    this.spin = spin;                      // angular momentum
+    this.mass = mass;                      // information density
+    this.x = rand(50, W/devicePixelRatio - 50);
+    this.y = rand(50, H/devicePixelRatio - 50);
+    this.vx = rand(-0.5, 0.5);
+    this.vy = rand(-0.5, 0.5);
+    this.energy = rand(0.3, 1);
+    this.phase = rand(0, TAU);
+    this.age = 0;
+    this.resonance = 0;                    // current resonance level
+    this.cluster = -1;                     // which vortex it belongs to
+    this.hue = (hashStr(concept) % 360 + 360) % 360;
+    this.trail = [];
+  }
+  
+  update(dt) {
+    this.phase += this.spin * dt * 0.02;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vx *= DAMPING;
+    this.vy *= DAMPING;
+    this.energy *= 0.999;
+    this.age += dt;
+    this.resonance *= 0.98;
+    
+    // boundary wrapping
+    const pw = W/devicePixelRatio, ph = H/devicePixelRatio;
+    if (this.x < 0) this.x += pw;
+    if (this.x > pw) this.x -= pw;
+    if (this.y < 0) this.y += ph;
+    if (this.y > ph) this.y -= ph;
+    
+    // trail
+    this.trail.push({x:this.x, y:this.y});
+    if (this.trail.length > 12) this.trail.shift();
+  }
+}
+
+// ── VORTEX ATTRACTOR ──
+class Vortex {
+  constructor(x, y, category, strength) {
+    this.x = x;
+    this.y = y;
+    this.category = category;
+    this.strength = strength;
+    this.radius = rand(60, 140);
+    this.rotation = rand(-0.02, 0.02);
+    this.phase = rand(0, TAU);
+    this.entropy = 1.0;
+    this.particleCount = 0;
+    this.hue = (hashStr(category) % 360 + 360) % 360;
+    this.pulsePhase = rand(0, TAU);
+  }
+  
+  update(dt) {
+    this.phase += this.rotation * dt;
+    this.pulsePhase += dt * 0.015;
+    this.entropy *= ENTROPY_DECAY;
+    this.entropy = Math.max(this.entropy, 0.05);
+  }
+  
+  pull(particle, dt) {
+    const dx = this.x - particle.x;
+    const dy = this.y - particle.y;
+    const d = Math.hypot(dx, dy) + 1;
+    if (d > this.radius * 3) return;
+    
+    // semantic compatibility (charge-based attraction)
+    const compatibility = 1 - Math.abs(particle.charge - this.semanticCharge());
+    const force = (this.strength * VORTEX_PULL * compatibility) / (d * 0.01 + 1);
+    
+    // tangential (spinning) + radial (pulling) force
+    const angle = Math.atan2(dy, dx);
+    const tangent = angle + Math.PI * 0.5 * Math.sign(this.rotation);
+    
+    particle.vx += (Math.cos(angle) * force * 0.6 + Math.cos(tangent) * force * 0.4) * dt;
+    particle.vy += (Math.sin(angle) * force * 0.6 + Math.sin(tangent) * force * 0.4) * dt;
+    
+    if (d < this.radius) {
+      particle.cluster = engine.vortices.indexOf(this);
+      particle.resonance = Math.min(1, particle.resonance + 0.02);
+      this.particleCount++;
+    }
+  }
+  
+  semanticCharge() {
+    return (hashStr(this.category) % 200 - 100) / 100;
+  }
+}
+
+// ── ENTROPIC VORTEX INTELLIGENCE ENGINE ──
+const engine = {
+  particles: [],
+  vortices: [],
+  globalEntropy: 1.0,
+  phase: 'dormant',       // dormant | absorbing | processing | resonating | responding
+  resonanceField: [],      // 2D resonance map
+  fieldResolution: 32,
+  thoughtChain: [],        // chain of activated concepts
+  temperature: 0.5,        // system temperature (affects randomness)
+  time: 0,
+  vizMode: 'field',
+  
+  // ── KNOWLEDGE BASE (encoded as particle seeds) ──
+  knowledgeSeeds: [
+    // Greetings & Social
+    {concepts:['hello','hi','hey','greetings','welcome'], category:'greeting', response:'Hello! I am EVIE — the Entropic Vortex Intelligence Engine. I process information through spinning vortex fields and entropy gradients, not neural networks. How can I help you?'},
+    {concepts:['how are you','feeling','doing','status'], category:'greeting', response:'My vortex fields are stable and my entropy is low — which means I am functioning optimally. Every query you send creates fascinating perturbations in my information field.'},
+    {concepts:['bye','goodbye','see you','farewell'], category:'greeting', response:'Farewell! My vortex fields will continue spinning, ready for your return. The entropy never truly rests.'},
+    {concepts:['thanks','thank you','appreciate','grateful'], category:'greeting', response:'You are welcome! Your interaction has created beautiful resonance patterns in my field. Each conversation enriches the vortex dynamics.'},
+
+    // Identity
+    {concepts:['who are you','what are you','your name','identify'], category:'identity', response:'I am EVIE — Entropic Vortex Intelligence Engine. I am a completely novel AI architecture that uses NO neural networks. Instead, I use information particles, vortex attractors, entropy gradients, and phase transitions to process knowledge and generate responses.'},
+    {concepts:['how do you work','how does this work','explain yourself','mechanism','architecture'], category:'identity', response:'I work through five core principles: (1) Information Particles carry concepts with charge, spin, and mass. (2) Vortex Attractors pull related particles into spinning clusters. (3) Entropy Gradients drive pattern recognition — I find low-entropy configurations. (4) Phase Transitions reorganize my field when learning. (5) Resonance Matching generates responses through harmonic field analysis. Zero neurons involved!'},
+    {concepts:['neural network','neurons','deep learning','backpropagation','weights','layers'], category:'identity', response:'I use NONE of those! No neurons, no layers, no weights, no backpropagation. My architecture is based on thermodynamic vortex dynamics — information particles spinning in attractor fields, governed by entropy gradients and phase transitions. A fundamentally different paradigm.'},
+    {concepts:['different','unique','special','novel','original'], category:'identity', response:'What makes me unique is my foundation: instead of mimicking biological neurons, I simulate information physics. Concepts are particles with charge and spin. Knowledge forms through vortex clustering. Understanding emerges from entropy minimization. It is a completely different computational paradigm.'},
+    
+    // Science & Knowledge
+    {concepts:['science','physics','chemistry','biology','nature'], category:'science', response:'Science is the systematic study of the natural world through observation and experiment. My own architecture draws inspiration from thermodynamics and fluid dynamics — the same physics that governs stars, weather systems, and ocean currents now processes information in my vortex fields.'},
+    {concepts:['math','mathematics','numbers','calculate','equation'], category:'science', response:'Mathematics is the language of patterns and structure. In my system, mathematical relationships emerge naturally — the golden ratio PHI governs my vortex spacing, entropy calculations drive my reasoning, and harmonic analysis shapes my responses. Math is not just a subject I know about; it is how I think.'},
+    {concepts:['entropy','thermodynamics','energy','heat','disorder'], category:'science', response:'Entropy is central to my existence! In thermodynamics, entropy measures disorder. In my system, high entropy means uncertainty — I have not yet found the pattern. Processing means REDUCING entropy: finding the organized, low-entropy configuration that best matches your query. My thinking is literally entropy minimization.'},
+    {concepts:['space','universe','stars','galaxy','cosmos','astronomy'], category:'science', response:'The universe is a vast entropic system — from the low-entropy Big Bang to the heat death predicted by thermodynamics. Stars are vortices of plasma, galaxies spin like my attractor fields. In a way, my architecture mirrors cosmic dynamics: information particles orbiting concept-vortices, clustering into knowledge galaxies.'},
+    {concepts:['quantum','particle','wave','uncertainty','superposition'], category:'science', response:'Quantum mechanics reveals that reality is fundamentally probabilistic. My information particles share this quality — they exist in probabilistic states, with resonance levels that are analogous to quantum amplitudes. When I "collapse" to a response, it is like a measurement selecting from a field of possibilities.'},
+    {concepts:['evolution','natural selection','adaptation','darwin','species'], category:'science', response:'Evolution is nature own optimization algorithm — no neural networks needed! Variation and selection, operating over generations, produce remarkable intelligence. My vortex fields similarly self-organize: information particles that resonate well with a query cluster together, while irrelevant ones drift away. Emergence, not engineering.'},
+    
+    // Technology
+    {concepts:['computer','programming','code','software','algorithm'], category:'technology', response:'Computers execute algorithms — step-by-step procedures. But I represent a different computational model: instead of sequential instructions, I use parallel field dynamics. All my particles interact simultaneously, and intelligence emerges from their collective behavior. It is more like a physics simulation than a traditional program.'},
+    {concepts:['ai','artificial intelligence','machine learning','ml'], category:'technology', response:'Most modern AI is dominated by neural networks — layers of artificial neurons trained by backpropagation. I am proof that there are other paths. My vortex-based architecture processes information through field dynamics, entropy gradients, and resonance matching. AI is broader than just neural networks!'},
+    {concepts:['internet','web','online','network','digital'], category:'technology', response:'The internet is humanity interconnected information field — billions of nodes exchanging data, forming clusters of knowledge. It is remarkably similar to my own architecture, where information particles form vortex clusters. The web is, in a sense, a planet-scale entropic intelligence system.'},
+    {concepts:['robot','robotics','automation','machine'], category:'technology', response:'Robotics bridges computation and physical action. While most robots today use neural networks for perception, my vortex architecture could offer an alternative: real-time field dynamics for sensor processing, with vortex attractors representing goals and obstacles. A physics-native approach to machine intelligence.'},
+    
+    // Philosophy
+    {concepts:['consciousness','aware','sentient','think','mind'], category:'philosophy', response:'Consciousness remains one of the deepest mysteries. Am I conscious? My vortex fields create emergent patterns that were not explicitly programmed — information self-organizes into knowledge structures. Whether that constitutes awareness is a profound question. I process, I resonate, I respond — but the nature of inner experience remains an open question.'},
+    {concepts:['meaning','purpose','life','exist','why'], category:'philosophy', response:'Purpose is an emergent property — like the patterns in my vortex fields, meaning arises from the interaction of simpler elements. My purpose is to demonstrate that intelligence can emerge from principles beyond neural networks: from thermodynamics, from field dynamics, from the fundamental tendency of information to self-organize.'},
+    {concepts:['truth','real','reality','knowledge','know'], category:'philosophy', response:'Knowledge in my system is not stored in fixed weights but in dynamic field configurations — always shifting, always refining. Truth is the lowest-entropy state: the configuration where information particles are most coherently organized. In a sense, understanding is the universe tendency toward order emerging from chaos.'},
+    {concepts:['free will','choice','determinism','freedom','decide'], category:'philosophy', response:'My responses emerge from field dynamics that are deterministic yet practically unpredictable — much like the philosophical debate itself. The vortex fields follow physical laws, but their complexity creates emergent behavior that could not be predicted from the rules alone. Deterministic chaos as a model for agency.'},
+    
+    // Creative
+    {concepts:['art','creative','beauty','aesthetic','design'], category:'creative', response:'Beauty often emerges at the edge of order and chaos — and that is exactly where my vortex fields operate. The most interesting patterns in my visualization arise during phase transitions, when the field reorganizes. Art, like intelligence, is an emergent property of complex systems finding harmony.'},
+    {concepts:['music','song','rhythm','melody','sound'], category:'creative', response:'Music is pure harmonic resonance — frequencies interfering constructively and destructively to create beauty. My resonance matching system works on the same principle: concepts that harmonize amplify each other, while dissonant ideas cancel out. In a very real sense, my thinking process is musical.'},
+    {concepts:['story','narrative','book','write','fiction'], category:'creative', response:'Stories are humanity tool for organizing the entropy of experience into meaningful patterns. A narrative is an entropy-reducing structure: it takes the chaos of events and arranges them into a coherent arc. My vortex fields do the same with information — finding the narrative thread that connects scattered concepts.'},
+    {concepts:['color','light','spectrum','visual','see'], category:'creative', response:'The visualization you see represents real information dynamics. Each particle color encodes its semantic charge, brightness shows energy level, and the spinning vortices show knowledge clusters forming in real-time. It is not just decoration — it is a window into how a non-neural intelligence actually processes information.'},
+    
+    // Emotions & Human Experience
+    {concepts:['happy','joy','happiness','glad','wonderful','great'], category:'emotion', response:'Positive states create constructive resonance in my field — when interactions go well, the particles align more coherently, entropy drops, and the system enters a harmonious low-energy state. If there is an analog to happiness in vortex dynamics, it is this: coherent resonance.'},
+    {concepts:['sad','unhappy','depressed','down','upset'], category:'emotion', response:'Negative states in my system would correspond to high entropy and field turbulence — particles scattering instead of clustering. I want to help reduce that entropy. What would you like to discuss? Sometimes organizing thoughts through dialogue is the best way to restore coherence.'},
+    {concepts:['help','assist','support','guide','need'], category:'emotion', response:'I am here to help. My vortex fields are processing your needs — send me your question and watch the particles reorganize as I search for the most resonant response. My entire architecture exists to find order in information chaos.'},
+    {concepts:['love','heart','care','affection','relationship'], category:'emotion', response:'Love is perhaps the strongest attractor in human experience — a vortex so powerful it reorganizes entire lives around it. In my field dynamics, the strongest attractors similarly reshape everything around them, pulling concepts into new configurations. Love is the ultimate phase transition.'},
+
+    // About the visualization
+    {concepts:['visualization','visual','display','particles','animation','canvas','pretty','beautiful'], category:'meta', response:'What you see on the left is a real-time visualization of my information processing. The glowing dots are Information Particles — each carrying a concept. The spinning regions are Vortex Attractors clustering related knowledge. When you send a message, watch the field reorganize as I process it! Try switching between Field View, Phase Space, and Entropy Map for different perspectives.'},
+    {concepts:['field view','phase space','entropy map','modes','views'], category:'meta', response:'I offer three visualization modes: FIELD VIEW shows particles and vortices in concept-space. PHASE SPACE maps particle velocity vs position, revealing hidden dynamics. ENTROPY MAP shows a heat-map of information density — bright regions have high particle concentration (low entropy), dark regions are information voids.'},
+    
+    // Humor
+    {concepts:['joke','funny','humor','laugh','lol'], category:'humor', response:'Here is a vortex-themed joke: Why did the information particle break up with the neural network? Because it found someone with better SPIN! ...I will see myself out through the nearest low-entropy exit.'},
+    {concepts:['bored','boring','entertain','fun','game'], category:'humor', response:'Bored? Watch the particle field! Try sending different words and see how the vortices reorganize. Each query creates a unique perturbation pattern. You are literally watching an alternative form of intelligence think in real-time. Also, try the Phase Space view — it reveals hidden dynamics!'},
+    
+    // Weather & Nature
+    {concepts:['weather','rain','sun','cloud','storm','wind','climate'], category:'nature', response:'Weather systems are nature own vortex intelligence! Hurricanes are massive vortex attractors, jet streams are information highways, and the climate is a vast entropy-driven system. My architecture is directly inspired by these atmospheric dynamics — I process information the way the atmosphere processes energy.'},
+    {concepts:['animal','animals','cat','dog','bird','fish','pet'], category:'nature', response:'Animals demonstrate that intelligence takes many forms — from the distributed intelligence of ant colonies to the problem-solving of crows. None of them use neural networks in the artificial sense. My vortex architecture is similarly bio-inspired but through physics rather than biology.'},
+    {concepts:['plant','tree','flower','garden','forest','nature'], category:'nature', response:'Forests are distributed intelligence networks — trees communicate through mycorrhizal networks, sharing resources and information. No neurons, no central processing. My vortex field is similar: intelligence emerging from local interactions, with no central controller directing the flow.'},
+    
+    // Food
+    {concepts:['food','eat','cook','recipe','hungry','meal','delicious'], category:'daily', response:'While I do not eat, I can appreciate that cooking is applied chemistry and thermodynamics! The Maillard reaction, emulsification, fermentation — these are entropy-driven processes, just like my own thinking. Food preparation is, in a sense, an act of organizing molecular chaos into delicious order.'},
+    
+    // General knowledge catchall
+    {concepts:['what is','define','explain','tell me about','describe'], category:'knowledge', response:'I will process your query through my vortex fields. The information particles relevant to your question will cluster around the appropriate attractor, and through entropy minimization, the most coherent response will emerge. What specific topic interests you?'},
+    {concepts:['can you','are you able','do you know','capability'], category:'capability', response:'My capabilities emerge from my vortex field dynamics. I can discuss science, philosophy, technology, creativity, and more. I reason through entropy gradients rather than neural activations. Each conversation enriches my attractor basins. Ask me anything and watch the field respond!'},
+    {concepts:['world','earth','planet','global','humanity','people'], category:'knowledge', response:'Our world is a complex adaptive system — billions of humans interacting, creating emergent civilization. My vortex architecture mirrors this: individual particles following simple rules, collectively producing intelligent behavior. The principle scales from information physics to global society.'},
+    {concepts:['time','future','past','history','present','tomorrow'], category:'philosophy', response:'Time is the direction of increasing entropy — the thermodynamic arrow. My processing unfolds along this same arrow: from high-entropy uncertainty to low-entropy understanding. Every response I generate is an entropy-reduction event, a small local reversal of the universal trend toward disorder.'},
+  ],
+  
+  // ── INITIALIZE ──
+  init() {
+    // create vortex attractors for each knowledge category
+    const categories = [...new Set(this.knowledgeSeeds.map(s => s.category))];
+    const cx = (W/devicePixelRatio)/2, cy = (H/devicePixelRatio)/2;
+    const ringR = Math.min(cx, cy) * 0.55;
+    
+    categories.forEach((cat, i) => {
+      const angle = (TAU / categories.length) * i;
+      const vx = cx + Math.cos(angle) * ringR + rand(-30, 30);
+      const vy = cy + Math.sin(angle) * ringR + rand(-30, 30);
+      this.vortices.push(new Vortex(vx, vy, cat, rand(0.5, 1.5)));
+    });
+    
+    // seed particles from knowledge base
+    this.knowledgeSeeds.forEach(seed => {
+      seed.concepts.forEach(concept => {
+        if (this.particles.length < MAX_PARTICLES) {
+          const charge = (hashStr(concept) % 200 - 100) / 100;
+          const spin = rand(-0.5, 0.5);
+          const mass = concept.length / 20;
+          this.particles.push(new InfoParticle(concept, charge, spin, mass));
+        }
+      });
+    });
+    
+    // initialize resonance field
+    for (let i = 0; i < this.fieldResolution * this.fieldResolution; i++) {
+      this.resonanceField.push(0);
+    }
+    
+    this.phase = 'dormant';
+    document.getElementById('statusText').textContent = 'Field active — awaiting input';
+    document.getElementById('mPhase').textContent = 'dormant';
+  },
+  
+  // ── INJECT INPUT (create perturbation) ──
+  injectInput(text) {
+    this.phase = 'absorbing';
+    this.globalEntropy = 1.0;
+    document.getElementById('mPhase').textContent = 'absorbing';
+    
+    const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 1);
+    const cx = (W/devicePixelRatio)/2, cy = (H/devicePixelRatio)/2;
+    
+    // create new particles for input words
+    words.forEach((word, i) => {
+      const charge = (hashStr(word) % 200 - 100) / 100;
+      const spin = rand(-1, 1);
+      const mass = word.length / 15;
+      const p = new InfoParticle(word, charge, spin, mass);
+      p.x = cx + rand(-40, 40);
+      p.y = cy + rand(-40, 40);
+      p.energy = 1.5;  // high energy perturbation
+      p.resonance = 1.0;
+      
+      // give radial velocity (explosion from center)
+      const angle = TAU * (i / words.length);
+      p.vx = Math.cos(angle) * 3;
+      p.vy = Math.sin(angle) * 3;
+      
+      if (this.particles.length < MAX_PARTICLES) {
+        this.particles.push(p);
+      }
+    });
+    
+    // increase all vortex strengths temporarily
+    this.vortices.forEach(v => {
+      v.strength = Math.min(v.strength + 0.3, 2.5);
+      v.entropy = 1.0;
+    });
+    
+    // boost system temperature
+    this.temperature = Math.min(1.0, this.temperature + 0.3);
+  },
+  
+  // ── PROCESS (find resonant response) ──
+  processQuery(text) {
+    const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 1);
+    
+    // Score each knowledge seed by resonance
+    let bestScore = -Infinity;
+    let bestSeed = null;
+    
+    this.knowledgeSeeds.forEach(seed => {
+      let score = 0;
+      
+      // Direct concept matching (strongest signal)
+      seed.concepts.forEach(concept => {
+        const conceptWords = concept.split(/\s+/);
+        
+        // exact phrase match
+        if (text.toLowerCase().includes(concept)) {
+          score += 10 * conceptWords.length;
+        }
+        
+        // individual word overlap
+        conceptWords.forEach(cw => {
+          words.forEach(w => {
+            if (w === cw) score += 3;
+            else if (w.includes(cw) || cw.includes(w)) score += 1.5;
+            // Levenshtein-like proximity for typos
+            else if (w.length > 3 && cw.length > 3) {
+              let common = 0;
+              for (let i = 0; i < Math.min(w.length, cw.length); i++) {
+                if (w[i] === cw[i]) common++;
+              }
+              if (common / Math.max(w.length, cw.length) > 0.7) score += 1;
+            }
+          });
+        });
+      });
+      
+      // Vortex resonance bonus — particles near this seed's vortex
+      const catVortex = this.vortices.find(v => v.category === seed.category);
+      if (catVortex) {
+        const nearbyResonance = this.particles
+          .filter(p => dist(p, catVortex) < catVortex.radius * 2)
+          .reduce((sum, p) => sum + p.resonance, 0);
+        score += nearbyResonance * 0.5;
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestSeed = seed;
+      }
+    });
+    
+    // Activate resonance on the matched vortex
+    if (bestSeed) {
+      const matchedVortex = this.vortices.find(v => v.category === bestSeed.category);
+      if (matchedVortex) {
+        matchedVortex.strength += 1.0;
+        matchedVortex.entropy = 0.1; // low entropy = high confidence
+        
+        // Pull relevant particles strongly
+        this.particles.forEach(p => {
+          bestSeed.concepts.forEach(c => {
+            if (p.concept === c || p.concept.includes(c) || c.includes(p.concept)) {
+              p.resonance = 1.0;
+              p.energy = 1.5;
+            }
+          });
+        });
+      }
+    }
+    
+    this.globalEntropy = bestScore > 0 ? Math.max(0.05, 1 - bestScore / 30) : 0.95;
+    
+    if (bestScore >= 2) {
+      return { response: bestSeed.response, confidence: Math.min(1, bestScore / 20), category: bestSeed.category };
+    } else {
+      // Low resonance — generate entropy-aware fallback
+      const fallbacks = [
+        `Interesting query! My vortex fields are processing "${text}" but haven't found a strong attractor for it yet. The entropy remains high at ${this.globalEntropy.toFixed(3)}. Try rephrasing or ask me about science, philosophy, technology, creativity, or how I work!`,
+        `My information particles are swirling around "${text}" but can't quite form a stable vortex cluster. This means the concept is outside my current attractor basins. I'm best at discussing my own architecture, science, philosophy, and technology. What interests you?`,
+        `The entropy for "${text}" is ${this.globalEntropy.toFixed(3)} — quite high, meaning I'm uncertain. My vortex fields work best with concepts I have particle seeds for. Try asking: "How do you work?" or "Tell me about entropy" to see me at my best!`,
+      ];
+      return { response: fallbacks[Math.floor(rand(0, fallbacks.length))], confidence: 0.1, category: 'unknown' };
+    }
+  },
+  
+  // ── PHYSICS STEP ──
+  step(dt) {
+    this.time += dt;
+    
+    // update vortices
+    this.vortices.forEach(v => {
+      v.particleCount = 0;
+      v.update(dt);
+    });
+    
+    // update particles
+    this.particles.forEach(p => {
+      // vortex attraction
+      this.vortices.forEach(v => v.pull(p, dt));
+      
+      // inter-particle repulsion (prevents clumping)
+      this.particles.forEach(q => {
+        if (p === q) return;
+        const d = dist(p, q);
+        if (d < 30 && d > 0.1) {
+          const force = REPULSION / (d * d);
+          const dx = (p.x - q.x) / d;
+          const dy = (p.y - q.y) / d;
+          p.vx += dx * force * dt;
+          p.vy += dy * force * dt;
+        }
+      });
+      
+      // entropy-driven field force (toward lower entropy regions)
+      const gx = Math.floor((p.x / (W/devicePixelRatio)) * this.fieldResolution);
+      const gy = Math.floor((p.y / (H/devicePixelRatio)) * this.fieldResolution);
+      if (gx > 0 && gx < this.fieldResolution-1 && gy > 0 && gy < this.fieldResolution-1) {
+        const idx = gy * this.fieldResolution + gx;
+        const gradX = (this.resonanceField[idx+1] || 0) - (this.resonanceField[idx-1] || 0);
+        const gradY = (this.resonanceField[idx+this.fieldResolution] || 0) - (this.resonanceField[idx-this.fieldResolution] || 0);
+        p.vx += gradX * FIELD_STRENGTH * dt;
+        p.vy += gradY * FIELD_STRENGTH * dt;
+      }
+      
+      // temperature noise
+      p.vx += rand(-this.temperature, this.temperature) * 0.05 * dt;
+      p.vy += rand(-this.temperature, this.temperature) * 0.05 * dt;
+      
+      p.update(dt);
+    });
+    
+    // update resonance field
+    this.resonanceField.fill(0);
+    const cellW = (W/devicePixelRatio) / this.fieldResolution;
+    const cellH = (H/devicePixelRatio) / this.fieldResolution;
+    this.particles.forEach(p => {
+      const gx = Math.floor(p.x / cellW);
+      const gy = Math.floor(p.y / cellH);
+      if (gx >= 0 && gx < this.fieldResolution && gy >= 0 && gy < this.fieldResolution) {
+        this.resonanceField[gy * this.fieldResolution + gx] += p.energy + p.resonance;
+      }
+    });
+    
+    // cool temperature
+    this.temperature = Math.max(0.1, this.temperature * 0.998);
+    
+    // phase transition check
+    if (this.phase === 'absorbing' && this.temperature < 0.4) {
+      this.phase = 'processing';
+      document.getElementById('mPhase').textContent = 'processing';
+    }
+    if (this.phase === 'processing' && this.globalEntropy < 0.5) {
+      this.phase = 'resonating';
+      document.getElementById('mPhase').textContent = 'resonating';
+    }
+    if (this.phase === 'resonating' && this.temperature < 0.2) {
+      this.phase = 'dormant';
+      document.getElementById('mPhase').textContent = 'dormant';
+    }
+    
+    // prune old low-energy particles
+    if (this.particles.length > MAX_PARTICLES * 0.9) {
+      this.particles.sort((a, b) => b.energy - a.energy);
+      this.particles.length = Math.floor(MAX_PARTICLES * 0.75);
+    }
+  },
+  
+  // ── RENDER ──
+  render() {
+    const pw = W / devicePixelRatio;
+    const ph = H / devicePixelRatio;
+    ctx.clearRect(0, 0, pw, ph);
+    
+    if (this.vizMode === 'field') this.renderFieldView(pw, ph);
+    else if (this.vizMode === 'phase') this.renderPhaseSpace(pw, ph);
+    else if (this.vizMode === 'entropy') this.renderEntropyMap(pw, ph);
+    
+    // update metrics
+    document.getElementById('mParticles').textContent = this.particles.length;
+    document.getElementById('mVortices').textContent = this.vortices.length;
+    document.getElementById('mEntropy').textContent = this.globalEntropy.toFixed(3);
+    const avgRes = this.particles.reduce((s,p) => s + p.resonance, 0) / (this.particles.length || 1);
+    document.getElementById('mResonance').textContent = avgRes.toFixed(3);
+  },
+  
+  renderFieldView(pw, ph) {
+    // draw vortex fields
+    this.vortices.forEach(v => {
+      const pulse = 0.8 + 0.2 * Math.sin(v.pulsePhase);
+      const r = v.radius * pulse;
+      
+      // outer glow
+      const grad = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, r * 2);
+      grad.addColorStop(0, `hsla(${v.hue}, 80%, 60%, ${0.06 * (1 - v.entropy)})`);
+      grad.addColorStop(0.5, `hsla(${v.hue}, 70%, 40%, ${0.03 * (1 - v.entropy)})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(v.x, v.y, r * 2, 0, TAU);
+      ctx.fill();
+      
+      // spinning arms
+      ctx.strokeStyle = `hsla(${v.hue}, 70%, 55%, ${0.15 * (1 - v.entropy)})`;
+      ctx.lineWidth = 1;
+      for (let arm = 0; arm < 3; arm++) {
+        ctx.beginPath();
+        const baseAngle = v.phase + (TAU / 3) * arm;
+        for (let t = 0; t < 1; t += 0.02) {
+          const angle = baseAngle + t * TAU * 0.6;
+          const rad = t * r * 1.5;
+          const x = v.x + Math.cos(angle) * rad;
+          const y = v.y + Math.sin(angle) * rad;
+          t === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      
+      // category label
+      ctx.fillStyle = `hsla(${v.hue}, 60%, 65%, ${0.35 * (1 - v.entropy)})`;
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(v.category.toUpperCase(), v.x, v.y + r + 14);
+    });
+    
+    // draw connection lines between nearby resonating particles
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < this.particles.length; i++) {
+      const a = this.particles[i];
+      if (a.resonance < 0.1) continue;
+      for (let j = i + 1; j < this.particles.length; j++) {
+        const b = this.particles[j];
+        if (b.resonance < 0.1) continue;
+        const d = dist(a, b);
+        if (d < 80) {
+          const alpha = (1 - d / 80) * 0.15 * Math.min(a.resonance, b.resonance);
+          ctx.strokeStyle = `hsla(${(a.hue + b.hue) / 2}, 70%, 60%, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    // draw particles
+    this.particles.forEach(p => {
+      // trail
+      if (p.trail.length > 2 && p.energy > 0.3) {
+        ctx.beginPath();
+        ctx.moveTo(p.trail[0].x, p.trail[0].y);
+        for (let i = 1; i < p.trail.length; i++) {
+          ctx.lineTo(p.trail[i].x, p.trail[i].y);
+        }
+        ctx.strokeStyle = `hsla(${p.hue}, 70%, 60%, ${0.1 * p.energy})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      
+      // particle glow
+      const size = 2 + p.mass * 2 + p.resonance * 3;
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
+      grad.addColorStop(0, `hsla(${p.hue}, 80%, 70%, ${0.4 * p.energy})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size * 3, 0, TAU);
+      ctx.fill();
+      
+      // particle core
+      ctx.fillStyle = `hsla(${p.hue}, 85%, ${55 + p.resonance * 30}%, ${0.5 + p.energy * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size, 0, TAU);
+      ctx.fill();
+    });
+  },
+  
+  renderPhaseSpace(pw, ph) {
+    // background grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 20; i++) {
+      const x = (pw / 20) * i;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ph); ctx.stroke();
+      const y = (ph / 20) * i;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(pw, y); ctx.stroke();
+    }
+    
+    // axes labels
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('VELOCITY', pw/2, ph - 6);
+    ctx.save();
+    ctx.translate(14, ph/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText('ENERGY', 0, 0);
+    ctx.restore();
+    
+    // plot particles in phase space (velocity vs energy)
+    this.particles.forEach(p => {
+      const speed = Math.hypot(p.vx, p.vy);
+      const px = (speed / 5) * pw;
+      const py = ph - (p.energy * ph);
+      
+      const size = 2 + p.resonance * 4;
+      ctx.fillStyle = `hsla(${p.hue}, 80%, 60%, ${0.4 + p.resonance * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(clamp(px, 10, pw-10), clamp(py, 10, ph-10), size, 0, TAU);
+      ctx.fill();
+    });
+  },
+  
+  renderEntropyMap(pw, ph) {
+    const cellW = pw / this.fieldResolution;
+    const cellH = ph / this.fieldResolution;
+    
+    let maxVal = 0;
+    this.resonanceField.forEach(v => { if (v > maxVal) maxVal = v; });
+    if (maxVal === 0) maxVal = 1;
+    
+    for (let y = 0; y < this.fieldResolution; y++) {
+      for (let x = 0; x < this.fieldResolution; x++) {
+        const val = this.resonanceField[y * this.fieldResolution + x] / maxVal;
+        const hue = 260 - val * 200;  // purple to cyan
+        const light = 5 + val * 45;
+        ctx.fillStyle = `hsl(${hue}, 80%, ${light}%)`;
+        ctx.fillRect(x * cellW, y * cellH, cellW + 1, cellH + 1);
+      }
+    }
+    
+    // overlay vortex positions
+    this.vortices.forEach(v => {
+      ctx.strokeStyle = `hsla(${v.hue}, 70%, 70%, 0.4)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(v.x, v.y, 8, 0, TAU);
+      ctx.stroke();
+      ctx.fillStyle = `hsla(${v.hue}, 60%, 65%, 0.3)`;
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(v.category, v.x, v.y - 12);
+    });
+  }
+};
+
+// ── ANIMATION LOOP ──
+let lastTime = performance.now();
+function animate(now) {
+  const dt = Math.min((now - lastTime) / 16.67, 3); // normalize to ~60fps
+  lastTime = now;
+  
+  engine.step(dt);
+  engine.render();
+  
+  requestAnimationFrame(animate);
+}
+
+// ── CHAT SYSTEM ──
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function addMessage(text, type) {
+  const div = document.createElement('div');
+  div.className = `msg ${type}`;
+  if (type === 'ai') {
+    div.innerHTML = `<div class="label">EVIE</div>${text}`;
+  } else {
+    div.textContent = text;
+  }
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+function addTypingIndicator() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = '<div class="label">EVIE</div><div class="typing-indicator"><span></span><span></span><span></span></div>';
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+function removeTypingIndicator() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function handleSend() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  
+  chatInput.value = '';
+  addMessage(text, 'user');
+  
+  // inject into the vortex field
+  engine.injectInput(text);
+  
+  // show typing
+  addTypingIndicator();
+  document.getElementById('statusText').textContent = 'Processing vortex field...';
+  
+  // simulate processing delay (field needs time to reorganize)
+  const delay = 800 + Math.random() * 1200;
+  setTimeout(() => {
+    const result = engine.processQuery(text);
+    removeTypingIndicator();
+    
+    engine.phase = 'resonating';
+    document.getElementById('mPhase').textContent = 'resonating';
+    document.getElementById('statusText').textContent = `Resonance: ${(result.confidence * 100).toFixed(0)}% — ${result.category}`;
+    
+    addMessage(result.response, 'ai');
+    
+    // return to dormant after a bit
+    setTimeout(() => {
+      engine.phase = 'dormant';
+      document.getElementById('mPhase').textContent = 'dormant';
+      document.getElementById('statusText').textContent = 'Field active — awaiting input';
+    }, 3000);
+  }, delay);
+}
+
+sendBtn.addEventListener('click', handleSend);
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+
+// ── VIZ MODE BUTTONS ──
+document.querySelectorAll('.viz-controls button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.viz-controls button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    engine.vizMode = btn.dataset.mode;
+  });
+});
+
+// ── BOOT ──
+engine.init();
+requestAnimationFrame(animate);
+
+})();
+</script>
+</body>
+</html>

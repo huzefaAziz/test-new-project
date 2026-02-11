@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRIFT FIELD INTELLIGENCE — Particle-Flow AI</title>
+<style>
+/* ============================================
+   DRIFT FIELD INTELLIGENCE — UI Styles
+   A non-neural-network AI system
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg-deep: #06060f;
+    --bg-panel: rgba(12, 12, 30, 0.92);
+    --bg-card: rgba(18, 18, 45, 0.85);
+    --border: rgba(0, 220, 255, 0.15);
+    --border-bright: rgba(0, 220, 255, 0.4);
+    --cyan: #00dcff;
+    --cyan-dim: #00789a;
+    --magenta: #ff0099;
+    --magenta-dim: #99005c;
+    --green: #00ff88;
+    --green-dim: #009952;
+    --amber: #ffaa00;
+    --red: #ff3355;
+    --text: #d0d0e8;
+    --text-dim: #707098;
+    --text-bright: #f0f0ff;
+    --font-mono: 'Consolas', 'SF Mono', 'Fira Code', monospace;
+    --font-ui: 'Segoe UI', 'Inter', system-ui, sans-serif;
+    --glow-cyan: 0 0 20px rgba(0, 220, 255, 0.3);
+    --glow-magenta: 0 0 20px rgba(255, 0, 153, 0.3);
+    --glow-green: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Background grid */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(rgba(0,220,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,220,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    padding: 28px 20px 18px;
+    position: relative;
+    z-index: 1;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,220,255,0.04), transparent);
+}
+
+.header h1 {
+    font-family: var(--font-mono);
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--cyan), var(--magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.header .subtitle {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.header .tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 14px;
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    color: var(--cyan);
+    letter-spacing: 1.5px;
+    font-family: var(--font-mono);
+}
+
+/* Main layout */
+.main-container {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 0;
+    min-height: calc(100vh - 120px);
+    position: relative;
+    z-index: 1;
+}
+
+/* Panels */
+.panel {
+    padding: 18px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+}
+
+.panel:last-child {
+    border-right: none;
+    border-left: 1px solid var(--border);
+}
+
+.panel-title {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 2.5px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Cards */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+    transition: border-color 0.3s;
+}
+
+.card:hover { border-color: var(--border-bright); }
+
+.card-label {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    background: rgba(0, 220, 255, 0.06);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.25s;
+    text-transform: uppercase;
+    width: 100%;
+    margin-bottom: 6px;
+}
+
+.btn:hover {
+    background: rgba(0, 220, 255, 0.15);
+    border-color: var(--cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn.primary {
+    background: linear-gradient(135deg, rgba(0,220,255,0.2), rgba(255,0,153,0.15));
+    border-color: var(--cyan);
+}
+
+.btn.danger {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255, 51, 85, 0.06);
+}
+
+.btn.danger:hover {
+    background: rgba(255, 51, 85, 0.15);
+    box-shadow: 0 0 20px rgba(255, 51, 85, 0.3);
+}
+
+.btn.success {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0, 255, 136, 0.06);
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Select / Input */
+select, input[type="range"] {
+    width: 100%;
+    padding: 7px 10px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    outline: none;
+    margin-bottom: 8px;
+}
+
+select:focus, input:focus { border-color: var(--cyan); }
+
+select option { background: #0a0a1e; }
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    padding: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--cyan);
+    cursor: pointer;
+    box-shadow: var(--glow-cyan);
+}
+
+/* Canvas area */
+.canvas-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: radial-gradient(ellipse at center, rgba(0,220,255,0.02) 0%, transparent 70%);
+    overflow: hidden;
+}
+
+canvas#fieldCanvas {
+    border-radius: 4px;
+    cursor: crosshair;
+}
+
+/* Stat rows */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.8rem;
+}
+
+.stat-label { color: var(--text-dim); }
+
+.stat-value {
+    font-family: var(--font-mono);
+    color: var(--text-bright);
+    font-weight: 600;
+}
+
+.stat-value.cyan { color: var(--cyan); }
+.stat-value.green { color: var(--green); }
+.stat-value.magenta { color: var(--magenta); }
+.stat-value.amber { color: var(--amber); }
+.stat-value.red { color: var(--red); }
+
+/* Progress bar */
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    border-radius: 3px;
+    transition: width 0.3s;
+    width: 0%;
+}
+
+/* Log area */
+.log-area {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    line-height: 1.6;
+}
+
+.log-area .log-entry {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.log-area .log-entry:last-child { border-bottom: none; }
+
+.log-entry .gen { color: var(--cyan); }
+.log-entry .acc { color: var(--green); }
+.log-entry .err { color: var(--red); }
+.log-entry .info { color: var(--amber); }
+
+/* Prediction grid */
+.pred-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.pred-cell {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.pred-cell .input-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+}
+
+.pred-cell .output-value {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.pred-cell.correct {
+    border-color: var(--green-dim);
+    background: rgba(0, 255, 136, 0.05);
+}
+
+.pred-cell.correct .output-value { color: var(--green); }
+
+.pred-cell.wrong {
+    border-color: var(--red);
+    background: rgba(255, 51, 85, 0.05);
+}
+
+.pred-cell.wrong .output-value { color: var(--red); }
+
+/* Mini accuracy chart */
+.chart-container {
+    width: 100%;
+    height: 80px;
+    position: relative;
+    margin: 8px 0;
+}
+
+canvas.chart-canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+}
+
+/* Architecture diagram in info section */
+.arch-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 0;
+    flex-wrap: wrap;
+}
+
+.arch-node {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.arch-node.emitter { border-color: var(--cyan-dim); color: var(--cyan); }
+.arch-node.field { border-color: var(--magenta-dim); color: var(--magenta); }
+.arch-node.collector { border-color: var(--green-dim); color: var(--green); }
+
+.arch-arrow {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .main-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 500px auto;
+    }
+    .panel {
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+    .panel:last-child { border-left: none; border-bottom: none; }
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text);
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: var(--glow-cyan);
+    display: none;
+}
+
+/* Pulse animation for training */
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.training-active .panel-title { animation: pulse 1.2s infinite; }
+
+/* Glow badge */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+}
+
+.badge.idle { background: rgba(112,112,152,0.2); color: var(--text-dim); }
+.badge.training { background: rgba(0,220,255,0.15); color: var(--cyan); }
+.badge.trained { background: rgba(0,255,136,0.15); color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h1>Drift Field Intelligence</h1>
+    <div class="subtitle">Particle-Flow Computation Engine &mdash; No Neural Networks</div>
+    <div class="tag">DFI v1.0 &mdash; Evolutionary Attractor Field Architecture</div>
+</div>
+
+<!-- Main Layout -->
+<div class="main-container" id="mainContainer">
+
+    <!-- LEFT PANEL — Controls -->
+    <div class="panel" id="leftPanel">
+        <div class="panel-title">Control Center</div>
+
+        <!-- Task Selection -->
+        <div class="card">
+            <div class="card-label">Task / Problem</div>
+            <select id="taskSelect">
+                <option value="xor">XOR Gate (Non-Linear)</option>
+                <option value="and">AND Gate</option>
+                <option value="or">OR Gate</option>
+                <option value="nand">NAND Gate</option>
+                <option value="circle">Circle Classification</option>
+                <option value="spiral">Spiral Classification</option>
+            </select>
+        </div>
+
+        <!-- Model Config -->
+        <div class="card">
+            <div class="card-label">Field Configuration</div>
+            <div class="stat-row">
+                <span class="stat-label">Attractors</span>
+                <span class="stat-value cyan" id="attractorCountLabel">8</span>
+            </div>
+            <input type="range" id="attractorCount" min="3" max="20" value="8">
+            <div class="stat-row">
+                <span class="stat-label">Particles / Eval</span>
+                <span class="stat-value cyan" id="particleCountLabel">120</span>
+            </div>
+            <input type="range" id="particleCount" min="40" max="300" value="120" step="10">
+            <div class="stat-row">
+                <span class="stat-label">Sim Steps</span>
+                <span class="stat-value cyan" id="simStepsLabel">60</span>
+            </div>
+            <input type="range" id="simSteps" min="20" max="150" value="60" step="5">
+            <div class="stat-row">
+                <span class="stat-label">Friction</span>
+                <span class="stat-value cyan" id="frictionLabel">0.96</span>
+            </div>
+            <input type="range" id="friction" min="0.85" max="0.99" value="0.96" step="0.01">
+        </div>
+
+        <!-- Training Config -->
+        <div class="card">
+            <div class="card-label">Evolution Settings</div>
+            <div class="stat-row">
+                <span class="stat-label">Population</span>
+                <span class="stat-value amber" id="popSizeLabel">30</span>
+            </div>
+            <input type="range" id="popSize" min="10" max="80" value="30" step="2">
+            <div class="stat-row">
+                <span class="stat-label">Mutation Rate</span>
+                <span class="stat-value amber" id="mutRateLabel">0.15</span>
+            </div>
+            <input type="range" id="mutRate" min="0.02" max="0.5" value="0.15" step="0.01">
+            <div class="stat-row">
+                <span class="stat-label">Generations</span>
+                <span class="stat-value amber" id="genCountLabel">150</span>
+            </div>
+            <input type="range" id="genCount" min="20" max="500" value="150" step="10">
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card">
+            <div class="card-label">Actions</div>
+            <button class="btn primary" id="btnTrain">Train Model</button>
+            <button class="btn danger" id="btnStop" disabled>Stop Training</button>
+            <button class="btn" id="btnReset">Reset Field</button>
+            <button class="btn success" id="btnPredict">Run Predictions</button>
+        </div>
+
+        <!-- Architecture Info -->
+        <div class="card">
+            <div class="card-label">Architecture</div>
+            <div class="arch-flow">
+                <span class="arch-node emitter">Emitters</span>
+                <span class="arch-arrow">&rarr;</span>
+                <span class="arch-node field">Drift Field</span>
+                <span class="arch-arrow">&rarr;</span>
+                <span class="arch-node collector">Collectors</span>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--text-dim); line-height: 1.5; margin-top: 6px;">
+                Data is encoded as <span style="color:var(--cyan)">particles</span> emitted into a 2D force field.
+                <span style="color:var(--magenta)">Attractors</span> warp particle trajectories.
+                <span style="color:var(--green)">Collectors</span> capture particles to produce output.
+                Learning evolves attractor placement — <b>no neurons, no gradients, no backpropagation</b>.
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER — Canvas -->
+    <div class="canvas-container" id="canvasContainer">
+        <canvas id="fieldCanvas"></canvas>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <!-- RIGHT PANEL — Results -->
+    <div class="panel" id="rightPanel">
+        <div class="panel-title">Intelligence Monitor</div>
+
+        <!-- Status -->
+        <div class="card">
+            <div class="card-label">Status</div>
+            <div class="stat-row">
+                <span class="stat-label">State</span>
+                <span class="badge idle" id="statusBadge">IDLE</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Generation</span>
+                <span class="stat-value cyan" id="currentGen">0 / 0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Best Accuracy</span>
+                <span class="stat-value green" id="bestAccuracy">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Current Best Error</span>
+                <span class="stat-value red" id="bestError">—</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- Accuracy Chart -->
+        <div class="card">
+            <div class="card-label">Accuracy Over Generations</div>
+            <div class="chart-container">
+                <canvas class="chart-canvas" id="accChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Model Stats -->
+        <div class="card">
+            <div class="card-label">Model Parameters</div>
+            <div class="stat-row">
+                <span class="stat-label">Total Attractors</span>
+                <span class="stat-value cyan" id="statAttractors">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Learnable Params</span>
+                <span class="stat-value cyan" id="statParams">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Emitters</span>
+                <span class="stat-value magenta" id="statEmitters">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Collectors</span>
+                <span class="stat-value green" id="statCollectors">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Field Dimensions</span>
+                <span class="stat-value" id="statDimensions">—</span>
+            </div>
+        </div>
+
+        <!-- Predictions -->
+        <div class="card">
+            <div class="card-label">Predictions</div>
+            <div class="pred-grid" id="predGrid"></div>
+        </div>
+
+        <!-- Training Log -->
+        <div class="card">
+            <div class="card-label">Evolution Log</div>
+            <div class="log-area" id="logArea">
+                <div class="log-entry"><span class="info">System ready. Select a task and train.</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==========================================================
+//  DRIFT FIELD INTELLIGENCE (DFI) — Core Engine
+//  A non-neural-network AI computation system
+//  Using particle dynamics + evolutionary optimization
+// ==========================================================
+
+// ---- Utility ----
+const rand = (a = 0, b = 1) => Math.random() * (b - a) + a;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ---- Particle ----
+class Particle {
+    constructor(x, y, vx = 0, vy = 0) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.alive = true;
+        this.trail = [{ x, y }];
+        this.age = 0;
+    }
+}
+
+// ---- Attractor (learnable parameter) ----
+class Attractor {
+    constructor(x, y, strength, radius) {
+        this.x = x;
+        this.y = y;
+        this.strength = strength;   // positive = attract, negative = repel
+        this.radius = radius;       // influence falloff radius
+    }
+
+    clone() {
+        return new Attractor(this.x, this.y, this.strength, this.radius);
+    }
+}
+
+// ---- Emitter (input node) ----
+class Emitter {
+    constructor(x, y, inputIndex) {
+        this.x = x;
+        this.y = y;
+        this.inputIndex = inputIndex;
+    }
+}
+
+// ---- Collector (output node) ----
+class Collector {
+    constructor(x, y, radius, classIndex) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.classIndex = classIndex;
+        this.count = 0;
+    }
+}
+
+// ---- DFI Model ----
+class DriftFieldModel {
+    constructor(config) {
+        this.width = config.width || 600;
+        this.height = config.height || 450;
+        this.numAttractors = config.numAttractors || 8;
+        this.particlesPerEval = config.particlesPerEval || 120;
+        this.simSteps = config.simSteps || 60;
+        this.friction = config.friction || 0.96;
+        this.dt = 0.8;
+        this.attractors = [];
+        this.emitters = [];
+        this.collectors = [];
+        this.lastParticles = [];    // for visualization
+    }
+
+    // Set up emitters and collectors for a given task
+    setupTopology(numInputs, numClasses) {
+        this.emitters = [];
+        this.collectors = [];
+
+        // Place emitters on the left side, vertically spaced
+        const emitterX = 60;
+        const spacing = this.height / (numInputs + 1);
+        for (let i = 0; i < numInputs; i++) {
+            this.emitters.push(new Emitter(emitterX, spacing * (i + 1), i));
+        }
+
+        // Place collectors on the right side
+        const collectorX = this.width - 60;
+        const cSpacing = this.height / (numClasses + 1);
+        for (let i = 0; i < numClasses; i++) {
+            this.collectors.push(new Collector(collectorX, cSpacing * (i + 1), 45, i));
+        }
+    }
+
+    // Initialize attractors randomly
+    randomizeAttractors() {
+        this.attractors = [];
+        const margin = 80;
+        for (let i = 0; i < this.numAttractors; i++) {
+            this.attractors.push(new Attractor(
+                rand(margin, this.width - margin),
+                rand(margin, this.height - margin),
+                rand(-3, 3),       // strength
+                rand(30, 120)       // radius
+            ));
+        }
+    }
+
+    // Clone the model (for evolutionary training)
+    clone() {
+        const m = new DriftFieldModel({
+            width: this.width,
+            height: this.height,
+            numAttractors: this.numAttractors,
+            particlesPerEval: this.particlesPerEval,
+            simSteps: this.simSteps,
+            friction: this.friction
+        });
+        m.emitters = this.emitters.map(e => new Emitter(e.x, e.y, e.inputIndex));
+        m.collectors = this.collectors.map(c => new Collector(c.x, c.y, c.radius, c.classIndex));
+        m.attractors = this.attractors.map(a => a.clone());
+        m.dt = this.dt;
+        return m;
+    }
+
+    // Mutate attractors (evolutionary operator)
+    mutate(rate, scale = 1.0) {
+        const W = this.width;
+        const H = this.height;
+        for (const a of this.attractors) {
+            if (Math.random() < rate) {
+                a.x = clamp(a.x + rand(-40, 40) * scale, 20, W - 20);
+                a.y = clamp(a.y + rand(-40, 40) * scale, 20, H - 20);
+            }
+            if (Math.random() < rate) {
+                a.strength = clamp(a.strength + rand(-1.0, 1.0) * scale, -5, 5);
+            }
+            if (Math.random() < rate) {
+                a.radius = clamp(a.radius + rand(-20, 20) * scale, 15, 150);
+            }
+        }
+        // Occasionally mutate collector positions slightly (helps for harder tasks)
+        for (const c of this.collectors) {
+            if (Math.random() < rate * 0.3) {
+                c.y = clamp(c.y + rand(-15, 15) * scale, 40, H - 40);
+            }
+        }
+    }
+
+    // Crossover: blend two models
+    static crossover(parent1, parent2) {
+        const child = parent1.clone();
+        for (let i = 0; i < child.attractors.length; i++) {
+            if (Math.random() < 0.5 && i < parent2.attractors.length) {
+                child.attractors[i] = parent2.attractors[i].clone();
+            }
+        }
+        return child;
+    }
+
+    // Emit particles based on input values
+    emitParticles(inputs, storeTrails = false) {
+        const particles = [];
+        const perEmitter = Math.floor(this.particlesPerEval / this.emitters.length);
+
+        for (const emitter of this.emitters) {
+            const val = inputs[emitter.inputIndex];
+            // Number of particles proportional to input value, but always emit some
+            const count = Math.floor(perEmitter * (0.3 + 0.7 * val));
+            const speed = 0.8 + val * 1.5;
+
+            for (let i = 0; i < count; i++) {
+                const angle = rand(-0.6, 0.6);  // mostly rightward
+                const p = new Particle(
+                    emitter.x + rand(-8, 8),
+                    emitter.y + rand(-15, 15),
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed
+                );
+                if (!storeTrails) p.trail = null;
+                particles.push(p);
+            }
+        }
+        return particles;
+    }
+
+    // Run physics simulation
+    simulate(particles) {
+        for (let step = 0; step < this.simSteps; step++) {
+            for (const p of particles) {
+                if (!p.alive) continue;
+                let fx = 0, fy = 0;
+
+                // Force from each attractor
+                for (const a of this.attractors) {
+                    const dx = a.x - p.x;
+                    const dy = a.y - p.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq) + 0.1;
+
+                    // Gaussian-like influence
+                    const influence = Math.exp(-distSq / (2 * a.radius * a.radius));
+                    const force = a.strength * influence;
+
+                    fx += force * dx / dist;
+                    fy += force * dy / dist;
+                }
+
+                // Update velocity
+                p.vx += fx * this.dt;
+                p.vy += fy * this.dt;
+
+                // Friction
+                p.vx *= this.friction;
+                p.vy *= this.friction;
+
+                // Speed limit
+                const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                if (speed > 5) {
+                    p.vx = (p.vx / speed) * 5;
+                    p.vy = (p.vy / speed) * 5;
+                }
+
+                // Update position
+                p.x += p.vx * this.dt;
+                p.y += p.vy * this.dt;
+
+                // Soft boundary bounce
+                if (p.x < 5) { p.x = 5; p.vx = Math.abs(p.vx) * 0.5; }
+                if (p.x > this.width - 5) { p.x = this.width - 5; p.vx = -Math.abs(p.vx) * 0.5; }
+                if (p.y < 5) { p.y = 5; p.vy = Math.abs(p.vy) * 0.5; }
+                if (p.y > this.height - 5) { p.y = this.height - 5; p.vy = -Math.abs(p.vy) * 0.5; }
+
+                // Store trail
+                if (p.trail) {
+                    p.trail.push({ x: p.x, y: p.y });
+                }
+                p.age++;
+            }
+        }
+    }
+
+    // Read collector outputs
+    readCollectors(particles) {
+        // Reset counts
+        for (const c of this.collectors) c.count = 0;
+
+        for (const p of particles) {
+            let bestDist = Infinity;
+            let bestC = -1;
+            for (let i = 0; i < this.collectors.length; i++) {
+                const c = this.collectors[i];
+                const dx = c.x - p.x;
+                const dy = c.y - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < c.radius && dist < bestDist) {
+                    bestDist = dist;
+                    bestC = i;
+                }
+            }
+            if (bestC >= 0) {
+                this.collectors[bestC].count++;
+            }
+        }
+
+        const total = this.collectors.reduce((s, c) => s + c.count, 0) || 1;
+        return this.collectors.map(c => c.count / total);
+    }
+
+    // Full forward pass: input → output
+    predict(inputs, storeTrails = false) {
+        const particles = this.emitParticles(inputs, storeTrails);
+        this.simulate(particles);
+        const output = this.readCollectors(particles);
+        if (storeTrails) this.lastParticles = particles;
+        return output;
+    }
+
+    // Get predicted class
+    classify(inputs) {
+        const output = this.predict(inputs, false);
+        let maxIdx = 0;
+        for (let i = 1; i < output.length; i++) {
+            if (output[i] > output[maxIdx]) maxIdx = i;
+        }
+        return maxIdx;
+    }
+
+    // Count learnable parameters
+    paramCount() {
+        return this.attractors.length * 4 + this.collectors.length * 1; // x,y,strength,radius + collector.y
+    }
+}
+
+
+// ---- Training Tasks ----
+const TASKS = {
+    xor: {
+        name: 'XOR Gate',
+        inputs: 2,
+        classes: 2,
+        data: [
+            { input: [0, 0], target: 0 },
+            { input: [0, 1], target: 1 },
+            { input: [1, 0], target: 1 },
+            { input: [1, 1], target: 0 }
+        ]
+    },
+    and: {
+        name: 'AND Gate',
+        inputs: 2,
+        classes: 2,
+        data: [
+            { input: [0, 0], target: 0 },
+            { input: [0, 1], target: 0 },
+            { input: [1, 0], target: 0 },
+            { input: [1, 1], target: 1 }
+        ]
+    },
+    or: {
+        name: 'OR Gate',
+        inputs: 2,
+        classes: 2,
+        data: [
+            { input: [0, 0], target: 0 },
+            { input: [0, 1], target: 1 },
+            { input: [1, 0], target: 1 },
+            { input: [1, 1], target: 1 }
+        ]
+    },
+    nand: {
+        name: 'NAND Gate',
+        inputs: 2,
+        classes: 2,
+        data: [
+            { input: [0, 0], target: 1 },
+            { input: [0, 1], target: 1 },
+            { input: [1, 0], target: 1 },
+            { input: [1, 1], target: 0 }
+        ]
+    },
+    circle: {
+        name: 'Circle Classification',
+        inputs: 2,
+        classes: 2,
+        data: (() => {
+            const data = [];
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random();
+                const y = Math.random();
+                const dist = Math.sqrt((x - 0.5) ** 2 + (y - 0.5) ** 2);
+                data.push({ input: [x, y], target: dist < 0.3 ? 1 : 0 });
+            }
+            return data;
+        })()
+    },
+    spiral: {
+        name: 'Spiral Classification',
+        inputs: 2,
+        classes: 2,
+        data: (() => {
+            const data = [];
+            for (let i = 0; i < 50; i++) {
+                const t = (i / 50) * 3 * Math.PI;
+                const r0 = 0.1 + (i / 50) * 0.35;
+                // Class 0 spiral
+                data.push({
+                    input: [0.5 + r0 * Math.cos(t) + rand(-0.03, 0.03), 0.5 + r0 * Math.sin(t) + rand(-0.03, 0.03)],
+                    target: 0
+                });
+                // Class 1 spiral (rotated)
+                data.push({
+                    input: [0.5 - r0 * Math.cos(t) + rand(-0.03, 0.03), 0.5 - r0 * Math.sin(t) + rand(-0.03, 0.03)],
+                    target: 1
+                });
+            }
+            return data;
+        })()
+    }
+};
+
+
+// ---- Evolutionary Trainer ----
+class EvolutionaryTrainer {
+    constructor() {
+        this.population = [];
+        this.bestModel = null;
+        this.bestFitness = -Infinity;
+        this.generation = 0;
+        this.maxGenerations = 150;
+        this.populationSize = 30;
+        this.mutationRate = 0.15;
+        this.task = null;
+        this.running = false;
+        this.accHistory = [];
+        this.onProgress = null;
+        this.onComplete = null;
+    }
+
+    // Evaluate a model on the task data
+    evaluate(model) {
+        let correct = 0;
+        let totalError = 0;
+        const data = this.task.data;
+
+        for (const sample of data) {
+            const output = model.predict(sample.input, false);
+            let maxIdx = 0;
+            for (let i = 1; i < output.length; i++) {
+                if (output[i] > output[maxIdx]) maxIdx = i;
+            }
+            if (maxIdx === sample.target) correct++;
+
+            // Continuous error: encourage confidence
+            const targetProb = output[sample.target] || 0;
+            totalError += (1 - targetProb);
+        }
+
+        const accuracy = correct / data.length;
+        const avgError = totalError / data.length;
+
+        // Fitness is accuracy + bonus for confidence
+        return { accuracy, avgError, fitness: accuracy - avgError * 0.3 };
+    }
+
+    // Initialize the population
+    initPopulation(baseModel) {
+        this.population = [];
+        for (let i = 0; i < this.populationSize; i++) {
+            const m = baseModel.clone();
+            m.randomizeAttractors();
+            this.population.push(m);
+        }
+        this.generation = 0;
+        this.bestFitness = -Infinity;
+        this.bestModel = null;
+        this.accHistory = [];
+    }
+
+    // Run one generation
+    stepGeneration() {
+        // 1. Evaluate all
+        const evaluated = this.population.map(m => {
+            const result = this.evaluate(m);
+            return { model: m, ...result };
+        });
+
+        // Sort by fitness descending
+        evaluated.sort((a, b) => b.fitness - a.fitness);
+
+        // Track best
+        if (evaluated[0].fitness > this.bestFitness) {
+            this.bestFitness = evaluated[0].fitness;
+            this.bestModel = evaluated[0].model.clone();
+        }
+
+        const bestAcc = evaluated[0].accuracy;
+        const bestErr = evaluated[0].avgError;
+        this.accHistory.push(bestAcc);
+
+        // 2. Selection — top 40% survive
+        const survivors = Math.max(4, Math.floor(this.populationSize * 0.4));
+        const elites = evaluated.slice(0, survivors).map(e => e.model);
+
+        // 3. Create next generation
+        const nextPop = [];
+
+        // Keep top 2 unchanged (elitism)
+        nextPop.push(elites[0].clone());
+        if (elites.length > 1) nextPop.push(elites[1].clone());
+
+        // Fill rest with crossover + mutation
+        while (nextPop.length < this.populationSize) {
+            const p1 = elites[Math.floor(Math.random() * elites.length)];
+            const p2 = elites[Math.floor(Math.random() * elites.length)];
+
+            let child;
+            if (Math.random() < 0.7) {
+                child = DriftFieldModel.crossover(p1, p2);
+            } else {
+                child = p1.clone();
+            }
+
+            // Adaptive mutation: reduce scale as accuracy improves
+            const adaptiveScale = 1.0 - bestAcc * 0.6;
+            child.mutate(this.mutationRate, Math.max(0.15, adaptiveScale));
+            nextPop.push(child);
+        }
+
+        this.population = nextPop;
+        this.generation++;
+
+        return { accuracy: bestAcc, error: bestErr };
+    }
+
+    // Async training loop
+    async train(baseModel, task, config) {
+        this.task = task;
+        this.maxGenerations = config.generations || 150;
+        this.populationSize = config.populationSize || 30;
+        this.mutationRate = config.mutationRate || 0.15;
+        this.running = true;
+
+        this.initPopulation(baseModel);
+
+        while (this.generation < this.maxGenerations && this.running) {
+            const result = this.stepGeneration();
+
+            if (this.onProgress) {
+                this.onProgress({
+                    generation: this.generation,
+                    maxGenerations: this.maxGenerations,
+                    accuracy: result.accuracy,
+                    error: result.error,
+                    bestModel: this.bestModel,
+                    accHistory: this.accHistory
+                });
+            }
+
+            // Early stopping
+            if (result.accuracy >= 1.0 && result.error < 0.15) {
+                break;
+            }
+
+            // Yield to UI thread every few generations
+            if (this.generation % 2 === 0) {
+                await new Promise(r => setTimeout(r, 0));
+            }
+        }
+
+        this.running = false;
+        if (this.onComplete) {
+            this.onComplete(this.bestModel);
+        }
+        return this.bestModel;
+    }
+
+    stop() {
+        this.running = false;
+    }
+}
+
+
+// ---- Visualization Renderer ----
+class FieldRenderer {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.animating = false;
+        this.model = null;
+        this.showingPrediction = false;
+        this.predictionParticles = [];
+        this.animFrame = 0;
+        this.maxAnimFrames = 60;
+        this.hoverInfo = null;
+    }
+
+    resize(w, h) {
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = w * dpr;
+        this.canvas.height = h * dpr;
+        this.canvas.style.width = w + 'px';
+        this.canvas.style.height = h + 'px';
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Draw the full field
+    render(model, particles = null) {
+        this.model = model;
+        const ctx = this.ctx;
+        const W = model.width;
+        const H = model.height;
+
+        // Background
+        ctx.fillStyle = '#06060f';
+        ctx.fillRect(0, 0, W, H);
+
+        // Draw force field heatmap
+        this.drawForceField(ctx, model);
+
+        // Draw attractors
+        this.drawAttractors(ctx, model);
+
+        // Draw emitters
+        this.drawEmitters(ctx, model);
+
+        // Draw collectors
+        this.drawCollectors(ctx, model);
+
+        // Draw particles
+        if (particles && particles.length > 0) {
+            this.drawParticles(ctx, particles);
+        }
+
+        // Border
+        ctx.strokeStyle = 'rgba(0, 220, 255, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+    }
+
+    drawForceField(ctx, model) {
+        const step = 12;
+        const W = model.width;
+        const H = model.height;
+
+        for (let x = 0; x < W; x += step) {
+            for (let y = 0; y < H; y += step) {
+                let totalForce = 0;
+                let fx = 0, fy = 0;
+
+                for (const a of model.attractors) {
+                    const dx = a.x - x;
+                    const dy = a.y - y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq) + 0.1;
+                    const influence = Math.exp(-distSq / (2 * a.radius * a.radius));
+                    const force = a.strength * influence;
+                    fx += force * dx / dist;
+                    fy += force * dy / dist;
+                    totalForce += Math.abs(force * influence);
+                }
+
+                const mag = Math.sqrt(fx * fx + fy * fy);
+                const alpha = Math.min(0.12, mag * 0.04);
+
+                if (alpha > 0.005) {
+                    // Color based on net direction
+                    const hue = (Math.atan2(fy, fx) / Math.PI * 180 + 360) % 360;
+                    ctx.fillStyle = `hsla(${hue}, 80%, 50%, ${alpha})`;
+                    ctx.fillRect(x, y, step, step);
+                }
+            }
+        }
+    }
+
+    drawAttractors(ctx, model) {
+        for (const a of model.attractors) {
+            const isRepulsor = a.strength < 0;
+            const absStr = Math.abs(a.strength);
+            const alpha = 0.1 + absStr * 0.12;
+            const col = isRepulsor ? `rgba(255, 0, 100, ${alpha})` : `rgba(0, 200, 255, ${alpha})`;
+            const colBright = isRepulsor ? 'rgba(255, 0, 100, 0.7)' : 'rgba(0, 200, 255, 0.7)';
+
+            // Influence radius
+            ctx.beginPath();
+            ctx.arc(a.x, a.y, a.radius * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = col;
+            ctx.fill();
+
+            // Core glow
+            const grad = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 8 + absStr * 3);
+            grad.addColorStop(0, colBright);
+            grad.addColorStop(1, 'transparent');
+            ctx.beginPath();
+            ctx.arc(a.x, a.y, 8 + absStr * 3, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Center dot
+            ctx.beginPath();
+            ctx.arc(a.x, a.y, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = colBright;
+            ctx.fill();
+
+            // Symbol
+            ctx.fillStyle = isRepulsor ? 'rgba(255,100,150,0.8)' : 'rgba(100,220,255,0.8)';
+            ctx.font = '9px Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(isRepulsor ? '−' : '+', a.x, a.y - 10);
+        }
+    }
+
+    drawEmitters(ctx, model) {
+        for (const e of model.emitters) {
+            // Outer glow
+            const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 25);
+            grad.addColorStop(0, 'rgba(0, 220, 255, 0.3)');
+            grad.addColorStop(1, 'transparent');
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, 25, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Body
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 220, 255, 0.15)';
+            ctx.strokeStyle = 'rgba(0, 220, 255, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.fill();
+            ctx.stroke();
+
+            // Arrow
+            ctx.beginPath();
+            ctx.moveTo(e.x + 4, e.y);
+            ctx.lineTo(e.x - 2, e.y - 4);
+            ctx.lineTo(e.x - 2, e.y + 4);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(0, 220, 255, 0.8)';
+            ctx.fill();
+
+            // Label
+            ctx.fillStyle = 'rgba(0, 220, 255, 0.9)';
+            ctx.font = '10px Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`IN ${e.inputIndex}`, e.x, e.y + 22);
+        }
+    }
+
+    drawCollectors(ctx, model) {
+        for (const c of model.collectors) {
+            // Outer ring
+            const grad = ctx.createRadialGradient(c.x, c.y, c.radius * 0.3, c.x, c.y, c.radius);
+            grad.addColorStop(0, 'rgba(0, 255, 136, 0.08)');
+            grad.addColorStop(1, 'transparent');
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Border
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Inner core
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.fill();
+            ctx.stroke();
+
+            // Count
+            if (c.count > 0) {
+                ctx.fillStyle = 'rgba(0, 255, 136, 0.95)';
+                ctx.font = 'bold 12px Consolas, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(c.count, c.x, c.y + 4);
+            }
+
+            // Label
+            ctx.fillStyle = 'rgba(0, 255, 136, 0.9)';
+            ctx.font = '10px Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(`CLASS ${c.classIndex}`, c.x, c.y + c.radius + 14);
+        }
+    }
+
+    drawParticles(ctx, particles) {
+        for (const p of particles) {
+            // Trail
+            if (p.trail && p.trail.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                for (let i = 1; i < p.trail.length; i++) {
+                    ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                }
+                ctx.strokeStyle = 'rgba(0, 220, 255, 0.08)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+
+            // Particle dot
+            const alpha = 0.4 + Math.random() * 0.4;
+            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 3);
+            grad.addColorStop(0, `rgba(0, 240, 255, ${alpha})`);
+            grad.addColorStop(1, 'transparent');
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+        }
+    }
+
+    // Animated prediction visualization
+    async animatePrediction(model, inputs) {
+        return new Promise((resolve) => {
+            const particles = model.emitParticles(inputs, true);
+            const totalSteps = model.simSteps;
+            let step = 0;
+
+            const animate = () => {
+                if (step >= totalSteps) {
+                    model.readCollectors(particles);
+                    this.render(model, particles);
+                    resolve(particles);
+                    return;
+                }
+
+                // Run a few sim steps per frame for smoother animation
+                const stepsPerFrame = 3;
+                for (let s = 0; s < stepsPerFrame && step < totalSteps; s++, step++) {
+                    for (const p of particles) {
+                        if (!p.alive) continue;
+                        let fx = 0, fy = 0;
+                        for (const a of model.attractors) {
+                            const dx = a.x - p.x;
+                            const dy = a.y - p.y;
+                            const distSq = dx * dx + dy * dy;
+                            const dist = Math.sqrt(distSq) + 0.1;
+                            const influence = Math.exp(-distSq / (2 * a.radius * a.radius));
+                            const force = a.strength * influence;
+                            fx += force * dx / dist;
+                            fy += force * dy / dist;
+                        }
+                        p.vx += fx * model.dt;
+                        p.vy += fy * model.dt;
+                        p.vx *= model.friction;
+                        p.vy *= model.friction;
+                        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+                        if (speed > 5) { p.vx = (p.vx / speed) * 5; p.vy = (p.vy / speed) * 5; }
+                        p.x += p.vx * model.dt;
+                        p.y += p.vy * model.dt;
+                        if (p.x < 5) { p.x = 5; p.vx = Math.abs(p.vx) * 0.5; }
+                        if (p.x > model.width - 5) { p.x = model.width - 5; p.vx = -Math.abs(p.vx) * 0.5; }
+                        if (p.y < 5) { p.y = 5; p.vy = Math.abs(p.vy) * 0.5; }
+                        if (p.y > model.height - 5) { p.y = model.height - 5; p.vy = -Math.abs(p.vy) * 0.5; }
+                        if (p.trail) p.trail.push({ x: p.x, y: p.y });
+                        p.age++;
+                    }
+                }
+
+                this.render(model, particles);
+                requestAnimationFrame(animate);
+            };
+
+            animate();
+        });
+    }
+}
+
+
+// ---- Accuracy Chart ----
+class AccuracyChart {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.data = [];
+    }
+
+    resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    draw(data) {
+        this.data = data;
+        const ctx = this.ctx;
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        const W = rect.width;
+        const H = rect.height;
+
+        ctx.clearRect(0, 0, W, H);
+
+        // Background
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(0, 0, W, H);
+
+        if (data.length < 2) {
+            ctx.fillStyle = 'rgba(112,112,152,0.4)';
+            ctx.font = '10px Consolas, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('No data yet', W / 2, H / 2);
+            return;
+        }
+
+        // Grid lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 0.5;
+        for (let y = 0; y <= 1; y += 0.25) {
+            const py = H - y * H * 0.85 - H * 0.075;
+            ctx.beginPath();
+            ctx.moveTo(0, py);
+            ctx.lineTo(W, py);
+            ctx.stroke();
+        }
+
+        // Data line
+        const xStep = W / (data.length - 1);
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+            const x = i * xStep;
+            const y = H - data[i] * H * 0.85 - H * 0.075;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = 'rgba(0, 255, 136, 0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Gradient fill under the line
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, 'rgba(0, 255, 136, 0.1)');
+        grad.addColorStop(1, 'transparent');
+        ctx.lineTo(W, H);
+        ctx.lineTo(0, H);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Labels
+        ctx.fillStyle = 'rgba(0, 255, 136, 0.6)';
+        ctx.font = '8px Consolas, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('100%', 2, H * 0.075 + 8);
+        ctx.fillText('0%', 2, H - 2);
+
+        // Current value
+        const last = data[data.length - 1];
+        ctx.fillStyle = 'rgba(0, 255, 136, 0.9)';
+        ctx.font = 'bold 10px Consolas, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText((last * 100).toFixed(1) + '%', W - 4, 12);
+    }
+}
+
+
+// ====================================================
+//  APPLICATION CONTROLLER
+// ====================================================
+class App {
+    constructor() {
+        this.canvas = document.getElementById('fieldCanvas');
+        this.renderer = new FieldRenderer(this.canvas);
+        this.chart = new AccuracyChart(document.getElementById('accChart'));
+        this.trainer = new EvolutionaryTrainer();
+        this.model = null;
+        this.currentTask = 'xor';
+        this.isTraining = false;
+
+        this.initUI();
+        this.resetModel();
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+
+        // Trainer callbacks
+        this.trainer.onProgress = (info) => this.onTrainProgress(info);
+        this.trainer.onComplete = (model) => this.onTrainComplete(model);
+    }
+
+    // ---- UI Binding ----
+    initUI() {
+        // Sliders
+        const sliders = [
+            { id: 'attractorCount', label: 'attractorCountLabel' },
+            { id: 'particleCount', label: 'particleCountLabel' },
+            { id: 'simSteps', label: 'simStepsLabel' },
+            { id: 'friction', label: 'frictionLabel' },
+            { id: 'popSize', label: 'popSizeLabel' },
+            { id: 'mutRate', label: 'mutRateLabel' },
+            { id: 'genCount', label: 'genCountLabel' }
+        ];
+
+        for (const s of sliders) {
+            const el = document.getElementById(s.id);
+            const lbl = document.getElementById(s.label);
+            el.addEventListener('input', () => { lbl.textContent = el.value; });
+        }
+
+        // Buttons
+        document.getElementById('btnTrain').addEventListener('click', () => this.startTraining());
+        document.getElementById('btnStop').addEventListener('click', () => this.stopTraining());
+        document.getElementById('btnReset').addEventListener('click', () => this.resetModel());
+        document.getElementById('btnPredict').addEventListener('click', () => this.runPredictions());
+
+        // Task select
+        document.getElementById('taskSelect').addEventListener('change', (e) => {
+            this.currentTask = e.target.value;
+            this.resetModel();
+        });
+
+        // Canvas hover
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (!this.model) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (this.model.width / rect.width);
+            const y = (e.clientY - rect.top) * (this.model.height / rect.height);
+            this.handleHover(x, y, e.clientX, e.clientY);
+        });
+
+        this.canvas.addEventListener('mouseleave', () => {
+            document.getElementById('tooltip').style.display = 'none';
+        });
+    }
+
+    handleHover(fx, fy, mx, my) {
+        const tooltip = document.getElementById('tooltip');
+        let info = null;
+
+        // Check attractors
+        for (const a of this.model.attractors) {
+            const d = Math.sqrt((a.x - fx) ** 2 + (a.y - fy) ** 2);
+            if (d < 15) {
+                const type = a.strength > 0 ? 'ATTRACTOR' : 'REPULSOR';
+                info = `${type} | str: ${a.strength.toFixed(2)} | rad: ${a.radius.toFixed(0)}`;
+                break;
+            }
+        }
+
+        // Check emitters
+        if (!info) {
+            for (const e of this.model.emitters) {
+                const d = Math.sqrt((e.x - fx) ** 2 + (e.y - fy) ** 2);
+                if (d < 20) {
+                    info = `EMITTER | input[${e.inputIndex}]`;
+                    break;
+                }
+            }
+        }
+
+        // Check collectors
+        if (!info) {
+            for (const c of this.model.collectors) {
+                const d = Math.sqrt((c.x - fx) ** 2 + (c.y - fy) ** 2);
+                if (d < c.radius) {
+                    info = `COLLECTOR | class ${c.classIndex} | captured: ${c.count}`;
+                    break;
+                }
+            }
+        }
+
+        if (info) {
+            tooltip.textContent = info;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (mx + 12) + 'px';
+            tooltip.style.top = (my - 30) + 'px';
+        } else {
+            tooltip.style.display = 'none';
+        }
+    }
+
+    // ---- Canvas Sizing ----
+    resizeCanvas() {
+        const container = document.getElementById('canvasContainer');
+        const w = container.clientWidth - 20;
+        const h = container.clientHeight - 20;
+        const cw = Math.min(w, 700);
+        const ch = Math.min(h, 500);
+
+        if (this.model) {
+            this.model.width = cw;
+            this.model.height = ch;
+        }
+
+        this.renderer.resize(cw, ch);
+        this.chart.resize();
+
+        if (this.model) {
+            this.renderer.render(this.model);
+        }
+        if (this.trainer.accHistory.length > 0) {
+            this.chart.draw(this.trainer.accHistory);
+        }
+    }
+
+    // ---- Model Management ----
+    resetModel() {
+        const task = TASKS[this.currentTask];
+        const container = document.getElementById('canvasContainer');
+        const w = Math.min(container.clientWidth - 20, 700);
+        const h = Math.min(container.clientHeight - 20, 500);
+
+        const numAttractors = parseInt(document.getElementById('attractorCount').value);
+        const particlesPerEval = parseInt(document.getElementById('particleCount').value);
+        const simSteps = parseInt(document.getElementById('simSteps').value);
+        const friction = parseFloat(document.getElementById('friction').value);
+
+        this.model = new DriftFieldModel({
+            width: w,
+            height: h,
+            numAttractors,
+            particlesPerEval,
+            simSteps,
+            friction
+        });
+
+        this.model.setupTopology(task.inputs, task.classes);
+        this.model.randomizeAttractors();
+
+        this.renderer.resize(w, h);
+        this.renderer.render(this.model);
+
+        // Update stats
+        this.updateModelStats();
+
+        // Clear predictions
+        document.getElementById('predGrid').innerHTML = '';
+        document.getElementById('bestAccuracy').textContent = '—';
+        document.getElementById('bestError').textContent = '—';
+        document.getElementById('currentGen').textContent = '0 / 0';
+        document.getElementById('progressFill').style.width = '0%';
+        this.chart.draw([]);
+
+        this.setStatus('idle', 'IDLE');
+        this.log('info', 'Field reset. New random attractor configuration generated.');
+    }
+
+    updateModelStats() {
+        document.getElementById('statAttractors').textContent = this.model.attractors.length;
+        document.getElementById('statParams').textContent = this.model.paramCount();
+        document.getElementById('statEmitters').textContent = this.model.emitters.length;
+        document.getElementById('statCollectors').textContent = this.model.collectors.length;
+        document.getElementById('statDimensions').textContent = `${this.model.width} × ${this.model.height}`;
+    }
+
+    // ---- Training ----
+    async startTraining() {
+        if (this.isTraining) return;
+        this.isTraining = true;
+
+        const task = TASKS[this.currentTask];
+        const generations = parseInt(document.getElementById('genCount').value);
+        const populationSize = parseInt(document.getElementById('popSize').value);
+        const mutationRate = parseFloat(document.getElementById('mutRate').value);
+
+        document.getElementById('btnTrain').disabled = true;
+        document.getElementById('btnStop').disabled = false;
+        document.getElementById('btnReset').disabled = true;
+        document.getElementById('btnPredict').disabled = true;
+        document.getElementById('mainContainer').classList.add('training-active');
+        this.setStatus('training', 'EVOLVING');
+
+        this.log('info', `Starting evolution: ${task.name}, pop=${populationSize}, gen=${generations}`);
+
+        await this.trainer.train(this.model, task, {
+            generations,
+            populationSize,
+            mutationRate
+        });
+
+        this.isTraining = false;
+        document.getElementById('btnTrain').disabled = false;
+        document.getElementById('btnStop').disabled = true;
+        document.getElementById('btnReset').disabled = false;
+        document.getElementById('btnPredict').disabled = false;
+        document.getElementById('mainContainer').classList.remove('training-active');
+    }
+
+    stopTraining() {
+        this.trainer.stop();
+        this.log('err', 'Training stopped by user.');
+    }
+
+    onTrainProgress(info) {
+        // Update UI
+        document.getElementById('currentGen').textContent = `${info.generation} / ${info.maxGenerations}`;
+        document.getElementById('bestAccuracy').textContent = (info.accuracy * 100).toFixed(1) + '%';
+        document.getElementById('bestError').textContent = info.error.toFixed(3);
+        document.getElementById('progressFill').style.width = (info.generation / info.maxGenerations * 100) + '%';
+
+        // Accuracy color
+        const accEl = document.getElementById('bestAccuracy');
+        if (info.accuracy >= 1.0) accEl.className = 'stat-value green';
+        else if (info.accuracy >= 0.75) accEl.className = 'stat-value amber';
+        else accEl.className = 'stat-value red';
+
+        // Update chart
+        this.chart.draw(info.accHistory);
+
+        // Render best model
+        if (info.bestModel) {
+            this.model = info.bestModel.clone();
+            this.model.predict(TASKS[this.currentTask].data[0].input, true);
+            this.renderer.render(this.model, this.model.lastParticles);
+        }
+
+        // Log every 10 gens
+        if (info.generation % 10 === 0) {
+            this.log('gen', `Gen ${info.generation}: ` +
+                `<span class="acc">acc=${(info.accuracy * 100).toFixed(1)}%</span> ` +
+                `<span class="err">err=${info.error.toFixed(3)}</span>`);
+        }
+    }
+
+    onTrainComplete(model) {
+        this.model = model.clone();
+        this.setStatus('trained', 'TRAINED');
+        const finalAcc = this.trainer.accHistory[this.trainer.accHistory.length - 1];
+        this.log('acc', `Evolution complete! Final accuracy: ${(finalAcc * 100).toFixed(1)}%`);
+        this.updateModelStats();
+        this.renderer.render(this.model);
+
+        // Auto-run predictions
+        this.runPredictions();
+    }
+
+    // ---- Predictions ----
+    async runPredictions() {
+        if (!this.model) return;
+        const task = TASKS[this.currentTask];
+        const grid = document.getElementById('predGrid');
+        grid.innerHTML = '';
+
+        this.log('info', `Running predictions for ${task.name}...`);
+
+        for (const sample of task.data) {
+            // Animate last prediction
+            const isLast = sample === task.data[task.data.length - 1];
+
+            const output = this.model.predict(sample.input, true);
+            let predicted = 0;
+            for (let i = 1; i < output.length; i++) {
+                if (output[i] > output[predicted]) predicted = i;
+            }
+
+            const correct = predicted === sample.target;
+
+            const cell = document.createElement('div');
+            cell.className = `pred-cell ${correct ? 'correct' : 'wrong'}`;
+            cell.innerHTML = `
+                <div class="input-label">[${sample.input.map(v => v.toFixed(1)).join(', ')}]</div>
+                <div class="output-value">${predicted} ${correct ? '✓' : '✗'}</div>
+                <div class="input-label">expect: ${sample.target}</div>
+            `;
+            grid.appendChild(cell);
+        }
+
+        // Animate the last sample
+        const lastSample = task.data[task.data.length - 1];
+        await this.renderer.animatePrediction(this.model, lastSample.input);
+    }
+
+    // ---- Status & Logging ----
+    setStatus(type, text) {
+        const badge = document.getElementById('statusBadge');
+        badge.className = `badge ${type}`;
+        badge.textContent = text;
+    }
+
+    log(type, msg) {
+        const logArea = document.getElementById('logArea');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        const time = new Date().toLocaleTimeString();
+        entry.innerHTML = `<span class="${type}">[${time}]</span> ${msg}`;
+        logArea.appendChild(entry);
+        logArea.scrollTop = logArea.scrollHeight;
+
+        // Limit entries
+        while (logArea.children.length > 80) {
+            logArea.removeChild(logArea.firstChild);
+        }
+    }
+}
+
+
+// ---- Boot ----
+window.addEventListener('DOMContentLoaded', () => {
+    const app = new App();
+    window.dfiApp = app; // expose for debugging
+});
+</script>
+
+</body>
+</html>

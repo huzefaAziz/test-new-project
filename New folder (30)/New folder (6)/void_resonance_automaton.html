@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOID RESONANCE AUTOMATON — A Post-Neural Intelligence</title>
+<style>
+  /* ── RESET & BASE ────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #06080d;
+    --bg2:       #0c1018;
+    --panel:     #0d1220;
+    --border:    #1a2240;
+    --cyan:      #00e5ff;
+    --magenta:   #ff00e5;
+    --gold:      #ffd700;
+    --green:     #00ff88;
+    --red:       #ff3366;
+    --dim:       #4a5580;
+    --text:      #c8d0e8;
+    --white:     #eef2ff;
+    --glow-cyan:   0 0 20px rgba(0,229,255,.35);
+    --glow-magenta:0 0 20px rgba(255,0,229,.35);
+    --glow-gold:   0 0 20px rgba(255,215,0,.35);
+  }
+  html { font-size: 14px; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCROLLBAR ───────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── HEADER ──────────────────────────────────────────── */
+  header {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 50% 80%, rgba(0,229,255,.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 30% 50%, rgba(255,0,229,.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  header h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: .15em;
+    background: linear-gradient(135deg, var(--cyan), var(--magenta), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    position: relative;
+  }
+  header .subtitle {
+    margin-top: .6rem;
+    font-size: 1rem;
+    color: var(--dim);
+    letter-spacing: .25em;
+    text-transform: uppercase;
+  }
+  header .tagline {
+    margin-top: .8rem;
+    font-size: .95rem;
+    color: var(--text);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+    opacity: .8;
+  }
+
+  /* ── LAYOUT ──────────────────────────────────────────── */
+  .app {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    gap: 1.5rem;
+  }
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; }
+  }
+
+  /* ── PANELS ──────────────────────────────────────────── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    opacity: .5;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 1rem;
+  }
+  .panel h3 {
+    font-size: .85rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--magenta);
+    margin: 1rem 0 .5rem;
+  }
+  .panel p, .panel li {
+    font-size: .88rem;
+    line-height: 1.65;
+    color: var(--text);
+    opacity: .85;
+  }
+  .panel ul { list-style: none; padding-left: .5rem; }
+  .panel li::before {
+    content: '▸ ';
+    color: var(--cyan);
+  }
+
+  /* ── MAIN VIZ ────────────────────────────────────────── */
+  .viz-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .canvas-wrap {
+    position: relative;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    cursor: crosshair;
+  }
+  .canvas-label {
+    position: absolute;
+    top: 10px; left: 14px;
+    font-size: .7rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* ── CONTROLS ────────────────────────────────────────── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+    align-items: center;
+  }
+  .btn {
+    padding: .55rem 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg2);
+    color: var(--text);
+    font-size: .82rem;
+    letter-spacing: .06em;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn:hover { border-color: var(--cyan); color: var(--white); box-shadow: var(--glow-cyan); }
+  .btn.active { border-color: var(--cyan); color: var(--cyan); box-shadow: var(--glow-cyan); }
+  .btn.danger:hover { border-color: var(--red); color: var(--red); box-shadow: 0 0 15px rgba(255,51,102,.3); }
+  .btn.gold:hover { border-color: var(--gold); color: var(--gold); box-shadow: var(--glow-gold); }
+  .btn.go {
+    background: linear-gradient(135deg, rgba(0,229,255,.15), rgba(255,0,229,.15));
+    border-color: var(--cyan);
+    color: var(--white);
+    font-weight: 600;
+  }
+  .btn.go:hover { box-shadow: var(--glow-cyan), var(--glow-magenta); }
+
+  .class-indicator {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .class-a { background: var(--cyan); box-shadow: var(--glow-cyan); }
+  .class-b { background: var(--magenta); box-shadow: var(--glow-magenta); }
+
+  /* ── STATS ───────────────────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+  }
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .8rem;
+    text-align: center;
+  }
+  .stat-card .val {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .stat-card .val.cyan { color: var(--cyan); }
+  .stat-card .val.magenta { color: var(--magenta); }
+  .stat-card .val.gold { color: var(--gold); }
+  .stat-card .val.green { color: var(--green); }
+  .stat-card .lbl {
+    font-size: .7rem;
+    color: var(--dim);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-top: .2rem;
+  }
+
+  /* ── COMPARISON TABLE ────────────────────────────────── */
+  .cmp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .8rem;
+    margin-top: .5rem;
+  }
+  .cmp-table th {
+    text-align: left;
+    padding: .5rem .4rem;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    letter-spacing: .08em;
+  }
+  .cmp-table td {
+    padding: .45rem .4rem;
+    border-bottom: 1px solid rgba(26,34,64,.4);
+    color: var(--text);
+    opacity: .85;
+  }
+  .cmp-table tr:last-child td { border-bottom: none; }
+  .cmp-table .old { color: var(--red); opacity: .6; }
+  .cmp-table .new { color: var(--green); }
+
+  /* ── LOG ──────────────────────────────────────────────── */
+  .log-area {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .8rem;
+    max-height: 180px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: .75rem;
+    line-height: 1.7;
+    color: var(--dim);
+  }
+  .log-area .log-line { margin: 0; }
+  .log-area .log-line .ts { color: var(--dim); opacity: .5; }
+  .log-area .log-line .msg-cyan { color: var(--cyan); }
+  .log-area .log-line .msg-magenta { color: var(--magenta); }
+  .log-area .log-line .msg-gold { color: var(--gold); }
+  .log-area .log-line .msg-green { color: var(--green); }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    font-size: .75rem;
+    color: var(--dim);
+    letter-spacing: .1em;
+  }
+  footer a { color: var(--cyan); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── PHASE ANIMATION ─────────────────────────────────── */
+  @keyframes pulse-ring {
+    0%   { transform: scale(.8); opacity: .7; }
+    50%  { transform: scale(1.1); opacity: .3; }
+    100% { transform: scale(.8); opacity: .7; }
+  }
+  .phase-badge {
+    display: inline-block;
+    padding: .25rem .7rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border: 1px solid;
+    margin-bottom: .6rem;
+  }
+  .phase-badge.idle   { border-color: var(--dim); color: var(--dim); }
+  .phase-badge.erode  { border-color: var(--cyan); color: var(--cyan); animation: pulse-ring 1.5s infinite; }
+  .phase-badge.resonate { border-color: var(--magenta); color: var(--magenta); animation: pulse-ring 1.2s infinite; }
+  .phase-badge.lock   { border-color: var(--gold); color: var(--gold); animation: pulse-ring 1s infinite; }
+  .phase-badge.done   { border-color: var(--green); color: var(--green); }
+
+  /* ── PRESET BUTTONS ──────────────────────────────────── */
+  .preset-section { margin-top: .8rem; }
+  .preset-section .preset-label {
+    font-size: .72rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: .4rem;
+  }
+  .preset-btns { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .preset-btns .btn { font-size: .75rem; padding: .4rem .8rem; }
+
+  /* ── SPEED SLIDER ────────────────────────────────────── */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-top: .5rem;
+  }
+  .slider-row label {
+    font-size: .75rem;
+    color: var(--dim);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--cyan);
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ HEADER ════════════════════ -->
+<header>
+  <h1>VOID RESONANCE AUTOMATON</h1>
+  <div class="subtitle">A Post-Neural Intelligence Architecture</div>
+  <p class="tagline">
+    No neurons. No weights. No backpropagation.<br>
+    Intelligence emerges from <strong>topological erosion</strong>, <strong>harmonic resonance fields</strong>,
+    and <strong>phase-locked automata</strong> carving structure from the void.
+  </p>
+</header>
+
+<!-- ════════════════════ APP ════════════════════ -->
+<div class="app">
+
+  <!-- ──── LEFT PANEL: THEORY ──── -->
+  <div class="panel" id="theory-panel">
+    <h2>Architecture Theory</h2>
+
+    <h3>I. Void Field</h3>
+    <p>The universe of possible solutions begins as an undifferentiated <em>void</em> — a uniform probability manifold.
+       Unlike neural networks that <em>build up</em> representations, VRA <em>carves away</em> impossibility.</p>
+
+    <h3>II. Resonance Kernels</h3>
+    <p>Each training datum emits a <em>harmonic resonance wave</em> that propagates through the void.
+       Waves have class-specific frequencies. Where same-class waves constructively interfere,
+       certainty increases. Cross-class interference creates <em>erosion fronts</em>.</p>
+
+    <h3>III. Erosion Phase</h3>
+    <p>Contradictory regions — where competing resonances overlap — are eroded away via
+       a reaction-diffusion process. The void literally dissolves at decision boundaries,
+       revealing the topological skeleton of the solution.</p>
+
+    <h3>IV. Phase Locking</h3>
+    <p>After erosion stabilises, remaining resonance fields <em>phase-lock</em> into discrete
+       attractor basins. Each basin corresponds to a class. New inputs are classified by
+       which basin captures their resonance signature.</p>
+
+    <h3>V. No Gradient Descent</h3>
+    <p>VRA uses <em>zero</em> gradient computation. Learning is a physical simulation:
+       wave propagation → interference → erosion → crystallisation.
+       The manifold <em>is</em> the model.</p>
+
+    <div style="margin-top:1.2rem;">
+      <h3>Comparison</h3>
+      <table class="cmp-table">
+        <tr><th>Aspect</th><th>Neural Net</th><th>VRA</th></tr>
+        <tr><td>Unit</td><td class="old">Neuron</td><td class="new">Void Cell</td></tr>
+        <tr><td>Connection</td><td class="old">Weighted Edge</td><td class="new">Resonance Wave</td></tr>
+        <tr><td>Learning</td><td class="old">Backprop / SGD</td><td class="new">Erosion Dynamics</td></tr>
+        <tr><td>Activation</td><td class="old">ReLU / Sigmoid</td><td class="new">Phase Lock</td></tr>
+        <tr><td>Representation</td><td class="old">Weight Matrix</td><td class="new">Topology Manifold</td></tr>
+        <tr><td>Inference</td><td class="old">Forward Pass</td><td class="new">Basin Capture</td></tr>
+        <tr><td>Capacity</td><td class="old">Param Count</td><td class="new">Manifold Genus</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ──── CENTRE: VISUALIZATION ──── -->
+  <div class="viz-area">
+    <div class="panel" style="padding:.8rem;">
+      <div class="controls">
+        <span class="phase-badge idle" id="phase-badge">IDLE</span>
+        <button class="btn active" id="btn-class-a" onclick="setClass(0)">
+          <span class="class-indicator class-a"></span>Class A
+        </button>
+        <button class="btn" id="btn-class-b" onclick="setClass(1)">
+          <span class="class-indicator class-b"></span>Class B
+        </button>
+        <button class="btn go" onclick="runVRA()">▶ Activate VRA</button>
+        <button class="btn danger" onclick="clearAll()">✕ Reset</button>
+      </div>
+      <div class="controls" style="margin-top:.5rem;">
+        <span style="font-size:.72rem;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;">Presets:</span>
+        <button class="btn" onclick="loadPreset('spiral')">Spiral</button>
+        <button class="btn" onclick="loadPreset('moons')">Moons</button>
+        <button class="btn" onclick="loadPreset('clusters')">Clusters</button>
+        <button class="btn" onclick="loadPreset('xor')">XOR</button>
+        <button class="btn" onclick="loadPreset('rings')">Rings</button>
+      </div>
+      <div class="slider-row">
+        <label>Resolution</label>
+        <input type="range" id="res-slider" min="40" max="160" value="80">
+        <label>Speed</label>
+        <input type="range" id="speed-slider" min="1" max="20" value="10">
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <span class="canvas-label">VOID MANIFOLD — Click to place training data</span>
+      <canvas id="mainCanvas" width="760" height="520"></canvas>
+    </div>
+
+    <div class="panel" style="padding:.8rem;">
+      <h2 style="margin-bottom:.5rem;">Process Log</h2>
+      <div class="log-area" id="log-area"></div>
+    </div>
+  </div>
+
+  <!-- ──── RIGHT PANEL: STATS & INFO ──── -->
+  <div class="panel" id="stats-panel">
+    <h2>System Metrics</h2>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="val cyan" id="stat-points">0</div>
+        <div class="lbl">Training Points</div>
+      </div>
+      <div class="stat-card">
+        <div class="val magenta" id="stat-waves">0</div>
+        <div class="lbl">Resonance Waves</div>
+      </div>
+      <div class="stat-card">
+        <div class="val gold" id="stat-erosion">0%</div>
+        <div class="lbl">Void Eroded</div>
+      </div>
+      <div class="stat-card">
+        <div class="val green" id="stat-phase">—</div>
+        <div class="lbl">Phase Coherence</div>
+      </div>
+      <div class="stat-card">
+        <div class="val cyan" id="stat-iterations">0</div>
+        <div class="lbl">Iterations</div>
+      </div>
+      <div class="stat-card">
+        <div class="val magenta" id="stat-basins">0</div>
+        <div class="lbl">Attractor Basins</div>
+      </div>
+      <div class="stat-card">
+        <div class="val gold" id="stat-genus">0</div>
+        <div class="lbl">Manifold Genus</div>
+      </div>
+      <div class="stat-card">
+        <div class="val green" id="stat-time">0 ms</div>
+        <div class="lbl">Compute Time</div>
+      </div>
+    </div>
+
+    <h3>How It Works (Step by Step)</h3>
+    <ul>
+      <li><strong>Place points</strong> on the void canvas — cyan for Class A, magenta for Class B</li>
+      <li>Press <strong>Activate VRA</strong> to begin</li>
+      <li><strong>Phase 1 — Resonance Emission:</strong> each point emits expanding harmonic waves at class-specific frequencies</li>
+      <li><strong>Phase 2 — Interference &amp; Erosion:</strong> cross-class wave collisions erode the void, dissolving ambiguous regions</li>
+      <li><strong>Phase 3 — Phase Locking:</strong> surviving resonance fields lock into stable attractor basins</li>
+      <li>The final <strong>topology manifold</strong> IS the trained model — no weights stored, only shaped void</li>
+    </ul>
+
+    <h3>Key Innovations</h3>
+    <ul>
+      <li><strong>Erosion Learning</strong> — solutions emerge by removing impossibility, not building approximation</li>
+      <li><strong>Wave Interference</strong> — replaces matrix multiplication with physics-inspired field interaction</li>
+      <li><strong>Topological Memory</strong> — the shape of the void encodes knowledge, not numerical weights</li>
+      <li><strong>Zero Gradients</strong> — no differentiation, no loss function, no optimiser</li>
+      <li><strong>Inherent Uncertainty</strong> — eroded boundary regions naturally represent uncertainty</li>
+    </ul>
+
+    <h3>Architecture Properties</h3>
+    <ul>
+      <li>Computation: O(R² × K × I) where R=resolution, K=kernels, I=iterations</li>
+      <li>Memory: O(R²) — only the manifold grid</li>
+      <li>No hyperparameters tuning of learning rate or momentum</li>
+      <li>Decision boundaries are topological invariants</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  VOID RESONANCE AUTOMATON v1.0 — A fundamentally non-neural approach to machine intelligence<br>
+  <span style="opacity:.5;">No neurons were harmed in the making of this intelligence.</span>
+</footer>
+
+<!-- ════════════════════ ENGINE ════════════════════ -->
+<script>
+// ──────────────────────────────────────────────
+// VOID RESONANCE AUTOMATON — Core Engine
+// A completely novel non-neural intelligence system
+// ──────────────────────────────────────────────
+
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+
+// Hi-DPI
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = (rect.width * 0.68) * dpr;
+  canvas.style.height = (rect.width * 0.68) + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ── STATE ──
+let trainingData = [];  // {x, y, cls}  in [0,1] space
+let currentClass = 0;   // 0 = A (cyan), 1 = B (magenta)
+let voidField = null;   // Float64Array — the manifold
+let fieldW = 80;
+let fieldH = 55;
+let isRunning = false;
+let animFrame = null;
+let currentPhase = 'idle'; // idle | resonate | erode | lock | done
+
+// ── COLORS ──
+const CLASS_COLORS = [
+  [0, 229, 255],   // cyan
+  [255, 0, 229],   // magenta
+];
+const VOID_COLOR = [6, 8, 13];
+const ERODED_COLOR = [20, 15, 30];
+
+// ── UI HELPERS ──
+function setClass(c) {
+  currentClass = c;
+  document.getElementById('btn-class-a').classList.toggle('active', c === 0);
+  document.getElementById('btn-class-b').classList.toggle('active', c === 1);
+}
+
+function log(msg, color = 'cyan') {
+  const area = document.getElementById('log-area');
+  const ts = new Date().toLocaleTimeString('en-GB', {hour12:false});
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="ts">[${ts}]</span> <span class="msg-${color}">${msg}</span>`;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+}
+
+function setPhase(phase) {
+  currentPhase = phase;
+  const badge = document.getElementById('phase-badge');
+  badge.className = 'phase-badge ' + phase;
+  const labels = {idle:'IDLE', resonate:'RESONATING', erode:'ERODING', lock:'PHASE LOCKING', done:'CONVERGED'};
+  badge.textContent = labels[phase] || phase.toUpperCase();
+}
+
+function updateStat(id, val) {
+  document.getElementById(id).textContent = val;
+}
+
+// ── CANVAS CLICK ──
+canvas.addEventListener('click', (e) => {
+  if (isRunning) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  trainingData.push({ x, y, cls: currentClass });
+  updateStat('stat-points', trainingData.length);
+  updateStat('stat-waves', trainingData.length);
+  drawIdle();
+  log(`Training point added: Class ${currentClass === 0 ? 'A' : 'B'} at (${x.toFixed(3)}, ${y.toFixed(3)})`, currentClass === 0 ? 'cyan' : 'magenta');
+});
+
+// ── PRESETS ──
+function loadPreset(name) {
+  if (isRunning) return;
+  trainingData = [];
+  const PI2 = Math.PI * 2;
+  const rand = () => Math.random();
+
+  switch(name) {
+    case 'spiral': {
+      for (let i = 0; i < 60; i++) {
+        const t = i / 60 * 3;
+        const r = 0.08 + t * 0.1;
+        const a = t * PI2 * 0.5;
+        trainingData.push({ x: 0.5 + Math.cos(a)*r + (rand()-.5)*.03, y: 0.5 + Math.sin(a)*r + (rand()-.5)*.03, cls: 0 });
+        trainingData.push({ x: 0.5 - Math.cos(a)*r + (rand()-.5)*.03, y: 0.5 - Math.sin(a)*r + (rand()-.5)*.03, cls: 1 });
+      }
+      break;
+    }
+    case 'moons': {
+      for (let i = 0; i < 50; i++) {
+        const a1 = Math.PI * i / 50;
+        trainingData.push({ x: 0.35 + Math.cos(a1)*.2 + (rand()-.5)*.04, y: 0.45 - Math.sin(a1)*.2 + (rand()-.5)*.04, cls: 0 });
+        const a2 = Math.PI + Math.PI * i / 50;
+        trainingData.push({ x: 0.55 + Math.cos(a2)*.2 + (rand()-.5)*.04, y: 0.55 - Math.sin(a2)*.2 + (rand()-.5)*.04, cls: 1 });
+      }
+      break;
+    }
+    case 'clusters': {
+      const centers = [[.3,.3],[.7,.7],[.3,.7],[.7,.3]];
+      for (let i = 0; i < 80; i++) {
+        const ci = i % 4;
+        const c = centers[ci];
+        trainingData.push({ x: c[0]+(rand()-.5)*.15, y: c[1]+(rand()-.5)*.15, cls: ci < 2 ? 0 : 1 });
+      }
+      break;
+    }
+    case 'xor': {
+      for (let i = 0; i < 30; i++) {
+        trainingData.push({ x: .25+(rand()-.5)*.2, y: .25+(rand()-.5)*.2, cls: 0 });
+        trainingData.push({ x: .75+(rand()-.5)*.2, y: .75+(rand()-.5)*.2, cls: 0 });
+        trainingData.push({ x: .25+(rand()-.5)*.2, y: .75+(rand()-.5)*.2, cls: 1 });
+        trainingData.push({ x: .75+(rand()-.5)*.2, y: .25+(rand()-.5)*.2, cls: 1 });
+      }
+      break;
+    }
+    case 'rings': {
+      for (let i = 0; i < 60; i++) {
+        const a = PI2 * i / 60;
+        const r1 = 0.12 + (rand()-.5)*.04;
+        trainingData.push({ x: .5+Math.cos(a)*r1, y: .5+Math.sin(a)*r1, cls: 0 });
+        const r2 = 0.3 + (rand()-.5)*.04;
+        trainingData.push({ x: .5+Math.cos(a)*r2, y: .5+Math.sin(a)*r2, cls: 1 });
+      }
+      break;
+    }
+  }
+  updateStat('stat-points', trainingData.length);
+  updateStat('stat-waves', trainingData.length);
+  drawIdle();
+  log(`Preset loaded: ${name} (${trainingData.length} points)`, 'gold');
+}
+
+// ── CLEAR ──
+function clearAll() {
+  if (animFrame) cancelAnimationFrame(animFrame);
+  isRunning = false;
+  trainingData = [];
+  voidField = null;
+  setPhase('idle');
+  updateStat('stat-points', '0');
+  updateStat('stat-waves', '0');
+  updateStat('stat-erosion', '0%');
+  updateStat('stat-phase', '—');
+  updateStat('stat-iterations', '0');
+  updateStat('stat-basins', '0');
+  updateStat('stat-genus', '0');
+  updateStat('stat-time', '0 ms');
+  drawIdle();
+  log('System reset — void restored to pristine state', 'gold');
+}
+
+// ── DRAW IDLE (just points on black) ──
+function drawIdle() {
+  const w = canvas.width / (window.devicePixelRatio||1);
+  const h = canvas.height / (window.devicePixelRatio||1);
+  ctx.fillStyle = '#06080d';
+  ctx.fillRect(0, 0, w, h);
+
+  // grid
+  ctx.strokeStyle = 'rgba(26,34,64,.3)';
+  ctx.lineWidth = .5;
+  for (let gx = 0; gx < w; gx += 30) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,h); ctx.stroke(); }
+  for (let gy = 0; gy < h; gy += 30) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); }
+
+  // points
+  trainingData.forEach(p => {
+    const px = p.x * w, py = p.y * h;
+    const col = CLASS_COLORS[p.cls];
+    // glow
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, 18);
+    grad.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},.4)`);
+    grad.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(px-18, py-18, 36, 36);
+    // dot
+    ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+drawIdle();
+
+// ══════════════════════════════════════════════════
+// ██  CORE VRA ALGORITHM  ██
+// This is NOT a neural network. It is a novel
+// topological-erosion + harmonic-resonance system.
+// ══════════════════════════════════════════════════
+
+function runVRA() {
+  if (isRunning) return;
+  if (trainingData.length < 2) {
+    log('Need at least 2 training points to begin', 'gold');
+    return;
+  }
+  const hasA = trainingData.some(p => p.cls === 0);
+  const hasB = trainingData.some(p => p.cls === 1);
+  if (!hasA || !hasB) {
+    log('Need points from BOTH classes (A and B)', 'gold');
+    return;
+  }
+
+  isRunning = true;
+  const t0 = performance.now();
+
+  // Read resolution from slider
+  fieldW = parseInt(document.getElementById('res-slider').value);
+  fieldH = Math.round(fieldW * 0.68);
+  const totalCells = fieldW * fieldH;
+
+  // ── 1. INITIALISE THE VOID ──
+  // Two channels: resonance strength for class A and class B
+  let fieldA = new Float64Array(totalCells);  // class A resonance
+  let fieldB = new Float64Array(totalCells);  // class B resonance
+  let erosion = new Float64Array(totalCells); // erosion mask (1 = intact, 0 = eroded)
+  let phase   = new Float64Array(totalCells); // phase coherence
+
+  // Start with full void (all 1)
+  erosion.fill(1.0);
+
+  log('Void manifold initialised: ' + fieldW + '×' + fieldH + ' cells', 'cyan');
+  setPhase('resonate');
+
+  // ── 2. RESONANCE EMISSION ──
+  // Each training point emits a decaying harmonic wave
+  // Wave frequency depends on class; amplitude decays with distance
+  log('Phase 1: Emitting resonance waves from ' + trainingData.length + ' kernels...', 'magenta');
+
+  const DECAY_A = 0.08;  // class A wave decay rate
+  const DECAY_B = 0.08;  // class B wave decay rate
+  const FREQ_A  = 3.7;   // class A harmonic frequency
+  const FREQ_B  = 5.3;   // class B harmonic frequency (different!)
+  const AMPLITUDE = 1.0;
+
+  // Emit waves for all training points
+  for (const pt of trainingData) {
+    const gx = pt.x * fieldW;
+    const gy = pt.y * fieldH;
+    const isA = pt.cls === 0;
+    const freq  = isA ? FREQ_A : FREQ_B;
+    const decay = isA ? DECAY_A : DECAY_B;
+    const field = isA ? fieldA : fieldB;
+
+    for (let fy = 0; fy < fieldH; fy++) {
+      for (let fx = 0; fx < fieldW; fx++) {
+        const dx = fx - gx;
+        const dy = fy - gy;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        // Harmonic resonance: cosine wave with exponential decay
+        const wave = AMPLITUDE * Math.cos(freq * dist) * Math.exp(-decay * dist);
+        const idx = fy * fieldW + fx;
+        field[idx] += Math.max(0, wave);
+      }
+    }
+  }
+
+  // Normalise fields
+  let maxA = 0, maxB = 0;
+  for (let i = 0; i < totalCells; i++) { maxA = Math.max(maxA, fieldA[i]); maxB = Math.max(maxB, fieldB[i]); }
+  if (maxA > 0) for (let i = 0; i < totalCells; i++) fieldA[i] /= maxA;
+  if (maxB > 0) for (let i = 0; i < totalCells; i++) fieldB[i] /= maxB;
+
+  log(`Resonance fields normalised. Peak A: ${maxA.toFixed(2)}, Peak B: ${maxB.toFixed(2)}`, 'cyan');
+
+  // ── 3. ITERATIVE EROSION + DIFFUSION ──
+  // The core learning loop:
+  // - Where A and B resonate strongly together → ERODE (contradiction)
+  // - Surviving regions strengthen their dominant class
+  // - Diffusion smooths the fields (like physical wave propagation)
+  // - Phase locking: cells with clear dominance lock their state
+
+  const maxIterations = 40;
+  const speedMul = parseInt(document.getElementById('speed-slider').value);
+  let iteration = 0;
+
+  function erodeStep() {
+    const ERODE_RATE = 0.15;
+    const DIFFUSE_RATE = 0.12;
+    const LOCK_THRESHOLD = 0.6;
+
+    // ── EROSION: Where both classes resonate, erode the void ──
+    for (let i = 0; i < totalCells; i++) {
+      const conflict = Math.min(fieldA[i], fieldB[i]) * 2;
+      erosion[i] = Math.max(0, erosion[i] - conflict * ERODE_RATE);
+    }
+
+    // ── APPLY EROSION TO FIELDS: eroded regions can't sustain resonance ──
+    for (let i = 0; i < totalCells; i++) {
+      fieldA[i] *= (0.7 + 0.3 * erosion[i]);
+      fieldB[i] *= (0.7 + 0.3 * erosion[i]);
+    }
+
+    // ── DIFFUSION: Smooth the fields (wave propagation) ──
+    let newA = new Float64Array(totalCells);
+    let newB = new Float64Array(totalCells);
+
+    for (let fy = 1; fy < fieldH - 1; fy++) {
+      for (let fx = 1; fx < fieldW - 1; fx++) {
+        const i = fy * fieldW + fx;
+        const neighbors = [i-1, i+1, i-fieldW, i+fieldW];
+        let sumA = fieldA[i] * (1 - DIFFUSE_RATE);
+        let sumB = fieldB[i] * (1 - DIFFUSE_RATE);
+        for (const ni of neighbors) {
+          sumA += fieldA[ni] * DIFFUSE_RATE * 0.25;
+          sumB += fieldB[ni] * DIFFUSE_RATE * 0.25;
+        }
+        newA[i] = sumA;
+        newB[i] = sumB;
+      }
+    }
+    // Copy boundaries
+    for (let fx = 0; fx < fieldW; fx++) {
+      newA[fx] = fieldA[fx]; newB[fx] = fieldB[fx];
+      const li = (fieldH-1)*fieldW+fx;
+      newA[li] = fieldA[li]; newB[li] = fieldB[li];
+    }
+    for (let fy = 0; fy < fieldH; fy++) {
+      const l = fy*fieldW; const r = fy*fieldW+fieldW-1;
+      newA[l] = fieldA[l]; newB[l] = fieldB[l];
+      newA[r] = fieldA[r]; newB[r] = fieldB[r];
+    }
+    fieldA = newA;
+    fieldB = newB;
+
+    // ── RE-INJECT resonance from training points (persistent source) ──
+    for (const pt of trainingData) {
+      const fx = Math.round(pt.x * (fieldW-1));
+      const fy = Math.round(pt.y * (fieldH-1));
+      const idx = fy * fieldW + fx;
+      if (pt.cls === 0) fieldA[idx] = Math.min(1, fieldA[idx] + 0.2);
+      else              fieldB[idx] = Math.min(1, fieldB[idx] + 0.2);
+      erosion[idx] = 1.0; // training points resist erosion
+    }
+
+    // ── PHASE LOCKING: cells with clear dominance lock ──
+    let locked = 0;
+    for (let i = 0; i < totalCells; i++) {
+      const total = fieldA[i] + fieldB[i] + 1e-10;
+      const dominance = Math.abs(fieldA[i] - fieldB[i]) / total;
+      if (dominance > LOCK_THRESHOLD) {
+        phase[i] = Math.min(1, phase[i] + 0.1);
+        locked++;
+      } else {
+        phase[i] = Math.max(0, phase[i] - 0.02);
+      }
+    }
+
+    iteration++;
+
+    // ── COMPUTE STATS ──
+    let totalErosion = 0;
+    let totalPhaseCoherence = 0;
+    for (let i = 0; i < totalCells; i++) {
+      totalErosion += (1 - erosion[i]);
+      totalPhaseCoherence += phase[i];
+    }
+    const erosionPct = (totalErosion / totalCells * 100).toFixed(1);
+    const coherence = (totalPhaseCoherence / totalCells * 100).toFixed(1);
+
+    // Count basins (connected components of dominant class)
+    let basins = countBasins(fieldA, fieldB, fieldW, fieldH);
+
+    // Estimate manifold genus from erosion topology
+    let genus = Math.max(0, basins - 1);
+
+    updateStat('stat-erosion', erosionPct + '%');
+    updateStat('stat-phase', coherence + '%');
+    updateStat('stat-iterations', iteration);
+    updateStat('stat-basins', basins);
+    updateStat('stat-genus', genus);
+    updateStat('stat-time', Math.round(performance.now() - t0) + ' ms');
+
+    return { locked, erosionPct, coherence };
+  }
+
+  // ── ANIMATION LOOP ──
+  let frameCount = 0;
+
+  function animate() {
+    if (!isRunning) return;
+
+    // Run multiple steps per frame based on speed
+    const stepsPerFrame = Math.max(1, Math.floor(speedMul / 3));
+    let stats;
+    for (let s = 0; s < stepsPerFrame && iteration < maxIterations; s++) {
+      stats = erodeStep();
+    }
+
+    // Update phase badge
+    if (iteration < maxIterations * 0.3) setPhase('resonate');
+    else if (iteration < maxIterations * 0.7) setPhase('erode');
+    else if (iteration < maxIterations) setPhase('lock');
+
+    // ── RENDER ──
+    renderField(fieldA, fieldB, erosion, phase);
+
+    // Log periodically
+    if (iteration % 8 === 0 && stats) {
+      log(`Iteration ${iteration}: erosion=${stats.erosionPct}%, coherence=${stats.coherence}%`, iteration < maxIterations*0.5 ? 'cyan' : 'magenta');
+    }
+
+    // Check convergence
+    if (iteration >= maxIterations) {
+      setPhase('done');
+      isRunning = false;
+      const elapsed = Math.round(performance.now() - t0);
+      updateStat('stat-time', elapsed + ' ms');
+      log(`✓ VRA converged in ${iteration} iterations (${elapsed}ms)`, 'green');
+      log(`Final manifold: ${stats.erosionPct}% eroded, ${stats.coherence}% phase-locked`, 'green');
+      log('The void has been shaped. The topology IS the model.', 'gold');
+
+      // Store the final field for inference
+      voidField = { fieldA: fieldA.slice(), fieldB: fieldB.slice(), erosion: erosion.slice(), phase: phase.slice() };
+      enableInference();
+      return;
+    }
+
+    animFrame = requestAnimationFrame(animate);
+  }
+
+  animFrame = requestAnimationFrame(animate);
+}
+
+// ── RENDER THE VOID FIELD ──
+function renderField(fieldA, fieldB, erosion, phase) {
+  const w = canvas.width / (window.devicePixelRatio||1);
+  const h = canvas.height / (window.devicePixelRatio||1);
+  const cellW = w / fieldW;
+  const cellH = h / fieldH;
+
+  // Create image data for fast rendering
+  const imgData = ctx.createImageData(Math.ceil(w), Math.ceil(h));
+  const data = imgData.data;
+
+  for (let fy = 0; fy < fieldH; fy++) {
+    for (let fx = 0; fx < fieldW; fx++) {
+      const idx = fy * fieldW + fx;
+      const a = fieldA[idx];
+      const b = fieldB[idx];
+      const e = erosion[idx];
+      const p = phase[idx];
+
+      // Color mixing based on resonance
+      const total = a + b + 1e-10;
+      const ratioA = a / total;
+      const ratioB = b / total;
+
+      // Base color: blend between class colors based on dominance
+      let r = ratioA * CLASS_COLORS[0][0] + ratioB * CLASS_COLORS[1][0];
+      let g = ratioA * CLASS_COLORS[0][1] + ratioB * CLASS_COLORS[1][1];
+      let bl = ratioA * CLASS_COLORS[0][2] + ratioB * CLASS_COLORS[1][2];
+
+      // Intensity based on total resonance and erosion
+      const intensity = Math.min(1, (a + b) * 1.5) * (0.3 + 0.7 * e);
+
+      // Phase-locked cells get brighter
+      const phaseBrightness = 1 + p * 0.5;
+
+      // Eroded regions go dark with a slight purple tint
+      const erosionDark = e < 0.3 ? (1 - e / 0.3) * 0.3 : 0;
+
+      r = r * intensity * phaseBrightness + ERODED_COLOR[0] * erosionDark + VOID_COLOR[0] * (1 - intensity);
+      g = g * intensity * phaseBrightness + ERODED_COLOR[1] * erosionDark + VOID_COLOR[1] * (1 - intensity);
+      bl = bl * intensity * phaseBrightness + ERODED_COLOR[2] * erosionDark + VOID_COLOR[2] * (1 - intensity);
+
+      // Fill the cell pixels
+      const px0 = Math.floor(fx * cellW);
+      const py0 = Math.floor(fy * cellH);
+      const px1 = Math.floor((fx+1) * cellW);
+      const py1 = Math.floor((fy+1) * cellH);
+
+      for (let py = py0; py < py1 && py < Math.ceil(h); py++) {
+        for (let px = px0; px < px1 && px < Math.ceil(w); px++) {
+          const pi = (py * Math.ceil(w) + px) * 4;
+          data[pi]   = Math.min(255, Math.round(r));
+          data[pi+1] = Math.min(255, Math.round(g));
+          data[pi+2] = Math.min(255, Math.round(bl));
+          data[pi+3] = 255;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+
+  // ── Draw training points on top ──
+  trainingData.forEach(pt => {
+    const px = pt.x * w, py = pt.y * h;
+    const col = CLASS_COLORS[pt.cls];
+    // Outer ring
+    ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},.8)`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI*2);
+    ctx.stroke();
+    // Inner dot
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(px, py, 2.5, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // ── Draw erosion boundary lines ──
+  ctx.strokeStyle = 'rgba(255,215,0,.15)';
+  ctx.lineWidth = 0.5;
+  for (let fy = 1; fy < fieldH - 1; fy++) {
+    for (let fx = 1; fx < fieldW - 1; fx++) {
+      const idx = fy * fieldW + fx;
+      const e = erosion[idx];
+      if (e < 0.5) {
+        // Check if neighbor has higher erosion (boundary)
+        const neighbors = [idx-1, idx+1, idx-fieldW, idx+fieldW];
+        for (const ni of neighbors) {
+          if (erosion[ni] > 0.5) {
+            const cx = (fx + 0.5) * cellW;
+            const cy = (fy + 0.5) * cellH;
+            ctx.beginPath();
+            ctx.arc(cx, cy, cellW * 0.3, 0, Math.PI*2);
+            ctx.stroke();
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ── COUNT ATTRACTOR BASINS (connected components) ──
+function countBasins(fieldA, fieldB, w, h) {
+  const visited = new Uint8Array(w * h);
+  let basins = 0;
+  const threshold = 0.1;
+
+  for (let i = 0; i < w * h; i++) {
+    if (visited[i]) continue;
+    const dominant = fieldA[i] > fieldB[i] ? 0 : 1;
+    if (Math.max(fieldA[i], fieldB[i]) < threshold) { visited[i] = 1; continue; }
+
+    // BFS flood fill
+    basins++;
+    const queue = [i];
+    visited[i] = 1;
+    while (queue.length > 0) {
+      const ci = queue.pop();
+      const cx = ci % w, cy = Math.floor(ci / w);
+      const neighbors = [];
+      if (cx > 0) neighbors.push(ci - 1);
+      if (cx < w-1) neighbors.push(ci + 1);
+      if (cy > 0) neighbors.push(ci - w);
+      if (cy < h-1) neighbors.push(ci + w);
+      for (const ni of neighbors) {
+        if (visited[ni]) continue;
+        const nd = fieldA[ni] > fieldB[ni] ? 0 : 1;
+        if (nd === dominant && Math.max(fieldA[ni], fieldB[ni]) >= threshold) {
+          visited[ni] = 1;
+          queue.push(ni);
+        }
+      }
+    }
+  }
+  return basins;
+}
+
+// ── INFERENCE MODE: After training, click to classify ──
+function enableInference() {
+  log('Inference mode enabled — click anywhere to classify via basin capture', 'green');
+
+  canvas.onclick = (e) => {
+    if (!voidField) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    // Map to grid
+    const fx = Math.min(fieldW-1, Math.max(0, Math.round(x * (fieldW-1))));
+    const fy = Math.min(fieldH-1, Math.max(0, Math.round(y * (fieldH-1))));
+    const idx = fy * fieldW + fx;
+
+    const a = voidField.fieldA[idx];
+    const b = voidField.fieldB[idx];
+    const e_val = voidField.erosion[idx];
+    const total = a + b + 1e-10;
+    const confidence = Math.abs(a - b) / total;
+
+    let classification;
+    if (e_val < 0.2) {
+      classification = 'VOID (eroded boundary — uncertain)';
+      log(`Query (${x.toFixed(3)}, ${y.toFixed(3)}): ${classification} [erosion: ${e_val.toFixed(3)}]`, 'gold');
+    } else if (a > b) {
+      classification = `Class A (confidence: ${(confidence*100).toFixed(1)}%)`;
+      log(`Query (${x.toFixed(3)}, ${y.toFixed(3)}): ${classification}`, 'cyan');
+    } else {
+      classification = `Class B (confidence: ${(confidence*100).toFixed(1)}%)`;
+      log(`Query (${x.toFixed(3)}, ${y.toFixed(3)}): ${classification}`, 'magenta');
+    }
+
+    // Draw query point
+    const w2 = canvas.width / (window.devicePixelRatio||1);
+    const h2 = canvas.height / (window.devicePixelRatio||1);
+    const px = x * w2, py = y * h2;
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px-8, py); ctx.lineTo(px+8, py);
+    ctx.moveTo(px, py-8); ctx.lineTo(px, py+8);
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px "Segoe UI", sans-serif';
+    ctx.fillText(classification, px + 12, py - 5);
+  };
+}
+</script>
+
+</body>
+</html>

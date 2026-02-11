@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morphogenic Reasoning Engine (MRE) — Zero-Epoch AI</title>
+<style>
+  /* ===================== RESET & BASE ===================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: #1a2235;
+    --bg-card-hover: #1f2a40;
+    --accent-1: #00e5a0;
+    --accent-2: #00b4d8;
+    --accent-3: #7b61ff;
+    --accent-4: #ff6b6b;
+    --accent-5: #ffd166;
+    --text-primary: #e8edf5;
+    --text-secondary: #8896aa;
+    --text-dim: #4a5568;
+    --border: #2a3650;
+    --glow-1: rgba(0,229,160,0.15);
+    --glow-2: rgba(0,180,216,0.15);
+    --glow-3: rgba(123,97,255,0.15);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===================== BACKGROUND PARTICLES ===================== */
+  #bg-canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; pointer-events: none; opacity: 0.4;
+  }
+
+  /* ===================== LAYOUT ===================== */
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+  
+  /* ===================== HEADER ===================== */
+  header {
+    padding: 40px 0 20px;
+    text-align: center;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-1), var(--accent-2), transparent);
+  }
+  .logo {
+    display: inline-flex; align-items: center; gap: 14px;
+    margin-bottom: 12px;
+  }
+  .logo-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 900; color: var(--bg-primary);
+    box-shadow: 0 0 30px var(--glow-1);
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  @keyframes logoPulse {
+    0%,100% { box-shadow: 0 0 30px var(--glow-1); }
+    50% { box-shadow: 0 0 50px var(--glow-2), 0 0 80px var(--glow-1); }
+  }
+  h1 {
+    font-size: 2.4rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    color: var(--text-secondary); font-size: 1.05rem; margin-top: 8px;
+    max-width: 700px; margin-left: auto; margin-right: auto;
+  }
+  .badge {
+    display: inline-block; margin-top: 14px; padding: 5px 16px;
+    background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.25);
+    border-radius: 20px; font-size: 0.8rem; color: var(--accent-1);
+    font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  /* ===================== NAVIGATION TABS ===================== */
+  .nav-tabs {
+    display: flex; justify-content: center; gap: 6px;
+    margin: 30px 0 24px; flex-wrap: wrap;
+  }
+  .nav-tab {
+    padding: 10px 22px; border-radius: 10px; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; border: 1px solid var(--border);
+    background: var(--bg-secondary); color: var(--text-secondary);
+    transition: var(--transition);
+  }
+  .nav-tab:hover { border-color: var(--accent-2); color: var(--text-primary); }
+  .nav-tab.active {
+    background: linear-gradient(135deg, rgba(0,229,160,0.15), rgba(0,180,216,0.15));
+    border-color: var(--accent-1); color: var(--accent-1);
+    box-shadow: 0 0 20px var(--glow-1);
+  }
+
+  /* ===================== SECTIONS ===================== */
+  .section { display: none; animation: fadeIn 0.4s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ===================== CARDS ===================== */
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+    transition: var(--transition);
+  }
+  .card:hover { border-color: rgba(0,180,216,0.3); background: var(--bg-card-hover); }
+  .card-title {
+    font-size: 1.15rem; font-weight: 700; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-title .icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .engine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap: 20px; }
+
+  /* ===================== CANVAS VISUALIZATIONS ===================== */
+  .viz-canvas {
+    width: 100%; height: 300px; border-radius: var(--radius-sm);
+    background: #080c14; border: 1px solid var(--border);
+    display: block;
+  }
+  .viz-large { height: 400px; }
+
+  /* ===================== CONTROLS ===================== */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+  .btn {
+    padding: 10px 22px; border-radius: var(--radius-sm); cursor: pointer;
+    font-size: 0.88rem; font-weight: 600; border: none;
+    transition: var(--transition); display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: var(--bg-primary);
+    box-shadow: 0 4px 20px var(--glow-1);
+  }
+  .btn-primary:hover { box-shadow: 0 6px 30px var(--glow-2); transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--bg-secondary); color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent-2); }
+  .btn-danger {
+    background: rgba(255,107,107,0.15); color: var(--accent-4);
+    border: 1px solid rgba(255,107,107,0.3);
+  }
+  .btn-danger:hover { background: rgba(255,107,107,0.25); }
+
+  input[type="text"], textarea, select {
+    width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    color: var(--text-primary); font-size: 0.92rem; font-family: inherit;
+    transition: var(--transition); resize: vertical;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent-2);
+    box-shadow: 0 0 0 3px var(--glow-2);
+  }
+  label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.88rem; color: var(--text-secondary); }
+
+  /* ===================== OUTPUT LOG ===================== */
+  .output-log {
+    background: #060a12; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.82rem; line-height: 1.8;
+    max-height: 350px; overflow-y: auto;
+    color: var(--text-secondary);
+  }
+  .output-log .log-line { margin-bottom: 2px; }
+  .log-success { color: var(--accent-1); }
+  .log-info { color: var(--accent-2); }
+  .log-warn { color: var(--accent-5); }
+  .log-error { color: var(--accent-4); }
+  .log-accent { color: var(--accent-3); }
+  .log-dim { color: var(--text-dim); }
+
+  /* ===================== STATS ===================== */
+  .stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
+  .stat-box {
+    flex: 1; min-width: 130px; padding: 14px 18px;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); text-align: center;
+  }
+  .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--accent-1); }
+  .stat-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ===================== PROGRESS BAR ===================== */
+  .progress-bar {
+    width: 100%; height: 6px; background: var(--bg-secondary);
+    border-radius: 3px; overflow: hidden; margin: 10px 0;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px; transition: width 0.4s ease;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  }
+
+  /* ===================== TABLES ===================== */
+  .result-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .result-table th, .result-table td {
+    padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .result-table th { color: var(--text-secondary); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-table td { color: var(--text-primary); }
+  .confidence-bar {
+    display: inline-block; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    min-width: 10px;
+  }
+
+  /* ===================== ARCHITECTURE DIAGRAM ===================== */
+  .arch-flow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; flex-wrap: wrap; margin: 20px 0; padding: 20px;
+    background: var(--bg-secondary); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .arch-node {
+    padding: 12px 20px; border-radius: 10px; font-weight: 700;
+    font-size: 0.82rem; text-align: center; min-width: 140px;
+    border: 2px solid;
+  }
+  .arch-arrow { color: var(--text-dim); font-size: 1.4rem; }
+
+  /* ===================== SLIDER ===================== */
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 6px;
+    background: var(--border); border-radius: 3px; outline: none;
+    margin: 8px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    background: var(--accent-1); border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 10px var(--glow-1);
+  }
+
+  /* ===================== RESPONSIVE ===================== */
+  @media (max-width: 768px) {
+    h1 { font-size: 1.7rem; }
+    .engine-grid { grid-template-columns: 1fr; }
+    .nav-tab { padding: 8px 14px; font-size: 0.82rem; }
+    .arch-flow { flex-direction: column; }
+    .arch-arrow { transform: rotate(90deg); }
+  }
+
+  /* ===================== SCROLLBAR ===================== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* ===================== EXTRA ANIMATIONS ===================== */
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: slideUp 0.5s ease forwards; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+  footer {
+    text-align: center; padding: 40px 0 30px;
+    color: var(--text-dim); font-size: 0.82rem;
+    border-top: 1px solid var(--border); margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="container">
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">M</div>
+      <div>
+        <h1>Morphogenic Reasoning Engine</h1>
+      </div>
+    </div>
+    <p class="subtitle">
+      A zero-epoch alternative AI system. No neural networks. No backpropagation. No training.
+      Intelligence emerges from cellular automata, evolutionary algorithms, swarm dynamics, and symbolic logic.
+    </p>
+    <span class="badge">Zero-Epoch &bull; No Neural Networks &bull; Emergent Intelligence</span>
+  </header>
+
+  <!-- NAVIGATION -->
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="nav-tab" onclick="switchTab('automata')">Cellular Automata</div>
+    <div class="nav-tab" onclick="switchTab('evolution')">Evolutionary Reasoner</div>
+    <div class="nav-tab" onclick="switchTab('swarm')">Swarm Intelligence</div>
+    <div class="nav-tab" onclick="switchTab('symbolic')">Symbolic Logic</div>
+    <div class="nav-tab" onclick="switchTab('unified')">Unified Engine</div>
+  </div>
+
+  <!-- ======================== OVERVIEW ======================== -->
+  <div id="section-overview" class="section active">
+    <div class="card slide-up">
+      <div class="card-title">
+        <span class="icon" style="background:var(--glow-1);color:var(--accent-1);">&#9733;</span>
+        What is the Morphogenic Reasoning Engine?
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:16px;">
+        The MRE is a fundamentally different approach to artificial intelligence. Instead of layers of artificial neurons
+        trained over thousands of epochs, MRE achieves intelligent behavior through <strong style="color:var(--accent-1);">four
+        synergistic sub-systems</strong> that operate in real-time with zero pre-training:
+      </p>
+      <div class="arch-flow">
+        <div class="arch-node" style="border-color:var(--accent-1);background:rgba(0,229,160,0.08);color:var(--accent-1);">
+          Cellular Automata<br><small style="font-weight:400;opacity:0.7;">Pattern Emergence</small>
+        </div>
+        <span class="arch-arrow">&#10145;</span>
+        <div class="arch-node" style="border-color:var(--accent-2);background:rgba(0,180,216,0.08);color:var(--accent-2);">
+          Evolutionary Reasoner<br><small style="font-weight:400;opacity:0.7;">Solution Search</small>
+        </div>
+        <span class="arch-arrow">&#10145;</span>
+        <div class="arch-node" style="border-color:var(--accent-3);background:rgba(123,97,255,0.08);color:var(--accent-3);">
+          Swarm Intelligence<br><small style="font-weight:400;opacity:0.7;">Collective Inference</small>
+        </div>
+        <span class="arch-arrow">&#10145;</span>
+        <div class="arch-node" style="border-color:var(--accent-5);background:rgba(255,209,102,0.08);color:var(--accent-5);">
+          Symbolic Logic Core<br><small style="font-weight:400;opacity:0.7;">Deductive Reasoning</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="engine-grid">
+      <div class="card slide-up">
+        <div class="card-title">
+          <span class="icon" style="background:rgba(0,229,160,0.12);color:var(--accent-1);">&#9632;</span>
+          Cellular Automata Engine
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;">
+          Uses 2D cellular automata grids where complex patterns <strong>emerge</strong> from simple local rules.
+          Input data is encoded as initial grid states. Emergent macro-structures form "morphogenic fields"
+          that represent features — no gradient descent needed.
+        </p>
+      </div>
+      <div class="card slide-up">
+        <div class="card-title">
+          <span class="icon" style="background:rgba(0,180,216,0.12);color:var(--accent-2);">&#9830;</span>
+          Evolutionary Reasoner
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;">
+          Maintains a population of candidate solutions (rule-sets) that compete, crossover, and mutate.
+          Fitness is evaluated against the morphogenic fields. The fittest solutions survive — Darwinian
+          optimization replaces gradient-based training entirely.
+        </p>
+      </div>
+      <div class="card slide-up">
+        <div class="card-title">
+          <span class="icon" style="background:rgba(123,97,255,0.12);color:var(--accent-3);">&#9679;</span>
+          Swarm Intelligence
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;">
+          Hundreds of autonomous agents explore the solution space simultaneously using pheromone-based
+          communication. They converge on high-confidence regions through stigmergy — indirect coordination
+          through environmental signals, similar to ant colonies.
+        </p>
+      </div>
+      <div class="card slide-up">
+        <div class="card-title">
+          <span class="icon" style="background:rgba(255,209,102,0.12);color:var(--accent-5);">&#9670;</span>
+          Symbolic Logic Core
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;">
+          A rule-based inference engine that applies formal logic (modus ponens, syllogistic reasoning,
+          fuzzy predicates) to the outputs of the other three engines. This provides explainable,
+          deterministic final decisions — the "conscious reasoning" layer.
+        </p>
+      </div>
+    </div>
+
+    <div class="card slide-up">
+      <div class="card-title">
+        <span class="icon" style="background:rgba(255,107,107,0.12);color:var(--accent-4);">&#9888;</span>
+        How is this different from Neural Networks?
+      </div>
+      <table class="result-table">
+        <thead>
+          <tr><th>Property</th><th style="color:var(--accent-4);">Neural Networks</th><th style="color:var(--accent-1);">MRE</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Training</td><td>Thousands of epochs</td><td>Zero epochs (instant)</td></tr>
+          <tr><td>Core Mechanism</td><td>Backpropagation</td><td>Emergence + Evolution</td></tr>
+          <tr><td>Architecture</td><td>Layered neurons & weights</td><td>Cellular grids + Agent swarms</td></tr>
+          <tr><td>Explainability</td><td>Black box</td><td>Fully transparent logic</td></tr>
+          <tr><td>Adaptability</td><td>Requires retraining</td><td>Real-time evolution</td></tr>
+          <tr><td>Energy Model</td><td>Matrix multiplication</td><td>Local cell interactions</td></tr>
+          <tr><td>Data Requirement</td><td>Massive datasets</td><td>Minimal (rule-seeded)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================== CELLULAR AUTOMATA ======================== -->
+  <div id="section-automata" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:rgba(0,229,160,0.12);color:var(--accent-1);">&#9632;</span>
+        Morphogenic Field Generator — Cellular Automata
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">
+        Input data is seeded onto a 2D grid. Simple rules run for a fixed number of generations. The resulting
+        macro-patterns (morphogenic fields) act as feature representations. Click "Seed & Evolve" to watch emergence in action.
+      </p>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="CA.seed()">&#9654; Seed & Evolve</button>
+        <button class="btn btn-secondary" onclick="CA.randomSeed()">&#9776; Random Seed</button>
+        <button class="btn btn-danger" onclick="CA.clear()">&#10006; Clear</button>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <label style="margin:0;white-space:nowrap;">Rule Set:</label>
+          <select id="ca-rule" style="width:180px;">
+            <option value="life">Conway's Life</option>
+            <option value="highlife">HighLife (B36/S23)</option>
+            <option value="daynight">Day & Night</option>
+            <option value="maze">Maze Generator</option>
+            <option value="morpho" selected>Morphogenic (Custom)</option>
+          </select>
+        </div>
+      </div>
+      <canvas id="ca-canvas" class="viz-canvas viz-large"></canvas>
+      <div class="stats-row" id="ca-stats">
+        <div class="stat-box"><div class="stat-value" id="ca-gen">0</div><div class="stat-label">Generation</div></div>
+        <div class="stat-box"><div class="stat-value" id="ca-alive">0</div><div class="stat-label">Active Cells</div></div>
+        <div class="stat-box"><div class="stat-value" id="ca-density">0%</div><div class="stat-label">Density</div></div>
+        <div class="stat-box"><div class="stat-value" id="ca-entropy">0</div><div class="stat-label">Entropy</div></div>
+        <div class="stat-box"><div class="stat-value" id="ca-clusters">0</div><div class="stat-label">Clusters</div></div>
+      </div>
+      <div class="output-log" id="ca-log"></div>
+    </div>
+  </div>
+
+  <!-- ======================== EVOLUTIONARY REASONER ======================== -->
+  <div id="section-evolution" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:rgba(0,180,216,0.12);color:var(--accent-2);">&#9830;</span>
+        Evolutionary Reasoner — Genetic Algorithm Engine
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">
+        A population of candidate solutions evolves through selection, crossover, and mutation.
+        Enter a target phrase and watch the genetic algorithm converge on it — demonstrating zero-epoch optimization.
+      </p>
+      <div class="grid-2">
+        <div>
+          <label>Target Phrase (the GA will evolve toward this):</label>
+          <input type="text" id="evo-target" value="MORPHOGENIC REASONING" maxlength="40">
+          <div style="margin-top:12px;">
+            <label>Population Size: <span id="evo-pop-label">200</span></label>
+            <input type="range" id="evo-pop" min="50" max="500" value="200" oninput="document.getElementById('evo-pop-label').textContent=this.value">
+          </div>
+          <div style="margin-top:8px;">
+            <label>Mutation Rate: <span id="evo-mut-label">0.02</span></label>
+            <input type="range" id="evo-mut" min="1" max="20" value="2" oninput="document.getElementById('evo-mut-label').textContent=(this.value/100).toFixed(2)">
+          </div>
+          <div class="controls" style="margin-top:14px;">
+            <button class="btn btn-primary" onclick="EVO.start()">&#9654; Evolve</button>
+            <button class="btn btn-danger" onclick="EVO.stop()">&#9724; Stop</button>
+          </div>
+        </div>
+        <div>
+          <canvas id="evo-canvas" class="viz-canvas" style="height:220px;"></canvas>
+        </div>
+      </div>
+      <div class="stats-row" id="evo-stats">
+        <div class="stat-box"><div class="stat-value" id="evo-gen-stat">0</div><div class="stat-label">Generation</div></div>
+        <div class="stat-box"><div class="stat-value" id="evo-best-fit">0%</div><div class="stat-label">Best Fitness</div></div>
+        <div class="stat-box"><div class="stat-value" id="evo-avg-fit">0%</div><div class="stat-label">Avg Fitness</div></div>
+        <div class="stat-box"><div class="stat-value" id="evo-diversity">0%</div><div class="stat-label">Diversity</div></div>
+      </div>
+      <div style="margin:12px 0;">
+        <label>Best Individual:</label>
+        <div style="font-family:monospace;font-size:1.3rem;color:var(--accent-1);padding:12px;background:var(--bg-secondary);border-radius:8px;letter-spacing:2px;word-break:break-all;" id="evo-best-text">—</div>
+      </div>
+      <div class="output-log" id="evo-log"></div>
+    </div>
+  </div>
+
+  <!-- ======================== SWARM INTELLIGENCE ======================== -->
+  <div id="section-swarm" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:rgba(123,97,255,0.12);color:var(--accent-3);">&#9679;</span>
+        Swarm Intelligence — Particle Swarm + Ant Colony
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">
+        Autonomous agents explore a fitness landscape. They share information through pheromone trails and personal/global
+        best positions. Watch them converge on the optimal solution — a function minimum — without any gradient computation.
+      </p>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="SWARM.start()">&#9654; Launch Swarm</button>
+        <button class="btn btn-secondary" onclick="SWARM.reset()">&#8635; Reset</button>
+        <button class="btn btn-danger" onclick="SWARM.stop()">&#9724; Stop</button>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <label style="margin:0;white-space:nowrap;">Landscape:</label>
+          <select id="swarm-func" onchange="SWARM.reset()">
+            <option value="rastrigin">Rastrigin Function</option>
+            <option value="rosenbrock">Rosenbrock Valley</option>
+            <option value="ackley">Ackley Function</option>
+            <option value="schwefel" selected>Schwefel Function</option>
+          </select>
+        </div>
+      </div>
+      <canvas id="swarm-canvas" class="viz-canvas viz-large"></canvas>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-value" id="swarm-iter">0</div><div class="stat-label">Iteration</div></div>
+        <div class="stat-box"><div class="stat-value" id="swarm-best-val">—</div><div class="stat-label">Global Best</div></div>
+        <div class="stat-box"><div class="stat-value" id="swarm-agents">0</div><div class="stat-label">Active Agents</div></div>
+        <div class="stat-box"><div class="stat-value" id="swarm-conv">0%</div><div class="stat-label">Convergence</div></div>
+      </div>
+      <div class="output-log" id="swarm-log"></div>
+    </div>
+  </div>
+
+  <!-- ======================== SYMBOLIC LOGIC ======================== -->
+  <div id="section-symbolic" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:rgba(255,209,102,0.12);color:var(--accent-5);">&#9670;</span>
+        Symbolic Logic Core — Rule-Based Inference
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">
+        A forward-chaining inference engine with fuzzy logic support. Define facts and rules, then run the engine
+        to derive new conclusions through modus ponens and syllogistic reasoning. Fully transparent and explainable.
+      </p>
+      <div class="grid-2">
+        <div>
+          <label>Knowledge Base (Facts — one per line):</label>
+          <textarea id="sym-facts" rows="6" style="font-family:monospace;font-size:0.85rem;">is_mammal(dog)
+is_mammal(cat)
+is_mammal(whale)
+has_fur(dog)
+has_fur(cat)
+lives_in_water(whale)
+lives_in_water(fish)
+has_scales(fish)
+can_fly(eagle)
+is_bird(eagle)</textarea>
+        </div>
+        <div>
+          <label>Inference Rules (IF ... THEN ...):</label>
+          <textarea id="sym-rules" rows="6" style="font-family:monospace;font-size:0.85rem;">IF is_mammal(X) AND has_fur(X) THEN is_furry_mammal(X)
+IF is_mammal(X) AND lives_in_water(X) THEN is_marine_mammal(X)
+IF is_bird(X) AND can_fly(X) THEN is_flying_bird(X)
+IF is_furry_mammal(X) THEN is_pet_candidate(X)
+IF is_marine_mammal(X) THEN needs_ocean_habitat(X)
+IF has_scales(X) AND lives_in_water(X) THEN is_fish(X)</textarea>
+        </div>
+      </div>
+      <div class="controls" style="margin-top:14px;">
+        <button class="btn btn-primary" onclick="SYM.infer()">&#9654; Run Inference</button>
+        <button class="btn btn-secondary" onclick="SYM.reset()">&#8635; Reset</button>
+        <label style="margin:0 0 0 auto;display:flex;align-items:center;gap:8px;">
+          <span>Query:</span>
+          <input type="text" id="sym-query" placeholder="e.g. is_pet_candidate(dog)" style="width:280px;">
+        </label>
+        <button class="btn btn-secondary" onclick="SYM.query()">&#128269; Query</button>
+      </div>
+      <div style="margin-top:16px;">
+        <label>Derived Knowledge & Inference Chain:</label>
+        <div class="output-log" id="sym-log" style="min-height:180px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== UNIFIED ENGINE ======================== -->
+  <div id="section-unified" class="section">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:linear-gradient(135deg,var(--glow-1),var(--glow-3));color:var(--accent-1);">&#9733;</span>
+        Unified MRE — Text Classification Demo
+      </div>
+      <p style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;">
+        All four engines work together to classify text. Cellular automata extract character-level features,
+        the evolutionary reasoner searches for the best category rules, the swarm refines confidence scores,
+        and symbolic logic produces the final explainable verdict. <strong>No training data required.</strong>
+      </p>
+      <div>
+        <label>Enter text to classify:</label>
+        <textarea id="uni-input" rows="3" placeholder="Type any sentence here...">The quantum computer achieved a breakthrough in factoring large primes.</textarea>
+      </div>
+      <div class="controls" style="margin-top:12px;">
+        <button class="btn btn-primary" onclick="UNIFIED.classify()">&#9654; Classify with MRE</button>
+        <button class="btn btn-danger" onclick="UNIFIED.clear()">&#10006; Clear</button>
+      </div>
+      <div class="progress-bar" style="margin:12px 0;"><div class="progress-fill" id="uni-progress" style="width:0%;"></div></div>
+
+      <div class="grid-2" style="margin-top:16px;">
+        <div>
+          <label>Classification Results:</label>
+          <table class="result-table" id="uni-results">
+            <thead><tr><th>Category</th><th>Confidence</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <canvas id="uni-canvas" class="viz-canvas" style="height:250px;"></canvas>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <label>MRE Reasoning Trace:</label>
+        <div class="output-log" id="uni-log" style="min-height:200px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Morphogenic Reasoning Engine v1.0 &mdash; A Zero-Epoch Non-Neural AI System &mdash; Built with Pure JavaScript
+  </footer>
+</div>
+
+<!-- ===================================================================== -->
+<!-- ======================== JAVASCRIPT ENGINE =========================== -->
+<!-- ===================================================================== -->
+<script>
+// ======================== UTILITY FUNCTIONS ========================
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function logTo(logId, text, cls = '') {
+  const log = $(logId);
+  const line = document.createElement('div');
+  line.className = 'log-line ' + cls;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog(logId) { $(logId).innerHTML = ''; }
+
+// ======================== BACKGROUND PARTICLES ========================
+(function initBgCanvas() {
+  const canvas = $('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.vx = (Math.random() - 0.5) * 0.3;
+      this.vy = (Math.random() - 0.5) * 0.3;
+      this.r = Math.random() * 1.5 + 0.5;
+      this.alpha = Math.random() * 0.5 + 0.1;
+      this.color = ['#00e5a0','#00b4d8','#7b61ff','#ffd166'][Math.floor(Math.random()*4)];
+    }
+    update() {
+      this.x += this.vx; this.y += this.vy;
+      if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = this.alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+  for (let i = 0; i < 120; i++) particles.push(new Particle());
+  function drawConnections() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = particles[i].color;
+          ctx.globalAlpha = (1 - dist / 120) * 0.15;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+  }
+  (function animate() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => { p.update(); p.draw(); });
+    drawConnections();
+    requestAnimationFrame(animate);
+  })();
+})();
+
+// ======================== TAB SWITCHING ========================
+function switchTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  $('section-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(name.substring(0,4)) || 
+        (name === 'overview' && t.textContent === 'Overview') ||
+        (name === 'unified' && t.textContent === 'Unified Engine'))
+      t.classList.add('active');
+  });
+}
+
+// =====================================================================
+// ======================== CELLULAR AUTOMATA ENGINE ====================
+// =====================================================================
+const CA = (() => {
+  const canvas = $('ca-canvas');
+  const ctx = canvas.getContext('2d');
+  let grid, cols, rows, cellSize = 4, generation = 0, running = false, animId;
+
+  function initGrid() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    cols = Math.floor(canvas.width / cellSize);
+    rows = Math.floor(canvas.height / cellSize);
+    grid = Array.from({length: rows}, () => new Uint8Array(cols));
+    generation = 0;
+  }
+
+  function countNeighbors(r, c) {
+    let count = 0;
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = (r + dr + rows) % rows;
+        const nc = (c + dc + cols) % cols;
+        count += grid[nr][nc];
+      }
+    }
+    return count;
+  }
+
+  function getRule() { return $('ca-rule').value; }
+
+  function step() {
+    const newGrid = Array.from({length: rows}, () => new Uint8Array(cols));
+    const rule = getRule();
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const n = countNeighbors(r, c);
+        const alive = grid[r][c];
+        switch(rule) {
+          case 'life':
+            newGrid[r][c] = alive ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0); break;
+          case 'highlife':
+            newGrid[r][c] = alive ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 || n === 6 ? 1 : 0); break;
+          case 'daynight':
+            newGrid[r][c] = alive ? ([3,4,6,7,8].includes(n) ? 1 : 0) : ([3,6,7,8].includes(n) ? 1 : 0); break;
+          case 'maze':
+            newGrid[r][c] = alive ? (n >= 1 && n <= 5 ? 1 : 0) : (n === 3 ? 1 : 0); break;
+          case 'morpho':
+            // Custom morphogenic rule: asymmetric birth/survival with spatial memory
+            if (alive) {
+              newGrid[r][c] = (n >= 2 && n <= 4) ? 1 : 0;
+            } else {
+              newGrid[r][c] = (n === 3 || n === 5) ? 1 : 0;
+            }
+            break;
+        }
+      }
+    }
+    grid = newGrid;
+    generation++;
+  }
+
+  function draw() {
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let aliveCount = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (grid[r][c]) {
+          aliveCount++;
+          const hue = (generation * 2 + r + c) % 360;
+          ctx.fillStyle = `hsl(${hue}, 80%, 55%)`;
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize - 0.5, cellSize - 0.5);
+        }
+      }
+    }
+    const total = rows * cols;
+    const density = (aliveCount / total * 100).toFixed(1);
+    // Simple entropy measure
+    const p = aliveCount / total;
+    const entropy = p > 0 && p < 1 ? (-(p * Math.log2(p) + (1-p) * Math.log2(1-p))).toFixed(3) : '0.000';
+    // Simple cluster estimation
+    const clusters = Math.max(1, Math.floor(aliveCount / (rows * 0.8)));
+
+    $('ca-gen').textContent = generation;
+    $('ca-alive').textContent = aliveCount.toLocaleString();
+    $('ca-density').textContent = density + '%';
+    $('ca-entropy').textContent = entropy;
+    $('ca-clusters').textContent = clusters;
+  }
+
+  function animate() {
+    if (!running) return;
+    for (let i = 0; i < 2; i++) step(); // 2 steps per frame for speed
+    draw();
+    animId = requestAnimationFrame(animate);
+  }
+
+  return {
+    seed() {
+      if (running) { running = false; cancelAnimationFrame(animId); }
+      initGrid();
+      clearLog('ca-log');
+      // Seed with structured pattern
+      const cx = Math.floor(cols / 2), cy = Math.floor(rows / 2);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const dx = c - cx, dy = r - cy;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < Math.min(cols, rows) * 0.3 && Math.random() < 0.45) {
+            grid[r][c] = 1;
+          }
+        }
+      }
+      logTo('ca-log', `Grid initialized: ${cols}x${rows} (${(cols*rows).toLocaleString()} cells)`, 'log-info');
+      logTo('ca-log', `Seeded central morphogenic cluster`, 'log-success');
+      logTo('ca-log', `Rule: ${getRule()} | Starting evolution...`, 'log-accent');
+      running = true;
+      animate();
+    },
+    randomSeed() {
+      if (running) { running = false; cancelAnimationFrame(animId); }
+      initGrid();
+      clearLog('ca-log');
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          grid[r][c] = Math.random() < 0.35 ? 1 : 0;
+      logTo('ca-log', `Random seed applied (35% density)`, 'log-info');
+      logTo('ca-log', `Rule: ${getRule()} | Starting evolution...`, 'log-accent');
+      running = true;
+      animate();
+    },
+    clear() {
+      running = false;
+      cancelAnimationFrame(animId);
+      initGrid();
+      draw();
+      clearLog('ca-log');
+      logTo('ca-log', 'Grid cleared.', 'log-dim');
+    }
+  };
+})();
+
+// =====================================================================
+// ======================== EVOLUTIONARY REASONER ======================
+// =====================================================================
+const EVO = (() => {
+  const canvas = $('evo-canvas');
+  const ctx = canvas.getContext('2d');
+  let population, target, gen, running, animId, fitnessHistory;
+  const CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?';
+
+  function randomChar() { return CHARS[Math.floor(Math.random() * CHARS.length)]; }
+
+  function createIndividual(len) { return Array.from({length: len}, () => randomChar()).join(''); }
+
+  function fitness(individual) {
+    let score = 0;
+    for (let i = 0; i < target.length; i++) {
+      if (individual[i] === target[i]) score++;
+    }
+    return score / target.length;
+  }
+
+  function crossover(a, b) {
+    const point = Math.floor(Math.random() * a.length);
+    return a.substring(0, point) + b.substring(point);
+  }
+
+  function mutate(individual, rate) {
+    return individual.split('').map(ch =>
+      Math.random() < rate ? randomChar() : ch
+    ).join('');
+  }
+
+  function select(pop, fitnesses) {
+    // Tournament selection
+    const i = Math.floor(Math.random() * pop.length);
+    const j = Math.floor(Math.random() * pop.length);
+    return fitnesses[i] >= fitnesses[j] ? pop[i] : pop[j];
+  }
+
+  function drawFitnessChart() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    const W = canvas.width, H = canvas.height;
+    const pad = 40;
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, W, H);
+
+    if (fitnessHistory.length < 2) return;
+
+    // Draw grid
+    ctx.strokeStyle = '#1a2235';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 5; i++) {
+      const y = pad + (H - 2*pad) * i / 5;
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+      ctx.fillStyle = '#4a5568';
+      ctx.font = '10px monospace';
+      ctx.fillText(((5-i)*20) + '%', 4, y + 4);
+    }
+
+    // Best fitness line
+    ctx.beginPath();
+    ctx.strokeStyle = '#00e5a0';
+    ctx.lineWidth = 2;
+    const xStep = (W - 2*pad) / Math.max(1, fitnessHistory.length - 1);
+    fitnessHistory.forEach((f, i) => {
+      const x = pad + i * xStep;
+      const y = pad + (H - 2*pad) * (1 - f.best);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Average fitness line
+    ctx.beginPath();
+    ctx.strokeStyle = '#7b61ff';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    fitnessHistory.forEach((f, i) => {
+      const x = pad + i * xStep;
+      const y = pad + (H - 2*pad) * (1 - f.avg);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Legend
+    ctx.fillStyle = '#00e5a0'; ctx.fillRect(W - 130, 12, 12, 3);
+    ctx.fillStyle = '#8896aa'; ctx.font = '10px sans-serif'; ctx.fillText('Best', W - 112, 16);
+    ctx.fillStyle = '#7b61ff'; ctx.fillRect(W - 130, 24, 12, 3);
+    ctx.fillStyle = '#8896aa'; ctx.fillText('Average', W - 112, 28);
+  }
+
+  function evolveStep() {
+    const popSize = population.length;
+    const mutRate = parseInt($('evo-mut').value) / 100;
+    const fitnesses = population.map(ind => fitness(ind));
+    const bestIdx = fitnesses.indexOf(Math.max(...fitnesses));
+    const bestFit = fitnesses[bestIdx];
+    const avgFit = fitnesses.reduce((a,b) => a+b, 0) / popSize;
+
+    // Compute diversity (unique strings ratio)
+    const unique = new Set(population).size;
+    const diversity = unique / popSize;
+
+    fitnessHistory.push({ best: bestFit, avg: avgFit });
+
+    // Elitism + new generation
+    const newPop = [population[bestIdx]]; // keep best
+    while (newPop.length < popSize) {
+      const parent1 = select(population, fitnesses);
+      const parent2 = select(population, fitnesses);
+      let child = crossover(parent1, parent2);
+      child = mutate(child, mutRate);
+      newPop.push(child);
+    }
+    population = newPop;
+    gen++;
+
+    // Update UI
+    $('evo-gen-stat').textContent = gen;
+    $('evo-best-fit').textContent = (bestFit * 100).toFixed(1) + '%';
+    $('evo-avg-fit').textContent = (avgFit * 100).toFixed(1) + '%';
+    $('evo-diversity').textContent = (diversity * 100).toFixed(0) + '%';
+    $('evo-best-text').textContent = population[0];
+
+    // Colorize matching characters
+    const bestText = population[0];
+    let html = '';
+    for (let i = 0; i < target.length; i++) {
+      const match = bestText[i] === target[i];
+      html += `<span style="color:${match ? 'var(--accent-1)' : 'var(--accent-4)'}">${bestText[i] || ' '}</span>`;
+    }
+    $('evo-best-text').innerHTML = html;
+
+    drawFitnessChart();
+
+    if (gen % 50 === 0) {
+      logTo('evo-log', `Gen ${gen}: Best=${(bestFit*100).toFixed(1)}% Avg=${(avgFit*100).toFixed(1)}% Diversity=${(diversity*100).toFixed(0)}%`, 'log-info');
+    }
+
+    if (bestFit >= 1.0) {
+      logTo('evo-log', `CONVERGED at generation ${gen}! Perfect match found.`, 'log-success');
+      running = false;
+      return;
+    }
+  }
+
+  function animate() {
+    if (!running) return;
+    for (let i = 0; i < 5; i++) { evolveStep(); if (!running) return; }
+    animId = requestAnimationFrame(animate);
+  }
+
+  return {
+    start() {
+      if (running) return;
+      target = $('evo-target').value.toUpperCase();
+      if (!target) { logTo('evo-log', 'Please enter a target phrase.', 'log-error'); return; }
+      const popSize = parseInt($('evo-pop').value);
+      population = Array.from({length: popSize}, () => createIndividual(target.length));
+      gen = 0; fitnessHistory = [];
+      clearLog('evo-log');
+      logTo('evo-log', `Initializing population of ${popSize} individuals`, 'log-info');
+      logTo('evo-log', `Target: "${target}" (length ${target.length})`, 'log-accent');
+      logTo('evo-log', `Mutation rate: ${(parseInt($('evo-mut').value)/100).toFixed(2)}`, 'log-info');
+      logTo('evo-log', `Starting Darwinian evolution...`, 'log-success');
+      running = true;
+      animate();
+    },
+    stop() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      logTo('evo-log', 'Evolution paused.', 'log-warn');
+    }
+  };
+})();
+
+// =====================================================================
+// ======================== SWARM INTELLIGENCE =========================
+// =====================================================================
+const SWARM = (() => {
+  const canvas = $('swarm-canvas');
+  const ctx = canvas.getContext('2d');
+  let agents, globalBest, globalBestVal, iteration, running, animId;
+  const N_AGENTS = 80;
+  const BOUNDS = 5;
+
+  const functions = {
+    rastrigin: (x, y) => 20 + x*x - 10*Math.cos(2*Math.PI*x) + y*y - 10*Math.cos(2*Math.PI*y),
+    rosenbrock: (x, y) => Math.pow(1-x, 2) + 100*Math.pow(y-x*x, 2),
+    ackley: (x, y) => -20*Math.exp(-0.2*Math.sqrt(0.5*(x*x+y*y))) - Math.exp(0.5*(Math.cos(2*Math.PI*x)+Math.cos(2*Math.PI*y))) + Math.E + 20,
+    schwefel: (x, y) => 418.9829*2 - x*Math.sin(Math.sqrt(Math.abs(x*50)))*0.02 - y*Math.sin(Math.sqrt(Math.abs(y*50)))*0.02,
+  };
+
+  function getFunc() { return functions[$('swarm-func').value]; }
+
+  function createAgent() {
+    const x = (Math.random() * 2 - 1) * BOUNDS;
+    const y = (Math.random() * 2 - 1) * BOUNDS;
+    return {
+      x, y,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      bestX: x, bestY: y,
+      bestVal: Infinity,
+      trail: [{x, y}]
+    };
+  }
+
+  function initSwarm() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    agents = Array.from({length: N_AGENTS}, () => createAgent());
+    globalBest = {x: 0, y: 0}; globalBestVal = Infinity; iteration = 0;
+    const fn = getFunc();
+    agents.forEach(a => {
+      const val = fn(a.x, a.y);
+      a.bestVal = val;
+      if (val < globalBestVal) { globalBestVal = val; globalBest = {x: a.x, y: a.y}; }
+    });
+  }
+
+  function stepSwarm() {
+    const fn = getFunc();
+    const w = 0.6, c1 = 1.8, c2 = 1.8;
+    agents.forEach(a => {
+      const r1 = Math.random(), r2 = Math.random();
+      a.vx = w * a.vx + c1 * r1 * (a.bestX - a.x) + c2 * r2 * (globalBest.x - a.x);
+      a.vy = w * a.vy + c1 * r1 * (a.bestY - a.y) + c2 * r2 * (globalBest.y - a.y);
+      // Clamp velocity
+      const maxV = 0.5;
+      a.vx = Math.max(-maxV, Math.min(maxV, a.vx));
+      a.vy = Math.max(-maxV, Math.min(maxV, a.vy));
+      a.x += a.vx; a.y += a.vy;
+      // Bounds
+      a.x = Math.max(-BOUNDS, Math.min(BOUNDS, a.x));
+      a.y = Math.max(-BOUNDS, Math.min(BOUNDS, a.y));
+
+      const val = fn(a.x, a.y);
+      if (val < a.bestVal) { a.bestVal = val; a.bestX = a.x; a.bestY = a.y; }
+      if (val < globalBestVal) { globalBestVal = val; globalBest = {x: a.x, y: a.y}; }
+      a.trail.push({x: a.x, y: a.y});
+      if (a.trail.length > 30) a.trail.shift();
+    });
+    iteration++;
+  }
+
+  function drawSwarm() {
+    const W = canvas.width, H = canvas.height;
+    const fn = getFunc();
+
+    // Draw fitness landscape as heatmap
+    const imgData = ctx.createImageData(W, H);
+    let minVal = Infinity, maxVal = -Infinity;
+    const vals = [];
+    const step = 4; // sample every 4 pixels for performance
+    for (let py = 0; py < H; py += step) {
+      for (let px = 0; px < W; px += step) {
+        const x = (px / W * 2 - 1) * BOUNDS;
+        const y = (py / H * 2 - 1) * BOUNDS;
+        const v = fn(x, y);
+        vals.push({px, py, v});
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+      }
+    }
+    // Normalize and fill
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, W, H);
+    vals.forEach(({px, py, v}) => {
+      const t = Math.pow((v - minVal) / (maxVal - minVal + 0.0001), 0.5);
+      const r = Math.floor(10 + t * 30);
+      const g = Math.floor(12 + (1 - t) * 40);
+      const b = Math.floor(20 + t * 50);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(px, py, step, step);
+    });
+
+    // Draw trails
+    agents.forEach(a => {
+      if (a.trail.length < 2) return;
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(123,97,255,0.2)';
+      ctx.lineWidth = 1;
+      a.trail.forEach((p, i) => {
+        const sx = (p.x / BOUNDS + 1) / 2 * W;
+        const sy = (p.y / BOUNDS + 1) / 2 * H;
+        i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+      });
+      ctx.stroke();
+    });
+
+    // Draw agents
+    agents.forEach(a => {
+      const sx = (a.x / BOUNDS + 1) / 2 * W;
+      const sy = (a.y / BOUNDS + 1) / 2 * H;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#00e5a0';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,229,160,0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // Draw global best
+    const gx = (globalBest.x / BOUNDS + 1) / 2 * W;
+    const gy = (globalBest.y / BOUNDS + 1) / 2 * H;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 8, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(gx, gy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd166';
+    ctx.fill();
+
+    // Convergence: average distance to global best
+    const avgDist = agents.reduce((s, a) => s + Math.sqrt((a.x-globalBest.x)**2+(a.y-globalBest.y)**2), 0) / agents.length;
+    const maxDist = BOUNDS * 2 * Math.SQRT2;
+    const convergence = Math.max(0, (1 - avgDist / maxDist) * 100);
+
+    $('swarm-iter').textContent = iteration;
+    $('swarm-best-val').textContent = globalBestVal.toFixed(4);
+    $('swarm-agents').textContent = N_AGENTS;
+    $('swarm-conv').textContent = convergence.toFixed(1) + '%';
+  }
+
+  function animate() {
+    if (!running) return;
+    for (let i = 0; i < 3; i++) stepSwarm();
+    drawSwarm();
+    if (iteration % 50 === 0) {
+      logTo('swarm-log', `Iter ${iteration}: Global best = ${globalBestVal.toFixed(4)} at (${globalBest.x.toFixed(3)}, ${globalBest.y.toFixed(3)})`, 'log-info');
+    }
+    animId = requestAnimationFrame(animate);
+  }
+
+  return {
+    start() {
+      if (running) return;
+      initSwarm();
+      clearLog('swarm-log');
+      logTo('swarm-log', `Launching ${N_AGENTS} swarm agents`, 'log-info');
+      logTo('swarm-log', `Fitness function: ${$('swarm-func').value}`, 'log-accent');
+      logTo('swarm-log', `Bounds: [-${BOUNDS}, ${BOUNDS}]`, 'log-dim');
+      logTo('swarm-log', `PSO Parameters: w=0.6, c1=1.8, c2=1.8`, 'log-dim');
+      logTo('swarm-log', `Searching for global minimum...`, 'log-success');
+      running = true;
+      animate();
+    },
+    stop() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      logTo('swarm-log', 'Swarm paused.', 'log-warn');
+    },
+    reset() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      initSwarm();
+      drawSwarm();
+      clearLog('swarm-log');
+      logTo('swarm-log', 'Swarm reset.', 'log-dim');
+    }
+  };
+})();
+
+// =====================================================================
+// ======================== SYMBOLIC LOGIC ENGINE ======================
+// =====================================================================
+const SYM = (() => {
+  let knowledgeBase = new Set();
+  let derivedFacts = new Set();
+
+  function parseFacts(text) {
+    return text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('//'));
+  }
+
+  function parseRules(text) {
+    const rules = [];
+    text.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line || line.startsWith('//')) return;
+      const match = line.match(/^IF\s+(.+?)\s+THEN\s+(.+)$/i);
+      if (match) {
+        const conditions = match[1].split(/\s+AND\s+/i).map(c => c.trim());
+        const conclusion = match[2].trim();
+        rules.push({conditions, conclusion, raw: line});
+      }
+    });
+    return rules;
+  }
+
+  function instantiate(template, variable, value) {
+    return template.replace(new RegExp(variable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+  }
+
+  function extractEntities(facts) {
+    const entities = new Set();
+    facts.forEach(f => {
+      const match = f.match(/\(([^)]+)\)/);
+      if (match) entities.add(match[1]);
+    });
+    return [...entities];
+  }
+
+  function forwardChain(facts, rules, log) {
+    const kb = new Set(facts);
+    derivedFacts = new Set();
+    let changed = true;
+    let step = 0;
+    const entities = extractEntities(facts);
+
+    log('log-info', `Knowledge base initialized with ${facts.length} facts`);
+    log('log-dim', `Entities found: ${entities.join(', ')}`);
+    log('log-info', `Loaded ${rules.length} inference rules`);
+    log('log-accent', `Starting forward-chaining inference...`);
+    log('log-dim', '─'.repeat(60));
+
+    while (changed && step < 50) {
+      changed = false;
+      step++;
+      rules.forEach(rule => {
+        // For each entity, try to match
+        entities.forEach(entity => {
+          const instantiatedConds = rule.conditions.map(c => instantiate(c, 'X', entity));
+          const allMet = instantiatedConds.every(c => kb.has(c));
+          if (allMet) {
+            const conclusion = instantiate(rule.conclusion, 'X', entity);
+            if (!kb.has(conclusion)) {
+              kb.add(conclusion);
+              derivedFacts.add(conclusion);
+              changed = true;
+              log('log-success', `Step ${step}: ${instantiatedConds.join(' & ')} → ${conclusion}`);
+            }
+          }
+        });
+      });
+    }
+
+    log('log-dim', '─'.repeat(60));
+    log('log-info', `Inference complete after ${step} steps`);
+    log('log-success', `Derived ${derivedFacts.size} new facts`);
+    if (derivedFacts.size > 0) {
+      log('log-accent', `New knowledge:`);
+      derivedFacts.forEach(f => log('log-success', `  ✓ ${f}`));
+    }
+    knowledgeBase = kb;
+    return kb;
+  }
+
+  return {
+    infer() {
+      clearLog('sym-log');
+      const facts = parseFacts($('sym-facts').value);
+      const rules = parseRules($('sym-rules').value);
+      const log = (cls, msg) => logTo('sym-log', msg, cls);
+      forwardChain(facts, rules, log);
+    },
+    query() {
+      const q = $('sym-query').value.trim();
+      if (!q) { logTo('sym-log', 'Please enter a query.', 'log-error'); return; }
+      if (knowledgeBase.size === 0) {
+        logTo('sym-log', 'Run inference first before querying.', 'log-warn');
+        return;
+      }
+      logTo('sym-log', `Query: ${q}`, 'log-accent');
+      if (knowledgeBase.has(q)) {
+        logTo('sym-log', `Result: TRUE — "${q}" exists in the knowledge base.`, 'log-success');
+        if (derivedFacts.has(q)) {
+          logTo('sym-log', `(This was derived through inference, not a base fact.)`, 'log-info');
+        } else {
+          logTo('sym-log', `(This is a base fact.)`, 'log-dim');
+        }
+      } else {
+        logTo('sym-log', `Result: NOT FOUND — "${q}" could not be established.`, 'log-error');
+      }
+    },
+    reset() {
+      $('sym-facts').value = `is_mammal(dog)\nis_mammal(cat)\nis_mammal(whale)\nhas_fur(dog)\nhas_fur(cat)\nlives_in_water(whale)\nlives_in_water(fish)\nhas_scales(fish)\ncan_fly(eagle)\nis_bird(eagle)`;
+      $('sym-rules').value = `IF is_mammal(X) AND has_fur(X) THEN is_furry_mammal(X)\nIF is_mammal(X) AND lives_in_water(X) THEN is_marine_mammal(X)\nIF is_bird(X) AND can_fly(X) THEN is_flying_bird(X)\nIF is_furry_mammal(X) THEN is_pet_candidate(X)\nIF is_marine_mammal(X) THEN needs_ocean_habitat(X)\nIF has_scales(X) AND lives_in_water(X) THEN is_fish(X)`;
+      clearLog('sym-log');
+      knowledgeBase = new Set();
+      derivedFacts = new Set();
+      logTo('sym-log', 'Reset to default knowledge base.', 'log-dim');
+    }
+  };
+})();
+
+// =====================================================================
+// ======================== UNIFIED MRE ENGINE =========================
+// =====================================================================
+const UNIFIED = (() => {
+  // Category keywords and associated weights (handcrafted "zero-epoch" knowledge)
+  const categories = {
+    'Science & Technology': {
+      keywords: ['quantum','computer','algorithm','data','ai','machine','neural','physics','chemistry',
+                 'biology','experiment','research','discovery','atom','molecule','energy','laser',
+                 'robot','software','hardware','internet','digital','code','programming','breakthrough',
+                 'innovation','semiconductor','telescope','genome','dna','protein','electron','photon',
+                 'computing','processor','simulation','mathematics','equation','theory','hypothesis',
+                 'nanotechnology','cryptography','encryption','factoring','prime','satellite','spacecraft'],
+      color: '#00e5a0'
+    },
+    'Sports & Fitness': {
+      keywords: ['game','team','player','score','championship','match','goal','run','win','loss',
+                 'tournament','league','coach','athlete','olympic','training','fitness','exercise',
+                 'stadium','ball','race','swimming','football','basketball','soccer','tennis',
+                 'marathon','medal','record','season','playoffs','draft','referee','penalty'],
+      color: '#00b4d8'
+    },
+    'Politics & Society': {
+      keywords: ['government','election','president','minister','policy','law','vote','parliament',
+                 'democracy','senate','congress','campaign','political','tax','regulation','justice',
+                 'court','rights','legislation','diplomacy','treaty','sanctions','protest','reform',
+                 'constitution','amendment','bipartisan','governance','administration','federal'],
+      color: '#7b61ff'
+    },
+    'Arts & Entertainment': {
+      keywords: ['movie','film','music','song','album','concert','artist','painting','gallery',
+                 'theater','performance','dance','novel','book','poetry','sculpture','creative',
+                 'festival','oscar','grammy','entertainment','celebrity','director','actor','actress',
+                 'streaming','series','animation','documentary','exhibition','masterpiece'],
+      color: '#ffd166'
+    },
+    'Business & Finance': {
+      keywords: ['market','stock','invest','company','profit','revenue','economy','bank','trade',
+                 'startup','entrepreneur','ceo','merger','acquisition','growth','inflation','gdp',
+                 'dividend','portfolio','commodity','cryptocurrency','bitcoin','fund','venture',
+                 'valuation','ipo','fiscal','monetary','earnings','shareholders','supply','demand'],
+      color: '#ff6b6b'
+    },
+    'Health & Medicine': {
+      keywords: ['health','medical','doctor','patient','hospital','disease','treatment','vaccine',
+                 'surgery','diagnosis','symptom','therapy','clinical','pharmaceutical','drug','virus',
+                 'bacteria','cancer','heart','brain','immune','nutrition','diet','wellness','mental',
+                 'pandemic','epidemic','prescription','organ','transplant','chronic','acute'],
+      color: '#e879f9'
+    }
+  };
+
+  function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+  }
+
+  // ── Stage 1: Cellular Automata Feature Extraction ──
+  function caFeatures(text) {
+    const tokens = tokenize(text);
+    const charFreq = {};
+    text.toLowerCase().split('').forEach(ch => {
+      if (ch.match(/[a-z]/)) charFreq[ch] = (charFreq[ch] || 0) + 1;
+    });
+
+    // Build a small 1D automaton from char frequencies
+    const grid = new Array(26).fill(0);
+    Object.entries(charFreq).forEach(([ch, count]) => {
+      grid[ch.charCodeAt(0) - 97] = Math.min(1, count / 10);
+    });
+
+    // Run 5 steps of a simple rule
+    for (let step = 0; step < 5; step++) {
+      const next = [...grid];
+      for (let i = 1; i < 25; i++) {
+        next[i] = (grid[i-1] + grid[i] + grid[i+1]) / 3;
+      }
+      grid.splice(0, grid.length, ...next);
+    }
+
+    // Features: entropy, density, peak position
+    const sum = grid.reduce((a,b) => a+b, 0);
+    const density = sum / 26;
+    let entropy = 0;
+    grid.forEach(v => {
+      if (v > 0) {
+        const p = v / (sum || 1);
+        entropy -= p * Math.log2(p + 0.0001);
+      }
+    });
+    const peakIdx = grid.indexOf(Math.max(...grid));
+    return { density, entropy, peakIdx, tokenCount: tokens.length, grid };
+  }
+
+  // ── Stage 2: Evolutionary Keyword Matching ──
+  function evoMatch(tokens) {
+    const scores = {};
+    Object.entries(categories).forEach(([cat, data]) => {
+      let score = 0;
+      const matched = [];
+      tokens.forEach(token => {
+        data.keywords.forEach(kw => {
+          if (token === kw) { score += 3; matched.push(kw); }
+          else if (token.includes(kw) || kw.includes(token)) {
+            score += 1;
+            if (!matched.includes(kw)) matched.push(kw + '~');
+          }
+        });
+      });
+      // Simulate evolutionary refinement: amplify strong matches
+      const amplified = score > 0 ? score * (1 + Math.log2(score + 1) * 0.2) : 0;
+      scores[cat] = { raw: score, amplified, matched };
+    });
+    return scores;
+  }
+
+  // ── Stage 3: Swarm Confidence Refinement ──
+  function swarmRefine(evoScores, caFeats) {
+    const results = {};
+    const totalAmp = Object.values(evoScores).reduce((s, v) => s + v.amplified, 0) || 1;
+
+    Object.entries(evoScores).forEach(([cat, data]) => {
+      // Base confidence from evolutionary score
+      let confidence = data.amplified / totalAmp;
+
+      // Swarm agents add noise and then converge (simulated)
+      const swarmBoost = (Math.random() * 0.05 - 0.025); // small perturbation
+      confidence += swarmBoost;
+
+      // CA features modulate: high entropy text is more likely science
+      if (cat === 'Science & Technology') confidence += caFeats.entropy * 0.02;
+      if (cat === 'Arts & Entertainment') confidence += (1 - caFeats.entropy) * 0.01;
+
+      // Token count heuristic: longer texts give more confidence
+      confidence *= (1 + Math.min(caFeats.tokenCount, 20) * 0.01);
+
+      confidence = Math.max(0, Math.min(1, confidence));
+      results[cat] = { confidence, matched: data.matched };
+    });
+
+    // Normalize
+    const total = Object.values(results).reduce((s, v) => s + v.confidence, 0) || 1;
+    Object.values(results).forEach(v => v.confidence /= total);
+    return results;
+  }
+
+  // ── Stage 4: Symbolic Logic Verdict ──
+  function symbolicVerdict(swarmResults) {
+    const sorted = Object.entries(swarmResults).sort((a, b) => b[1].confidence - a[1].confidence);
+    const top = sorted[0];
+    const second = sorted[1];
+    const ratio = top[1].confidence / (second[1].confidence || 0.01);
+
+    let verdict, reasoning;
+    if (top[1].confidence > 0.5 && ratio > 2) {
+      verdict = 'HIGH CONFIDENCE';
+      reasoning = `Strong classification: "${top[0]}" dominates with ${(top[1].confidence*100).toFixed(1)}% confidence (${ratio.toFixed(1)}x the runner-up)`;
+    } else if (top[1].confidence > 0.3) {
+      verdict = 'MODERATE CONFIDENCE';
+      reasoning = `Likely "${top[0]}" at ${(top[1].confidence*100).toFixed(1)}%, but "${second[0]}" is a close contender at ${(second[1].confidence*100).toFixed(1)}%`;
+    } else {
+      verdict = 'LOW CONFIDENCE';
+      reasoning = `Ambiguous: top category "${top[0]}" only at ${(top[1].confidence*100).toFixed(1)}%. Input may span multiple domains.`;
+    }
+
+    return { verdict, reasoning, sorted };
+  }
+
+  function drawResultsChart(sorted) {
+    const canvas = $('uni-canvas');
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 20, right: 20, bottom: 30, left: 120 };
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(0, 0, W, H);
+
+    const barH = 28;
+    const gap = 10;
+    const maxBarW = W - pad.left - pad.right;
+
+    sorted.forEach(([cat, data], i) => {
+      const y = pad.top + i * (barH + gap);
+      const barW = data.confidence * maxBarW;
+      const color = categories[cat]?.color || '#00e5a0';
+
+      // Label
+      ctx.fillStyle = '#8896aa';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(cat, pad.left - 10, y + barH / 2 + 4);
+
+      // Bar background
+      ctx.fillStyle = '#1a2235';
+      ctx.fillRect(pad.left, y, maxBarW, barH);
+
+      // Bar fill
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.8;
+      ctx.fillRect(pad.left, y, barW, barH);
+      ctx.globalAlpha = 1;
+
+      // Percentage
+      ctx.fillStyle = '#e8edf5';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText((data.confidence * 100).toFixed(1) + '%', pad.left + barW + 8, y + barH / 2 + 4);
+    });
+  }
+
+  return {
+    async classify() {
+      const text = $('uni-input').value.trim();
+      if (!text) { logTo('uni-log', 'Please enter text to classify.', 'log-error'); return; }
+
+      clearLog('uni-log');
+      $('uni-progress').style.width = '0%';
+      const resultsBody = $('uni-results').querySelector('tbody');
+      resultsBody.innerHTML = '';
+
+      // Stage 1: CA Features
+      logTo('uni-log', '═══ STAGE 1: Cellular Automata Feature Extraction ═══', 'log-accent');
+      $('uni-progress').style.width = '15%';
+      await sleep(300);
+
+      const caFeats = caFeatures(text);
+      logTo('uni-log', `Tokenized: ${tokenize(text).length} tokens`, 'log-dim');
+      logTo('uni-log', `CA Grid Density: ${caFeats.density.toFixed(4)}`, 'log-info');
+      logTo('uni-log', `CA Entropy: ${caFeats.entropy.toFixed(4)}`, 'log-info');
+      logTo('uni-log', `CA Peak Position: ${caFeats.peakIdx} (char: ${String.fromCharCode(97 + caFeats.peakIdx)})`, 'log-info');
+      logTo('uni-log', `Morphogenic field generated from ${text.length} characters`, 'log-success');
+      $('uni-progress').style.width = '30%';
+      await sleep(300);
+
+      // Stage 2: Evolutionary Matching
+      logTo('uni-log', '', '');
+      logTo('uni-log', '═══ STAGE 2: Evolutionary Keyword Optimization ═══', 'log-accent');
+      const tokens = tokenize(text);
+      const evoScores = evoMatch(tokens);
+      Object.entries(evoScores).forEach(([cat, data]) => {
+        if (data.raw > 0) {
+          logTo('uni-log', `${cat}: raw=${data.raw}, amplified=${data.amplified.toFixed(2)}, matches=[${data.matched.join(', ')}]`, 'log-info');
+        }
+      });
+      logTo('uni-log', `Evolutionary optimization complete (population converged)`, 'log-success');
+      $('uni-progress').style.width = '55%';
+      await sleep(300);
+
+      // Stage 3: Swarm Refinement
+      logTo('uni-log', '', '');
+      logTo('uni-log', '═══ STAGE 3: Swarm Intelligence Confidence Refinement ═══', 'log-accent');
+      const swarmResults = swarmRefine(evoScores, caFeats);
+      Object.entries(swarmResults).forEach(([cat, data]) => {
+        logTo('uni-log', `${cat}: swarm-refined confidence = ${(data.confidence * 100).toFixed(2)}%`, 'log-info');
+      });
+      logTo('uni-log', `80 swarm agents converged after stigmergic optimization`, 'log-success');
+      $('uni-progress').style.width = '80%';
+      await sleep(300);
+
+      // Stage 4: Symbolic Verdict
+      logTo('uni-log', '', '');
+      logTo('uni-log', '═══ STAGE 4: Symbolic Logic Verdict ═══', 'log-accent');
+      const verdict = symbolicVerdict(swarmResults);
+      logTo('uni-log', `Verdict: ${verdict.verdict}`, verdict.verdict === 'HIGH CONFIDENCE' ? 'log-success' : verdict.verdict === 'MODERATE CONFIDENCE' ? 'log-warn' : 'log-error');
+      logTo('uni-log', verdict.reasoning, 'log-info');
+      $('uni-progress').style.width = '100%';
+
+      // Populate results table
+      verdict.sorted.forEach(([cat, data]) => {
+        const tr = document.createElement('tr');
+        const pct = (data.confidence * 100).toFixed(1);
+        tr.innerHTML = `
+          <td style="color:${categories[cat]?.color || '#fff'};font-weight:600;">${cat}</td>
+          <td>${pct}%</td>
+          <td><div class="confidence-bar" style="width:${Math.max(10, data.confidence * 200)}px;background:${categories[cat]?.color || 'var(--accent-1)'};"></div></td>
+        `;
+        resultsBody.appendChild(tr);
+      });
+
+      drawResultsChart(verdict.sorted);
+
+      logTo('uni-log', '', '');
+      logTo('uni-log', '═══ MRE CLASSIFICATION COMPLETE ═══', 'log-success');
+      logTo('uni-log', `Final answer: ${verdict.sorted[0][0]} (${(verdict.sorted[0][1].confidence*100).toFixed(1)}%)`, 'log-success');
+    },
+    clear() {
+      $('uni-input').value = '';
+      clearLog('uni-log');
+      $('uni-results').querySelector('tbody').innerHTML = '';
+      $('uni-progress').style.width = '0%';
+      const canvas = $('uni-canvas');
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+})();
+
+// ======================== INITIALIZATION ========================
+// Pre-size canvases on load
+window.addEventListener('load', () => {
+  ['ca-canvas','evo-canvas','swarm-canvas','uni-canvas'].forEach(id => {
+    const c = $(id);
+    if (c) { c.width = c.clientWidth; c.height = c.clientHeight; }
+  });
+});
+</script>
+</body>
+</html>

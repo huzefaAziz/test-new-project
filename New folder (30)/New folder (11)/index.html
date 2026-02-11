@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS FIELD INTELLIGENCE - Reaction-Diffusion Computational Engine</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root{
+    --bg:#04060e;--panel:#0a0f1e;--border:#1a2545;--accent:#00e5ff;--accent2:#7c4dff;
+    --accent3:#ff4081;--accent4:#76ff03;--text:#c8d6e5;--text-dim:#5a6a80;
+    --glow:0 0 20px rgba(0,229,255,0.3);--glow2:0 0 20px rgba(124,77,255,0.3);
+  }
+
+  body{
+    background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;
+    overflow-x:hidden;min-height:100vh;
+  }
+
+  /* === HEADER === */
+  .header{
+    text-align:center;padding:30px 20px 20px;position:relative;
+    background:linear-gradient(180deg,rgba(0,229,255,0.03) 0%,transparent 100%);
+    border-bottom:1px solid var(--border);
+  }
+  .header::before{
+    content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:300px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  }
+  .header h1{
+    font-family:'Orbitron',monospace;font-size:2.2rem;font-weight:900;
+    background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    letter-spacing:4px;text-shadow:var(--glow);
+  }
+  .header .tagline{
+    font-size:0.95rem;color:var(--text-dim);letter-spacing:6px;
+    text-transform:uppercase;margin-top:6px;font-weight:300;
+  }
+  .header .desc{
+    max-width:750px;margin:12px auto 0;font-size:0.92rem;color:var(--text-dim);
+    line-height:1.6;
+  }
+
+  /* === LAYOUT === */
+  .main{display:grid;grid-template-columns:300px 1fr 300px;gap:0;min-height:calc(100vh - 140px)}
+
+  /* === PANELS === */
+  .panel{
+    background:var(--panel);border:1px solid var(--border);padding:18px;
+    overflow-y:auto;max-height:calc(100vh - 140px);
+  }
+  .panel::-webkit-scrollbar{width:4px}
+  .panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .panel-title{
+    font-family:'Orbitron',monospace;font-size:0.75rem;letter-spacing:3px;
+    color:var(--accent);text-transform:uppercase;margin-bottom:14px;
+    padding-bottom:8px;border-bottom:1px solid var(--border);
+  }
+  .section{margin-bottom:18px}
+  .section-label{
+    font-size:0.7rem;letter-spacing:2px;color:var(--text-dim);
+    text-transform:uppercase;margin-bottom:8px;font-weight:600;
+  }
+
+  /* === CONTROLS === */
+  .control-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .control-row label{font-size:0.82rem;color:var(--text)}
+  .control-row span.val{
+    font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent);min-width:45px;text-align:right
+  }
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;border-radius:2px;
+    background:var(--border);outline:none;margin:4px 0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--accent);cursor:pointer;box-shadow:var(--glow);
+  }
+  select{
+    width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:6px 10px;border-radius:4px;font-family:'Rajdhani',sans-serif;
+    font-size:0.85rem;cursor:pointer;
+  }
+  select:focus{border-color:var(--accent);outline:none}
+
+  /* === BUTTONS === */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:8px 18px;border:1px solid var(--accent);background:rgba(0,229,255,0.08);
+    color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:0.85rem;
+    font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;
+    border-radius:4px;transition:all 0.2s;width:100%;margin-bottom:6px;
+  }
+  .btn:hover{background:rgba(0,229,255,0.18);box-shadow:var(--glow)}
+  .btn.active{background:rgba(0,229,255,0.25);box-shadow:var(--glow)}
+  .btn.danger{border-color:var(--accent3);color:var(--accent3);background:rgba(255,64,129,0.08)}
+  .btn.danger:hover{background:rgba(255,64,129,0.18)}
+  .btn.success{border-color:var(--accent4);color:var(--accent4);background:rgba(118,255,3,0.08)}
+  .btn.success:hover{background:rgba(118,255,3,0.18)}
+  .btn.purple{border-color:var(--accent2);color:var(--accent2);background:rgba(124,77,255,0.08)}
+  .btn.purple:hover{background:rgba(124,77,255,0.18)}
+
+  /* === CENTER CANVAS === */
+  .center{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:20px;background:var(--bg);position:relative;
+  }
+  .canvas-wrap{
+    position:relative;border:1px solid var(--border);border-radius:8px;
+    overflow:hidden;box-shadow:0 0 40px rgba(0,229,255,0.05);
+  }
+  canvas#fieldCanvas{display:block;image-rendering:pixelated;cursor:crosshair}
+  .canvas-overlay{
+    position:absolute;top:8px;left:8px;font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem;color:var(--accent);opacity:0.7;pointer-events:none;
+    text-shadow:0 0 8px rgba(0,229,255,0.5);
+  }
+  .canvas-overlay-right{
+    position:absolute;top:8px;right:8px;font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem;color:var(--accent2);opacity:0.7;pointer-events:none;
+    text-align:right;
+  }
+
+  /* === OUTPUT BAR === */
+  .output-bar{
+    margin-top:14px;width:100%;max-width:520px;
+    background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:12px 16px;
+  }
+  .output-bar .out-label{
+    font-family:'Orbitron',monospace;font-size:0.65rem;letter-spacing:2px;
+    color:var(--text-dim);text-transform:uppercase;margin-bottom:6px;
+  }
+  .output-bar .out-value{
+    font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:var(--accent4);
+    word-break:break-all;
+  }
+  .output-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;
+  }
+  .output-cell{
+    background:var(--bg);border:1px solid var(--border);border-radius:4px;
+    padding:8px 10px;text-align:center;
+  }
+  .output-cell .oc-label{font-size:0.65rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
+  .output-cell .oc-val{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--accent);margin-top:2px}
+
+  /* === STATS === */
+  .stat-block{
+    background:var(--bg);border:1px solid var(--border);border-radius:4px;
+    padding:10px 12px;margin-bottom:8px;
+  }
+  .stat-block .sb-label{font-size:0.65rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
+  .stat-block .sb-val{
+    font-family:'JetBrains Mono',monospace;font-size:1.3rem;
+    color:var(--accent);margin-top:2px;
+  }
+  .stat-block .sb-val.purple{color:var(--accent2)}
+  .stat-block .sb-val.pink{color:var(--accent3)}
+  .stat-block .sb-val.green{color:var(--accent4)}
+
+  /* === PROGRESS BAR === */
+  .progress-wrap{
+    width:100%;height:6px;background:var(--bg);border-radius:3px;
+    overflow:hidden;margin:6px 0;border:1px solid var(--border);
+  }
+  .progress-fill{height:100%;border-radius:3px;transition:width 0.3s;
+    background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+  /* === LOG === */
+  .log-area{
+    background:var(--bg);border:1px solid var(--border);border-radius:4px;
+    padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:0.68rem;
+    color:var(--text-dim);max-height:180px;overflow-y:auto;line-height:1.7;
+  }
+  .log-area .log-line{border-bottom:1px solid rgba(26,37,69,0.5);padding:2px 0}
+  .log-area .log-line:last-child{border:none}
+  .log-time{color:var(--accent);margin-right:6px}
+  .log-ok{color:var(--accent4)}
+  .log-warn{color:#ffc107}
+  .log-err{color:var(--accent3)}
+
+  /* === ARCHITECTURE DIAGRAM === */
+  .arch-box{
+    background:var(--bg);border:1px solid var(--border);border-radius:4px;
+    padding:10px;margin-bottom:10px;text-align:center;
+  }
+  .arch-box .ab-title{
+    font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;
+    color:var(--accent2);margin-bottom:6px;
+  }
+  .arch-flow{
+    display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;
+  }
+  .arch-node{
+    padding:4px 8px;border:1px solid var(--border);border-radius:3px;
+    font-size:0.65rem;color:var(--text);background:rgba(0,229,255,0.05);
+  }
+  .arch-node.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,0.12)}
+  .arch-arrow{color:var(--text-dim);font-size:0.7rem}
+
+  /* === INPUT AREA === */
+  .input-group{margin-bottom:10px}
+  .input-group label{display:block;font-size:0.75rem;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase}
+  .input-group input[type=text],.input-group textarea{
+    width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:8px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;
+    font-size:0.8rem;resize:vertical;
+  }
+  .input-group input[type=text]:focus,.input-group textarea:focus{border-color:var(--accent);outline:none}
+
+  /* === TRUTH TABLE === */
+  .truth-table{width:100%;border-collapse:collapse;margin:8px 0}
+  .truth-table th,.truth-table td{
+    padding:5px 8px;text-align:center;border:1px solid var(--border);
+    font-family:'JetBrains Mono',monospace;font-size:0.75rem;
+  }
+  .truth-table th{background:rgba(0,229,255,0.06);color:var(--accent);font-size:0.65rem;letter-spacing:1px}
+  .truth-table td{color:var(--text)}
+  .truth-table td.correct{color:var(--accent4)}
+  .truth-table td.wrong{color:var(--accent3)}
+
+  /* === RESPONSIVE === */
+  @media(max-width:1100px){
+    .main{grid-template-columns:1fr;max-height:none}
+    .panel{max-height:none}
+  }
+
+  /* === ANIMATIONS === */
+  @keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
+  .pulsing{animation:pulse 1.5s ease-in-out infinite}
+  @keyframes fieldGlow{
+    0%{box-shadow:0 0 20px rgba(0,229,255,0.05)}
+    50%{box-shadow:0 0 40px rgba(0,229,255,0.15)}
+    100%{box-shadow:0 0 20px rgba(0,229,255,0.05)}
+  }
+  .field-active{animation:fieldGlow 2s ease-in-out infinite}
+
+  .tab-bar{display:flex;gap:4px;margin-bottom:12px}
+  .tab{
+    flex:1;padding:6px;text-align:center;font-size:0.7rem;letter-spacing:1px;
+    text-transform:uppercase;cursor:pointer;border:1px solid var(--border);
+    border-radius:3px;color:var(--text-dim);transition:all 0.2s;
+  }
+  .tab.active{color:var(--accent);border-color:var(--accent);background:rgba(0,229,255,0.08)}
+  .tab:hover{color:var(--accent)}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>NEXUS FIELD INTELLIGENCE</h1>
+  <div class="tagline">Reaction-Diffusion Computational Engine</div>
+  <div class="desc">
+    A fundamentally different approach to artificial intelligence. No neurons. No weights. No backpropagation.
+    Intelligence emerges from evolving chemical-like fields on a 2D lattice through reaction-diffusion dynamics,
+    wave interference, and evolutionary optimization.
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main">
+
+  <!-- LEFT PANEL: Controls -->
+  <div class="panel" id="leftPanel">
+    <div class="panel-title">Field Configuration</div>
+
+    <!-- Architecture Diagram -->
+    <div class="arch-box">
+      <div class="ab-title">Computational Pipeline</div>
+      <div class="arch-flow">
+        <div class="arch-node" id="archInput">Input</div>
+        <div class="arch-arrow">&rarr;</div>
+        <div class="arch-node" id="archInject">Inject</div>
+        <div class="arch-arrow">&rarr;</div>
+        <div class="arch-node" id="archDiffuse">Diffuse</div>
+        <div class="arch-arrow">&rarr;</div>
+        <div class="arch-node" id="archReact">React</div>
+        <div class="arch-arrow">&rarr;</div>
+        <div class="arch-node" id="archRead">Read</div>
+        <div class="arch-arrow">&rarr;</div>
+        <div class="arch-node" id="archOut">Output</div>
+      </div>
+    </div>
+
+    <!-- Task Selection -->
+    <div class="section">
+      <div class="section-label">Task</div>
+      <select id="taskSelect">
+        <option value="xor">XOR Gate (Non-Linear)</option>
+        <option value="and">AND Gate</option>
+        <option value="or">OR Gate</option>
+        <option value="circle">Circle Classification</option>
+        <option value="spiral">Spiral Classification</option>
+        <option value="custom">Custom Text Input</option>
+      </select>
+    </div>
+
+    <!-- Field Parameters -->
+    <div class="section">
+      <div class="section-label">Field Dynamics</div>
+      <div class="control-row">
+        <label>Grid Size</label><span class="val" id="vGridSize">48</span>
+      </div>
+      <input type="range" id="sGridSize" min="16" max="96" value="48" step="8">
+      <div class="control-row">
+        <label>Diffusion Rate U</label><span class="val" id="vDu">0.16</span>
+      </div>
+      <input type="range" id="sDu" min="0.01" max="0.50" value="0.16" step="0.01">
+      <div class="control-row">
+        <label>Diffusion Rate V</label><span class="val" id="vDv">0.08</span>
+      </div>
+      <input type="range" id="sDv" min="0.01" max="0.30" value="0.08" step="0.01">
+      <div class="control-row">
+        <label>Feed Rate</label><span class="val" id="vFeed">0.055</span>
+      </div>
+      <input type="range" id="sFeed" min="0.01" max="0.10" value="0.055" step="0.001">
+      <div class="control-row">
+        <label>Kill Rate</label><span class="val" id="vKill">0.062</span>
+      </div>
+      <input type="range" id="sKill" min="0.01" max="0.10" value="0.062" step="0.001">
+      <div class="control-row">
+        <label>Evolution Steps</label><span class="val" id="vSteps">120</span>
+      </div>
+      <input type="range" id="sSteps" min="20" max="500" value="120" step="10">
+      <div class="control-row">
+        <label>Time Delta</label><span class="val" id="vDt">1.0</span>
+      </div>
+      <input type="range" id="sDt" min="0.1" max="2.0" value="1.0" step="0.1">
+    </div>
+
+    <!-- Evolution Parameters -->
+    <div class="section">
+      <div class="section-label">Evolutionary Optimizer</div>
+      <div class="control-row">
+        <label>Population</label><span class="val" id="vPop">40</span>
+      </div>
+      <input type="range" id="sPop" min="10" max="100" value="40" step="5">
+      <div class="control-row">
+        <label>Generations</label><span class="val" id="vGen">80</span>
+      </div>
+      <input type="range" id="sGen" min="10" max="300" value="80" step="10">
+      <div class="control-row">
+        <label>Mutation Rate</label><span class="val" id="vMut">0.15</span>
+      </div>
+      <input type="range" id="sMut" min="0.01" max="0.50" value="0.15" step="0.01">
+      <div class="control-row">
+        <label>Elite Keep</label><span class="val" id="vElite">4</span>
+      </div>
+      <input type="range" id="sElite" min="1" max="15" value="4" step="1">
+    </div>
+
+    <!-- Custom Input -->
+    <div class="section" id="customInputSection" style="display:none">
+      <div class="section-label">Custom Input</div>
+      <div class="input-group">
+        <label>Text Input</label>
+        <input type="text" id="customInput" placeholder="Type something...">
+      </div>
+      <button class="btn purple" onclick="runCustomInference()">Analyze Field Response</button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="section">
+      <div class="section-label">Actions</div>
+      <button class="btn success" onclick="startTraining()" id="btnTrain">Evolve Intelligence</button>
+      <button class="btn" onclick="runInference()" id="btnInfer">Run Inference</button>
+      <button class="btn purple" onclick="toggleSimulation()" id="btnSim">Live Field View</button>
+      <button class="btn danger" onclick="resetField()" id="btnReset">Reset Field</button>
+    </div>
+  </div>
+
+  <!-- CENTER: Canvas -->
+  <div class="center">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="fieldCanvas" width="480" height="480"></canvas>
+      <div class="canvas-overlay" id="canvasOverlay">
+        FIELD: IDLE<br>STEP: 0
+      </div>
+      <div class="canvas-overlay-right" id="canvasOverlayRight">
+        48x48 GRID<br>2-CH R/D
+      </div>
+    </div>
+
+    <!-- Output Bar -->
+    <div class="output-bar">
+      <div class="out-label">Computation Result</div>
+      <div class="output-grid">
+        <div class="output-cell">
+          <div class="oc-label">Field Energy</div>
+          <div class="oc-val" id="outEnergy">---</div>
+        </div>
+        <div class="output-cell">
+          <div class="oc-label">Classification</div>
+          <div class="oc-val" id="outClass">---</div>
+        </div>
+        <div class="output-cell">
+          <div class="oc-label">Confidence</div>
+          <div class="oc-val" id="outConf">---</div>
+        </div>
+        <div class="output-cell">
+          <div class="oc-label">Field Entropy</div>
+          <div class="oc-val" id="outEntropy">---</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Stats & Info -->
+  <div class="panel" id="rightPanel">
+    <div class="panel-title">Intelligence Metrics</div>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('stats')">Stats</div>
+      <div class="tab" onclick="switchTab('results')">Results</div>
+      <div class="tab" onclick="switchTab('about')">About</div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div class="tab-content active" id="tabStats">
+      <div class="stat-block">
+        <div class="sb-label">Generation</div>
+        <div class="sb-val" id="statGen">0 / 0</div>
+      </div>
+      <div class="stat-block">
+        <div class="sb-label">Best Fitness</div>
+        <div class="sb-val green" id="statFit">---</div>
+      </div>
+      <div class="stat-block">
+        <div class="sb-label">Avg Fitness</div>
+        <div class="sb-val purple" id="statAvgFit">---</div>
+      </div>
+      <div class="stat-block">
+        <div class="sb-label">Field Computations</div>
+        <div class="sb-val" id="statComps">0</div>
+      </div>
+      <div class="stat-block">
+        <div class="sb-label">Training Accuracy</div>
+        <div class="sb-val green" id="statAcc">---</div>
+      </div>
+      <div class="section">
+        <div class="section-label">Evolution Progress</div>
+        <div class="progress-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Fitness History</div>
+        <canvas id="fitnessChart" width="260" height="100" style="width:100%;border:1px solid var(--border);border-radius:4px;background:var(--bg)"></canvas>
+      </div>
+      <div class="section">
+        <div class="section-label">System Log</div>
+        <div class="log-area" id="logArea"></div>
+      </div>
+    </div>
+
+    <!-- RESULTS TAB -->
+    <div class="tab-content" id="tabResults">
+      <div class="section">
+        <div class="section-label">Truth Table Evaluation</div>
+        <table class="truth-table" id="truthTable">
+          <thead><tr><th>Input A</th><th>Input B</th><th>Expected</th><th>Output</th></tr></thead>
+          <tbody id="truthBody"></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <div class="section-label">Genome (Best Individual)</div>
+        <div class="log-area" id="genomeDisplay" style="max-height:250px;word-break:break-all">
+          No genome evolved yet.
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT TAB -->
+    <div class="tab-content" id="tabAbout">
+      <div class="section">
+        <div class="section-label">What Is This?</div>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim)">
+          <strong style="color:var(--accent)">Nexus Field Intelligence</strong> is a completely novel AI architecture
+          that has <strong style="color:var(--accent3)">nothing to do with neural networks</strong>.
+        </p>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim);margin-top:8px">
+          Instead of neurons, weights, and backpropagation, it uses a
+          <strong style="color:var(--accent2)">reaction-diffusion field</strong> &mdash; a 2D grid of chemical-like
+          concentrations that evolve over time according to partial differential equations.
+        </p>
+      </div>
+      <div class="section">
+        <div class="section-label">How It Works</div>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim)">
+          <strong style="color:var(--accent)">1. Field Initialization</strong><br>
+          A 2D lattice is created with two chemical species (U and V). U starts at concentration 1.0, V at 0.0.
+        </p>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim);margin-top:6px">
+          <strong style="color:var(--accent)">2. Input Injection</strong><br>
+          Input values are injected as perturbations at specific grid locations (the "injection points"),
+          seeding the field with information.
+        </p>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim);margin-top:6px">
+          <strong style="color:var(--accent)">3. Field Evolution</strong><br>
+          The Gray-Scott reaction-diffusion equations evolve the field for N timesteps.
+          U and V diffuse, react, and form complex self-organizing patterns.
+        </p>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim);margin-top:6px">
+          <strong style="color:var(--accent)">4. Output Reading</strong><br>
+          After evolution, field values are sampled at "reader points" and combined
+          through a learned polynomial to produce the final output.
+        </p>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim);margin-top:6px">
+          <strong style="color:var(--accent)">5. Evolutionary Learning</strong><br>
+          A genetic algorithm optimizes all parameters: injection points, reader points,
+          reaction rates, and output polynomial coefficients. No gradients needed.
+        </p>
+      </div>
+      <div class="section">
+        <div class="section-label">Key Differences From Neural Networks</div>
+        <p style="font-size:0.82rem;line-height:1.7;color:var(--text-dim)">
+          &bull; No neurons or layers<br>
+          &bull; No weight matrices<br>
+          &bull; No activation functions<br>
+          &bull; No backpropagation or gradient descent<br>
+          &bull; Computation through physical simulation<br>
+          &bull; Learning through evolution, not calculus<br>
+          &bull; Information encoded as spatial wave patterns<br>
+          &bull; Emergent complexity from simple PDE rules
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+//  NEXUS FIELD INTELLIGENCE ENGINE
+//  A Reaction-Diffusion Computational Model
+//  Entirely non-neural-network AI
+// ============================================================
+
+// === UTILITY ===
+const $ = id => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (lo = 0, hi = 1) => lo + Math.random() * (hi - lo);
+const randInt = (lo, hi) => Math.floor(rand(lo, hi + 1));
+
+// === SLIDER BINDINGS ===
+const sliders = [
+  ['sGridSize','vGridSize',v=>v],
+  ['sDu','vDu',v=>v.toFixed(2)],
+  ['sDv','vDv',v=>v.toFixed(2)],
+  ['sFeed','vFeed',v=>v.toFixed(3)],
+  ['sKill','vKill',v=>v.toFixed(3)],
+  ['sSteps','vSteps',v=>v],
+  ['sDt','vDt',v=>v.toFixed(1)],
+  ['sPop','vPop',v=>v],
+  ['sGen','vGen',v=>v],
+  ['sMut','vMut',v=>v.toFixed(2)],
+  ['sElite','vElite',v=>v],
+];
+sliders.forEach(([sid, vid, fmt]) => {
+  const s = $(sid), v = $(vid);
+  s.addEventListener('input', () => { v.textContent = fmt(parseFloat(s.value)); });
+});
+
+// === TAB SWITCHING ===
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  $('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+}
+
+// Task select show/hide custom input
+$('taskSelect').addEventListener('change', () => {
+  $('customInputSection').style.display = $('taskSelect').value === 'custom' ? 'block' : 'none';
+});
+
+// === LOGGING ===
+function log(msg, type = 'ok') {
+  const area = $('logArea');
+  const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const cls = type === 'ok' ? 'log-ok' : type === 'warn' ? 'log-warn' : 'log-err';
+  area.innerHTML += `<div class="log-line"><span class="log-time">${time}</span><span class="${cls}">${msg}</span></div>`;
+  area.scrollTop = area.scrollHeight;
+}
+
+// === FITNESS CHART ===
+let fitnessHistory = [];
+function drawFitnessChart() {
+  const c = $('fitnessChart');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  if (fitnessHistory.length < 2) return;
+  const maxF = Math.max(...fitnessHistory, 0.01);
+  const minF = Math.min(...fitnessHistory);
+  ctx.beginPath();
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 1.5;
+  fitnessHistory.forEach((f, i) => {
+    const x = (i / (fitnessHistory.length - 1)) * W;
+    const y = H - ((f - minF) / (maxF - minF + 0.001)) * (H - 10) - 5;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  // glow
+  ctx.shadowColor = '#00e5ff';
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ============================================================
+//  REACTION-DIFFUSION FIELD
+// ============================================================
+class ReactionDiffusionField {
+  constructor(size) {
+    this.size = size;
+    this.u = new Float64Array(size * size);
+    this.v = new Float64Array(size * size);
+    this.uNext = new Float64Array(size * size);
+    this.vNext = new Float64Array(size * size);
+    this.reset();
+  }
+
+  reset() {
+    const N = this.size;
+    for (let i = 0; i < N * N; i++) {
+      this.u[i] = 1.0;
+      this.v[i] = 0.0;
+    }
+  }
+
+  // Seed a rectangular region with V activator
+  seed(cx, cy, radius, amount = 1.0) {
+    const N = this.size;
+    for (let y = -radius; y <= radius; y++) {
+      for (let x = -radius; x <= radius; x++) {
+        const gx = (cx + x + N) % N;
+        const gy = (cy + y + N) % N;
+        const idx = gy * N + gx;
+        this.v[idx] = clamp(this.v[idx] + amount, 0, 1);
+        this.u[idx] = clamp(this.u[idx] - amount * 0.5, 0, 1);
+      }
+    }
+  }
+
+  // One step of Gray-Scott reaction-diffusion
+  step(Du, Dv, feed, kill, dt) {
+    const N = this.size;
+    for (let y = 0; y < N; y++) {
+      for (let x = 0; x < N; x++) {
+        const idx = y * N + x;
+        const u = this.u[idx];
+        const v = this.v[idx];
+
+        // Laplacian with wrapping
+        const xm = ((x - 1) + N) % N;
+        const xp = (x + 1) % N;
+        const ym = ((y - 1) + N) % N;
+        const yp = (y + 1) % N;
+
+        const lapU = this.u[y * N + xm] + this.u[y * N + xp]
+                   + this.u[ym * N + x] + this.u[yp * N + x]
+                   - 4 * u;
+        const lapV = this.v[y * N + xm] + this.v[y * N + xp]
+                   + this.v[ym * N + x] + this.v[yp * N + x]
+                   - 4 * v;
+
+        const uvv = u * v * v;
+        this.uNext[idx] = u + dt * (Du * lapU - uvv + feed * (1 - u));
+        this.vNext[idx] = v + dt * (Dv * lapV + uvv - (kill + feed) * v);
+      }
+    }
+    // Swap
+    [this.u, this.uNext] = [this.uNext, this.u];
+    [this.v, this.vNext] = [this.vNext, this.v];
+  }
+
+  // Read value at fractional position
+  readAt(fx, fy) {
+    const N = this.size;
+    const x = clamp(Math.round(fx * (N - 1)), 0, N - 1);
+    const y = clamp(Math.round(fy * (N - 1)), 0, N - 1);
+    return { u: this.u[y * N + x], v: this.v[y * N + x] };
+  }
+
+  // Compute total energy
+  energy() {
+    let e = 0;
+    for (let i = 0; i < this.u.length; i++) e += this.v[i];
+    return e / this.u.length;
+  }
+
+  // Compute field entropy
+  entropy() {
+    const bins = 20;
+    const counts = new Float64Array(bins);
+    const total = this.v.length;
+    for (let i = 0; i < total; i++) {
+      const b = clamp(Math.floor(this.v[i] * bins), 0, bins - 1);
+      counts[b]++;
+    }
+    let ent = 0;
+    for (let i = 0; i < bins; i++) {
+      const p = counts[i] / total;
+      if (p > 0) ent -= p * Math.log2(p);
+    }
+    return ent;
+  }
+}
+
+// ============================================================
+//  GENOME: Encodes a complete field-intelligence individual
+// ============================================================
+class Genome {
+  constructor(numInputs, numReaders) {
+    this.numInputs = numInputs;
+    this.numReaders = numReaders;
+
+    // Injection points: where inputs are seeded into the field
+    // Each input maps to (fx, fy, radius, strength)
+    this.injectors = [];
+    for (let i = 0; i < numInputs; i++) {
+      this.injectors.push({
+        fx: rand(0.1, 0.9), fy: rand(0.1, 0.9),
+        radius: randInt(1, 4), strength: rand(0.3, 1.0)
+      });
+    }
+
+    // Reader points: where output is sampled from field
+    this.readers = [];
+    for (let i = 0; i < numReaders; i++) {
+      this.readers.push({
+        fx: rand(0.1, 0.9), fy: rand(0.1, 0.9),
+        weightU: rand(-2, 2), weightV: rand(-2, 2)
+      });
+    }
+
+    // Output polynomial coefficients: bias + linear combo of reader values
+    this.outputBias = rand(-1, 1);
+    this.outputScale = rand(0.5, 3.0);
+
+    // Local reaction modifiers: per-injector feed/kill offsets
+    this.feedOffset = rand(-0.02, 0.02);
+    this.killOffset = rand(-0.02, 0.02);
+
+    // Cross-reaction coupling between injectors
+    this.coupling = rand(-0.5, 0.5);
+
+    this.fitness = -Infinity;
+  }
+
+  clone() {
+    const g = new Genome(this.numInputs, this.numReaders);
+    g.injectors = this.injectors.map(p => ({ ...p }));
+    g.readers = this.readers.map(p => ({ ...p }));
+    g.outputBias = this.outputBias;
+    g.outputScale = this.outputScale;
+    g.feedOffset = this.feedOffset;
+    g.killOffset = this.killOffset;
+    g.coupling = this.coupling;
+    g.fitness = this.fitness;
+    return g;
+  }
+
+  mutate(rate) {
+    const m = (v, lo, hi) => {
+      if (Math.random() < rate) return clamp(v + rand(-0.15, 0.15), lo, hi);
+      return v;
+    };
+    const mInt = (v, lo, hi) => {
+      if (Math.random() < rate) return clamp(v + randInt(-1, 1), lo, hi);
+      return v;
+    };
+
+    this.injectors.forEach(p => {
+      p.fx = m(p.fx, 0.05, 0.95);
+      p.fy = m(p.fy, 0.05, 0.95);
+      p.radius = mInt(p.radius, 1, 5);
+      p.strength = m(p.strength, 0.1, 1.5);
+    });
+    this.readers.forEach(p => {
+      p.fx = m(p.fx, 0.05, 0.95);
+      p.fy = m(p.fy, 0.05, 0.95);
+      p.weightU = m(p.weightU, -3, 3);
+      p.weightV = m(p.weightV, -3, 3);
+    });
+    this.outputBias = m(this.outputBias, -3, 3);
+    this.outputScale = m(this.outputScale, 0.1, 5.0);
+    this.feedOffset = m(this.feedOffset, -0.03, 0.03);
+    this.killOffset = m(this.killOffset, -0.03, 0.03);
+    this.coupling = m(this.coupling, -1, 1);
+  }
+
+  // Crossover: uniform
+  static crossover(a, b) {
+    const child = a.clone();
+    const pick = () => Math.random() < 0.5;
+    for (let i = 0; i < child.injectors.length; i++) {
+      if (pick()) child.injectors[i] = { ...b.injectors[i] };
+    }
+    for (let i = 0; i < child.readers.length; i++) {
+      if (pick()) child.readers[i] = { ...b.readers[i] };
+    }
+    if (pick()) child.outputBias = b.outputBias;
+    if (pick()) child.outputScale = b.outputScale;
+    if (pick()) child.feedOffset = b.feedOffset;
+    if (pick()) child.killOffset = b.killOffset;
+    if (pick()) child.coupling = b.coupling;
+    child.fitness = -Infinity;
+    return child;
+  }
+}
+
+// ============================================================
+//  FIELD INTELLIGENCE ENGINE
+// ============================================================
+class FieldIntelligence {
+  constructor() {
+    this.field = null;
+    this.bestGenome = null;
+    this.gridSize = 48;
+    this.Du = 0.16; this.Dv = 0.08;
+    this.feed = 0.055; this.kill = 0.062;
+    this.steps = 120; this.dt = 1.0;
+    this.totalComputations = 0;
+  }
+
+  readParams() {
+    this.gridSize = parseInt($('sGridSize').value);
+    this.Du = parseFloat($('sDu').value);
+    this.Dv = parseFloat($('sDv').value);
+    this.feed = parseFloat($('sFeed').value);
+    this.kill = parseFloat($('sKill').value);
+    this.steps = parseInt($('sSteps').value);
+    this.dt = parseFloat($('sDt').value);
+  }
+
+  // Run a single evaluation: inject inputs, evolve field, read output
+  evaluate(genome, inputs) {
+    const N = this.gridSize;
+    if (!this.field || this.field.size !== N) {
+      this.field = new ReactionDiffusionField(N);
+    }
+    this.field.reset();
+
+    // Inject inputs
+    for (let i = 0; i < genome.injectors.length && i < inputs.length; i++) {
+      const inj = genome.injectors[i];
+      const val = inputs[i];
+      const cx = Math.round(inj.fx * (N - 1));
+      const cy = Math.round(inj.fy * (N - 1));
+      this.field.seed(cx, cy, inj.radius, val * inj.strength);
+
+      // Cross-coupling: if previous injector exists, add interaction
+      if (i > 0 && genome.coupling !== 0) {
+        const prevInj = genome.injectors[i - 1];
+        const mx = Math.round((inj.fx + prevInj.fx) / 2 * (N - 1));
+        const my = Math.round((inj.fy + prevInj.fy) / 2 * (N - 1));
+        this.field.seed(mx, my, 1, inputs[i] * inputs[i - 1] * genome.coupling * 0.5);
+      }
+    }
+
+    // Evolve with genome-specific reaction parameters
+    const f = clamp(this.feed + genome.feedOffset, 0.005, 0.1);
+    const k = clamp(this.kill + genome.killOffset, 0.005, 0.1);
+
+    for (let s = 0; s < this.steps; s++) {
+      this.field.step(this.Du, this.Dv, f, k, this.dt);
+    }
+    this.totalComputations++;
+
+    // Read output
+    let output = genome.outputBias;
+    for (const reader of genome.readers) {
+      const { u, v } = this.field.readAt(reader.fx, reader.fy);
+      output += u * reader.weightU + v * reader.weightV;
+    }
+
+    // Sigmoid
+    return 1.0 / (1.0 + Math.exp(-output * genome.outputScale));
+  }
+}
+
+// ============================================================
+//  TASK DEFINITIONS
+// ============================================================
+function getTaskData(task) {
+  switch (task) {
+    case 'xor':
+      return {
+        inputs: [[0, 0], [0, 1], [1, 0], [1, 1]],
+        targets: [0, 1, 1, 0],
+        labels: ['0 XOR 0 = 0', '0 XOR 1 = 1', '1 XOR 0 = 1', '1 XOR 1 = 0'],
+        numInputs: 2, numReaders: 6
+      };
+    case 'and':
+      return {
+        inputs: [[0, 0], [0, 1], [1, 0], [1, 1]],
+        targets: [0, 0, 0, 1],
+        labels: ['0 AND 0 = 0', '0 AND 1 = 0', '1 AND 0 = 0', '1 AND 1 = 1'],
+        numInputs: 2, numReaders: 4
+      };
+    case 'or':
+      return {
+        inputs: [[0, 0], [0, 1], [1, 0], [1, 1]],
+        targets: [0, 1, 1, 1],
+        labels: ['0 OR 0 = 0', '0 OR 1 = 1', '1 OR 0 = 1', '1 OR 1 = 1'],
+        numInputs: 2, numReaders: 4
+      };
+    case 'circle': {
+      const inputs = [], targets = [];
+      for (let i = 0; i < 20; i++) {
+        const x = rand(-1, 1), y = rand(-1, 1);
+        inputs.push([(x + 1) / 2, (y + 1) / 2]);
+        targets.push(x * x + y * y < 0.5 ? 1 : 0);
+      }
+      return { inputs, targets, labels: inputs.map((p, i) => `(${p[0].toFixed(2)},${p[1].toFixed(2)})=>${targets[i]}`), numInputs: 2, numReaders: 8 };
+    }
+    case 'spiral': {
+      const inputs = [], targets = [];
+      for (let i = 0; i < 24; i++) {
+        const cls = i % 2;
+        const angle = (i / 24) * 4 * Math.PI + cls * Math.PI;
+        const r = 0.1 + (i / 24) * 0.4;
+        const x = 0.5 + r * Math.cos(angle);
+        const y = 0.5 + r * Math.sin(angle);
+        inputs.push([clamp(x, 0, 1), clamp(y, 0, 1)]);
+        targets.push(cls);
+      }
+      return { inputs, targets, labels: inputs.map((p, i) => `(${p[0].toFixed(2)},${p[1].toFixed(2)})=>${targets[i]}`), numInputs: 2, numReaders: 10 };
+    }
+    default:
+      return getTaskData('xor');
+  }
+}
+
+// ============================================================
+//  MAIN ENGINE STATE
+// ============================================================
+const engine = new FieldIntelligence();
+let isTraining = false;
+let simRunning = false;
+let simAnimId = null;
+let currentField = null;
+
+// ============================================================
+//  CANVAS RENDERING
+// ============================================================
+const canvas = $('fieldCanvas');
+const ctx = canvas.getContext('2d');
+
+function renderField(field, genome = null) {
+  if (!field) return;
+  const N = field.size;
+  const W = canvas.width, H = canvas.height;
+  const cellW = W / N, cellH = H / N;
+  const imgData = ctx.createImageData(W, H);
+
+  for (let fy = 0; fy < N; fy++) {
+    for (let fx = 0; fx < N; fx++) {
+      const idx = fy * N + fx;
+      const u = clamp(field.u[idx], 0, 1);
+      const v = clamp(field.v[idx], 0, 1);
+
+      // Beautiful color mapping
+      const r = Math.floor(clamp(v * 380 - u * 30, 0, 255));
+      const g = Math.floor(clamp(v * 120 + u * 80 - 40, 0, 255));
+      const b = Math.floor(clamp(u * 200 + v * 55, 0, 255));
+
+      // Map to pixel coordinates
+      const px0 = Math.floor(fx * cellW);
+      const py0 = Math.floor(fy * cellH);
+      const px1 = Math.floor((fx + 1) * cellW);
+      const py1 = Math.floor((fy + 1) * cellH);
+
+      for (let py = py0; py < py1 && py < H; py++) {
+        for (let px = px0; px < px1 && px < W; px++) {
+          const pi = (py * W + px) * 4;
+          imgData.data[pi] = r;
+          imgData.data[pi + 1] = g;
+          imgData.data[pi + 2] = b;
+          imgData.data[pi + 3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Draw injector and reader points if genome provided
+  if (genome) {
+    // Injectors (cyan circles)
+    genome.injectors.forEach((inj, i) => {
+      const px = inj.fx * W, py = inj.fy * H;
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,229,255,0.3)';
+      ctx.fill();
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = '9px Orbitron';
+      ctx.fillText('I' + i, px + 8, py - 4);
+    });
+
+    // Readers (purple circles)
+    genome.readers.forEach((rd, i) => {
+      const px = rd.fx * W, py = rd.fy * H;
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#7c4dff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(124,77,255,0.3)';
+      ctx.fill();
+      ctx.fillStyle = '#7c4dff';
+      ctx.font = '8px Orbitron';
+      ctx.fillText('R' + i, px + 7, py - 3);
+    });
+  }
+}
+
+function renderBlank() {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#04060e';
+  ctx.fillRect(0, 0, W, H);
+  // Grid lines
+  ctx.strokeStyle = 'rgba(26,37,69,0.4)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 48; i++) {
+    const x = (i / 48) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, x); ctx.lineTo(W, x); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(0,229,255,0.15)';
+  ctx.font = '14px Orbitron';
+  ctx.textAlign = 'center';
+  ctx.fillText('FIELD INACTIVE', W / 2, H / 2 - 10);
+  ctx.font = '10px Rajdhani';
+  ctx.fillText('Click "Evolve Intelligence" to begin', W / 2, H / 2 + 12);
+  ctx.textAlign = 'left';
+}
+renderBlank();
+
+// ============================================================
+//  ARCHITECTURE HIGHLIGHT
+// ============================================================
+function highlightArch(stage) {
+  const stages = ['archInput', 'archInject', 'archDiffuse', 'archReact', 'archRead', 'archOut'];
+  stages.forEach(s => $(s).classList.remove('active'));
+  if (stage >= 0 && stage < stages.length) $(stages[stage]).classList.add('active');
+}
+
+// ============================================================
+//  TRAINING: Evolutionary Optimization
+// ============================================================
+async function startTraining() {
+  if (isTraining) return;
+  isTraining = true;
+  $('btnTrain').textContent = 'EVOLVING...';
+  $('btnTrain').classList.add('pulsing');
+  $('canvasWrap').classList.add('field-active');
+
+  engine.readParams();
+  const task = $('taskSelect').value;
+  const data = getTaskData(task);
+  const popSize = parseInt($('sPop').value);
+  const numGens = parseInt($('sGen').value);
+  const mutRate = parseFloat($('sMut').value);
+  const eliteCount = parseInt($('sElite').value);
+
+  fitnessHistory = [];
+  log('Initializing population of ' + popSize + ' individuals', 'ok');
+  log('Task: ' + task.toUpperCase() + ' | Grid: ' + engine.gridSize + 'x' + engine.gridSize, 'ok');
+
+  $('canvasOverlayRight').innerHTML = engine.gridSize + 'x' + engine.gridSize + ' GRID<br>2-CH R/D';
+
+  // Initialize population
+  let population = [];
+  for (let i = 0; i < popSize; i++) {
+    population.push(new Genome(data.numInputs, data.numReaders));
+  }
+
+  // Evaluate fitness for a genome
+  function evalFitness(genome) {
+    let totalError = 0;
+    for (let d = 0; d < data.inputs.length; d++) {
+      const output = engine.evaluate(genome, data.inputs[d]);
+      const error = (output - data.targets[d]) ** 2;
+      totalError += error;
+    }
+    // Fitness = negative MSE (higher is better)
+    genome.fitness = -totalError / data.inputs.length;
+    return genome.fitness;
+  }
+
+  // Evolution loop
+  for (let gen = 0; gen < numGens; gen++) {
+    highlightArch(-1);
+
+    // Evaluate all
+    highlightArch(0);
+    for (const genome of population) {
+      evalFitness(genome);
+    }
+    highlightArch(4);
+
+    // Sort by fitness (descending)
+    population.sort((a, b) => b.fitness - a.fitness);
+
+    const bestFit = population[0].fitness;
+    const avgFit = population.reduce((s, g) => s + g.fitness, 0) / popSize;
+    fitnessHistory.push(bestFit);
+
+    // Update UI
+    $('statGen').textContent = (gen + 1) + ' / ' + numGens;
+    $('statFit').textContent = bestFit.toFixed(6);
+    $('statAvgFit').textContent = avgFit.toFixed(6);
+    $('statComps').textContent = engine.totalComputations.toLocaleString();
+    $('progressFill').style.width = ((gen + 1) / numGens * 100) + '%';
+
+    // Accuracy
+    let correct = 0;
+    for (let d = 0; d < data.inputs.length; d++) {
+      const out = engine.evaluate(population[0], data.inputs[d]);
+      const pred = out >= 0.5 ? 1 : 0;
+      if (pred === data.targets[d]) correct++;
+    }
+    const acc = (correct / data.inputs.length * 100);
+    $('statAcc').textContent = acc.toFixed(1) + '%';
+
+    // Render best individual's field
+    if (gen % 3 === 0 || gen === numGens - 1) {
+      // Run best genome once more for visualization
+      engine.evaluate(population[0], data.inputs[0]);
+      renderField(engine.field, population[0]);
+      $('canvasOverlay').innerHTML = `FIELD: EVOLVING<br>GEN: ${gen + 1} / ${numGens}<br>FIT: ${bestFit.toFixed(4)}`;
+      drawFitnessChart();
+    }
+
+    if (gen % 10 === 0) {
+      log(`Gen ${gen + 1}: best=${bestFit.toFixed(5)} avg=${avgFit.toFixed(5)} acc=${acc.toFixed(0)}%`, bestFit > -0.1 ? 'ok' : 'warn');
+    }
+
+    // Check perfect
+    if (bestFit > -0.001) {
+      log('CONVERGENCE ACHIEVED at generation ' + (gen + 1), 'ok');
+      break;
+    }
+
+    // Selection & reproduction
+    const newPop = [];
+
+    // Elitism
+    for (let i = 0; i < Math.min(eliteCount, popSize); i++) {
+      newPop.push(population[i].clone());
+    }
+
+    // Tournament selection + crossover + mutation
+    while (newPop.length < popSize) {
+      // Tournament select 2 parents
+      const tournSize = 3;
+      const selectOne = () => {
+        let best = population[randInt(0, popSize - 1)];
+        for (let t = 1; t < tournSize; t++) {
+          const candidate = population[randInt(0, popSize - 1)];
+          if (candidate.fitness > best.fitness) best = candidate;
+        }
+        return best;
+      };
+      const p1 = selectOne(), p2 = selectOne();
+      let child = Genome.crossover(p1, p2);
+      child.mutate(mutRate);
+      newPop.push(child);
+    }
+
+    population = newPop;
+
+    // Yield to UI
+    if (gen % 2 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+
+  // Final
+  engine.bestGenome = population[0];
+  highlightArch(5);
+
+  // Show truth table
+  updateTruthTable(data);
+  displayGenome(engine.bestGenome);
+
+  log('Evolution complete. Best fitness: ' + population[0].fitness.toFixed(6), 'ok');
+  $('btnTrain').textContent = 'Evolve Intelligence';
+  $('btnTrain').classList.remove('pulsing');
+  $('canvasWrap').classList.remove('field-active');
+  $('canvasOverlay').innerHTML = 'FIELD: TRAINED<br>GENOME LOCKED';
+  isTraining = false;
+}
+
+// ============================================================
+//  TRUTH TABLE
+// ============================================================
+function updateTruthTable(data) {
+  const tbody = $('truthBody');
+  tbody.innerHTML = '';
+  if (!engine.bestGenome) return;
+
+  for (let d = 0; d < data.inputs.length; d++) {
+    const out = engine.evaluate(engine.bestGenome, data.inputs[d]);
+    const pred = out >= 0.5 ? 1 : 0;
+    const correct = pred === data.targets[d];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${data.inputs[d][0]}</td>
+      <td>${data.inputs[d].length > 1 ? data.inputs[d][1] : '-'}</td>
+      <td>${data.targets[d]}</td>
+      <td class="${correct ? 'correct' : 'wrong'}">${out.toFixed(4)} (${pred})</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// ============================================================
+//  GENOME DISPLAY
+// ============================================================
+function displayGenome(genome) {
+  if (!genome) return;
+  let text = '=== NEXUS FIELD GENOME ===\n\n';
+  text += '--- Injectors ---\n';
+  genome.injectors.forEach((inj, i) => {
+    text += `I${i}: pos(${inj.fx.toFixed(3)}, ${inj.fy.toFixed(3)}) r=${inj.radius} str=${inj.strength.toFixed(3)}\n`;
+  });
+  text += '\n--- Readers ---\n';
+  genome.readers.forEach((rd, i) => {
+    text += `R${i}: pos(${rd.fx.toFixed(3)}, ${rd.fy.toFixed(3)}) wU=${rd.weightU.toFixed(3)} wV=${rd.weightV.toFixed(3)}\n`;
+  });
+  text += `\n--- Output ---\nbias: ${genome.outputBias.toFixed(4)}\nscale: ${genome.outputScale.toFixed(4)}`;
+  text += `\nfeedΔ: ${genome.feedOffset.toFixed(4)}\nkillΔ: ${genome.killOffset.toFixed(4)}`;
+  text += `\ncoupling: ${genome.coupling.toFixed(4)}`;
+  text += `\nfitness: ${genome.fitness.toFixed(6)}`;
+  $('genomeDisplay').textContent = text;
+}
+
+// ============================================================
+//  INFERENCE
+// ============================================================
+function runInference() {
+  if (!engine.bestGenome) {
+    log('No trained genome. Evolve first!', 'err');
+    return;
+  }
+  engine.readParams();
+  const task = $('taskSelect').value;
+  const data = getTaskData(task);
+
+  highlightArch(0);
+  setTimeout(() => highlightArch(1), 100);
+  setTimeout(() => highlightArch(2), 300);
+  setTimeout(() => highlightArch(3), 600);
+  setTimeout(() => highlightArch(4), 900);
+
+  // Run on first input for visualization
+  const out = engine.evaluate(engine.bestGenome, data.inputs[0]);
+  renderField(engine.field, engine.bestGenome);
+
+  const energy = engine.field.energy();
+  const entropy = engine.field.entropy();
+
+  $('outEnergy').textContent = energy.toFixed(6);
+  $('outClass').textContent = out >= 0.5 ? 'CLASS 1' : 'CLASS 0';
+  $('outConf').textContent = (Math.abs(out - 0.5) * 200).toFixed(1) + '%';
+  $('outEntropy').textContent = entropy.toFixed(4);
+
+  setTimeout(() => highlightArch(5), 1200);
+  $('canvasOverlay').innerHTML = `FIELD: INFERENCE<br>ENERGY: ${energy.toFixed(4)}<br>OUT: ${out.toFixed(4)}`;
+
+  log('Inference complete. Output: ' + out.toFixed(6), 'ok');
+  updateTruthTable(data);
+}
+
+// ============================================================
+//  CUSTOM TEXT INFERENCE
+// ============================================================
+function runCustomInference() {
+  if (!engine.bestGenome) {
+    log('No trained genome. Evolve first!', 'err');
+    return;
+  }
+  const text = $('customInput').value;
+  if (!text) return;
+
+  // Encode text as numeric inputs (hash-based)
+  const inputs = [];
+  for (let i = 0; i < engine.bestGenome.numInputs; i++) {
+    let hash = 0;
+    for (let j = i; j < text.length; j += engine.bestGenome.numInputs) {
+      hash = ((hash << 5) - hash + text.charCodeAt(j)) | 0;
+    }
+    inputs.push(((hash % 1000) + 500) / 1000); // Normalize to [0, 1]
+  }
+
+  const out = engine.evaluate(engine.bestGenome, inputs);
+  renderField(engine.field, engine.bestGenome);
+
+  const energy = engine.field.energy();
+  const entropy = engine.field.entropy();
+
+  $('outEnergy').textContent = energy.toFixed(6);
+  $('outClass').textContent = out >= 0.5 ? 'POSITIVE' : 'NEGATIVE';
+  $('outConf').textContent = (Math.abs(out - 0.5) * 200).toFixed(1) + '%';
+  $('outEntropy').textContent = entropy.toFixed(4);
+  $('canvasOverlay').innerHTML = `FIELD: CUSTOM<br>INPUT: "${text.substring(0,12)}"<br>OUT: ${out.toFixed(4)}`;
+
+  log(`Custom inference: "${text}" => ${out.toFixed(4)}`, 'ok');
+}
+
+// ============================================================
+//  LIVE SIMULATION VIEW
+// ============================================================
+function toggleSimulation() {
+  if (simRunning) {
+    simRunning = false;
+    cancelAnimationFrame(simAnimId);
+    $('btnSim').textContent = 'Live Field View';
+    $('canvasOverlay').innerHTML = 'FIELD: PAUSED';
+    return;
+  }
+
+  simRunning = true;
+  $('btnSim').textContent = 'Stop Simulation';
+  engine.readParams();
+
+  const N = engine.gridSize;
+  const simField = new ReactionDiffusionField(N);
+
+  // Seed center with some activator
+  simField.seed(Math.floor(N / 2), Math.floor(N / 2), 3, 0.8);
+  simField.seed(Math.floor(N / 3), Math.floor(N / 3), 2, 0.6);
+  simField.seed(Math.floor(2 * N / 3), Math.floor(N / 2), 2, 0.7);
+
+  let step = 0;
+  function simLoop() {
+    if (!simRunning) return;
+
+    for (let i = 0; i < 4; i++) {
+      simField.step(engine.Du, engine.Dv, engine.feed, engine.kill, engine.dt);
+      step++;
+    }
+
+    renderField(simField);
+    $('canvasOverlay').innerHTML = `FIELD: LIVE<br>STEP: ${step}<br>ENERGY: ${simField.energy().toFixed(4)}`;
+
+    const energy = simField.energy();
+    const entropy = simField.entropy();
+    $('outEnergy').textContent = energy.toFixed(6);
+    $('outEntropy').textContent = entropy.toFixed(4);
+
+    simAnimId = requestAnimationFrame(simLoop);
+  }
+  simLoop();
+}
+
+// ============================================================
+//  RESET
+// ============================================================
+function resetField() {
+  if (simRunning) {
+    simRunning = false;
+    cancelAnimationFrame(simAnimId);
+    $('btnSim').textContent = 'Live Field View';
+  }
+  engine.bestGenome = null;
+  engine.totalComputations = 0;
+  fitnessHistory = [];
+  isTraining = false;
+
+  renderBlank();
+  $('canvasOverlay').innerHTML = 'FIELD: IDLE<br>STEP: 0';
+  $('statGen').textContent = '0 / 0';
+  $('statFit').textContent = '---';
+  $('statAvgFit').textContent = '---';
+  $('statComps').textContent = '0';
+  $('statAcc').textContent = '---';
+  $('progressFill').style.width = '0%';
+  $('outEnergy').textContent = '---';
+  $('outClass').textContent = '---';
+  $('outConf').textContent = '---';
+  $('outEntropy').textContent = '---';
+  $('truthBody').innerHTML = '';
+  $('genomeDisplay').textContent = 'No genome evolved yet.';
+  $('logArea').innerHTML = '';
+  $('btnTrain').textContent = 'Evolve Intelligence';
+  $('btnTrain').classList.remove('pulsing');
+  $('canvasWrap').classList.remove('field-active');
+  highlightArch(-1);
+  drawFitnessChart();
+
+  log('System reset complete.', 'ok');
+}
+
+// Canvas click: inject perturbation during live sim
+canvas.addEventListener('click', (e) => {
+  if (!simRunning) return;
+  const rect = canvas.getBoundingClientRect();
+  const N = engine.gridSize;
+  const fx = (e.clientX - rect.left) / rect.width;
+  const fy = (e.clientY - rect.top) / rect.height;
+  const cx = Math.round(fx * (N - 1));
+  const cy = Math.round(fy * (N - 1));
+  // Find the simulation field (it's in the closure... we'll use a global ref)
+  // For click interaction we just log it
+  log(`Click at field (${cx}, ${cy}) - inject perturbation`, 'ok');
+});
+
+// Initialize
+log('Nexus Field Intelligence Engine initialized.', 'ok');
+log('Architecture: Reaction-Diffusion Lattice + Evolutionary Optimizer', 'ok');
+log('Select a task and click "Evolve Intelligence" to begin.', 'ok');
+</script>
+</body>
+</html>

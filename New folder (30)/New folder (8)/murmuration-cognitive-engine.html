@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Murmuration Cognitive Engine — Swarm Intelligence AI</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0a0a12;--surface:#11111b;--surface2:#181825;--surface3:#1e1e2e;
+    --border:#313147;--text:#cdd6f4;--subtext:#a6adc8;--accent:#89b4fa;
+    --accent2:#f38ba8;--accent3:#a6e3a1;--accent4:#fab387;--accent5:#cba6f7;
+    --glow:rgba(137,180,250,0.15);--radius:12px;
+  }
+  html{font-size:14px}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+
+  /* HEADER */
+  header{
+    background:linear-gradient(135deg,#11111b 0%,#1a1a2e 50%,#11111b 100%);
+    border-bottom:1px solid var(--border);padding:24px 32px;
+    display:flex;align-items:center;gap:20px;position:relative;overflow:hidden;
+  }
+  header::before{
+    content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+    background:radial-gradient(ellipse at 30% 50%,rgba(137,180,250,0.04),transparent 60%),
+               radial-gradient(ellipse at 70% 50%,rgba(203,166,247,0.04),transparent 60%);
+    animation:headerPulse 8s ease-in-out infinite;
+  }
+  @keyframes headerPulse{0%,100%{opacity:.6}50%{opacity:1}}
+  .logo{
+    width:56px;height:56px;border-radius:50%;
+    background:conic-gradient(from 0deg,var(--accent),var(--accent5),var(--accent2),var(--accent4),var(--accent3),var(--accent));
+    display:flex;align-items:center;justify-content:center;position:relative;z-index:1;
+    animation:logoSpin 12s linear infinite;
+  }
+  @keyframes logoSpin{to{background:conic-gradient(from 360deg,var(--accent),var(--accent5),var(--accent2),var(--accent4),var(--accent3),var(--accent))}}
+  .logo-inner{width:44px;height:44px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .header-text{position:relative;z-index:1}
+  .header-text h1{font-size:1.6rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent5));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .header-text p{color:var(--subtext);font-size:.85rem;margin-top:2px}
+
+  /* LAYOUT */
+  .app{display:grid;grid-template-columns:320px 1fr 340px;grid-template-rows:1fr;height:calc(100vh - 105px);gap:0}
+  @media(max-width:1100px){.app{grid-template-columns:1fr;grid-template-rows:auto 400px auto}}
+
+  /* PANELS */
+  .panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:20px}
+  .panel:last-child{border-right:none;border-left:1px solid var(--border)}
+  .panel-title{font-size:1rem;font-weight:600;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .panel-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:dotPulse 2s ease-in-out infinite}
+  @keyframes dotPulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+  /* CANVAS AREA */
+  .canvas-wrap{position:relative;background:#07070f;overflow:hidden;display:flex;flex-direction:column}
+  #swarmCanvas{width:100%;flex:1;cursor:crosshair}
+  .canvas-overlay{
+    position:absolute;top:12px;left:12px;background:rgba(17,17,27,0.85);
+    border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;
+    font-size:.75rem;color:var(--subtext);backdrop-filter:blur(8px);pointer-events:none;
+  }
+  .canvas-overlay .stat{display:flex;justify-content:space-between;gap:20px;margin:2px 0}
+  .canvas-overlay .stat span:last-child{color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* STATUS BAR */
+  .status-bar{
+    position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+    background:rgba(17,17,27,0.9);border:1px solid var(--border);border-radius:20px;
+    padding:6px 18px;font-size:.75rem;color:var(--subtext);backdrop-filter:blur(8px);
+    display:flex;align-items:center;gap:10px;white-space:nowrap;
+  }
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent3);animation:dotPulse 1.5s ease-in-out infinite}
+  .status-dot.training{background:var(--accent4);animation:dotPulse .5s ease-in-out infinite}
+  .status-dot.idle{background:var(--subtext);animation:none}
+
+  /* FORM ELEMENTS */
+  label{display:block;font-size:.78rem;color:var(--subtext);margin-bottom:5px;font-weight:500}
+  textarea,input[type="text"],input[type="number"],select{
+    width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;color:var(--text);font-family:inherit;font-size:.85rem;resize:vertical;
+    transition:border-color .2s,box-shadow .2s;
+  }
+  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+  textarea{min-height:120px}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:10px 18px;border-radius:8px;font-size:.85rem;font-weight:600;
+    cursor:pointer;border:none;transition:all .2s;font-family:inherit;
+  }
+  .btn-primary{background:var(--accent);color:#0a0a12}
+  .btn-primary:hover{background:#a4c6fc;transform:translateY(-1px);box-shadow:0 4px 16px rgba(137,180,250,.3)}
+  .btn-secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border)}
+  .btn-secondary:hover{background:var(--surface2);border-color:var(--accent)}
+  .btn-danger{background:var(--accent2);color:#0a0a12}
+  .btn-danger:hover{background:#f5a0b8}
+  .btn-sm{padding:6px 12px;font-size:.78rem}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+  .btn-group{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .section{margin-bottom:20px}
+  .divider{height:1px;background:var(--border);margin:16px 0}
+
+  /* SLIDER */
+  input[type="range"]{
+    -webkit-appearance:none;width:100%;height:6px;border-radius:3px;
+    background:var(--surface3);outline:none;border:none;padding:0;margin:8px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid var(--bg);
+  }
+  .range-info{display:flex;justify-content:space-between;font-size:.72rem;color:var(--subtext)}
+
+  /* OUTPUT AREA */
+  .output-box{
+    background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:14px;font-size:.85rem;line-height:1.6;min-height:100px;max-height:300px;
+    overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+  }
+  .output-box:empty::before{content:'Awaiting query...';color:var(--subtext);font-style:italic}
+
+  /* METRICS */
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .metric-card{
+    background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:10px;text-align:center;
+  }
+  .metric-card .value{font-size:1.3rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .metric-card .label{font-size:.68rem;color:var(--subtext);margin-top:2px}
+
+  /* LOG */
+  .log{font-family:'Cascadia Code','Fira Code',monospace;font-size:.72rem;line-height:1.7;color:var(--subtext);max-height:200px;overflow-y:auto}
+  .log .info{color:var(--accent)}
+  .log .success{color:var(--accent3)}
+  .log .warn{color:var(--accent4)}
+  .log .error{color:var(--accent2)}
+
+  /* CONCEPT MAP */
+  .concept-tag{
+    display:inline-block;padding:3px 10px;border-radius:12px;font-size:.72rem;
+    margin:2px;border:1px solid var(--border);background:var(--surface3);color:var(--subtext);
+    transition:all .2s;cursor:default;
+  }
+  .concept-tag.active{border-color:var(--accent);color:var(--accent);background:rgba(137,180,250,0.08)}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--subtext)}
+
+  /* ARCHITECTURE DIAGRAM */
+  .arch-box{
+    background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 14px;margin:4px 0;font-size:.78rem;position:relative;
+    transition:border-color .3s;
+  }
+  .arch-box.highlight{border-color:var(--accent);box-shadow:0 0 12px var(--glow)}
+  .arch-box .arch-title{font-weight:600;color:var(--accent5);margin-bottom:3px}
+  .arch-box .arch-desc{color:var(--subtext);font-size:.72rem}
+  .arch-arrow{text-align:center;color:var(--border);font-size:1.2rem;line-height:1}
+
+  /* TOAST */
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--surface3);border:1px solid var(--border);
+    border-radius:var(--radius);padding:12px 20px;font-size:.85rem;color:var(--text);
+    box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(120%);transition:transform .3s;z-index:999;
+  }
+  .toast.show{transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-inner">🐦</div></div>
+  <div class="header-text">
+    <h1>Murmuration Cognitive Engine</h1>
+    <p>Swarm-Emergent Intelligence — No Neural Networks, No Gradient Descent</p>
+  </div>
+</header>
+
+<div class="app">
+  <!-- LEFT PANEL: Controls & Training -->
+  <div class="panel" id="leftPanel">
+    <div class="panel-title"><span class="dot"></span> Engine Controls</div>
+
+    <div class="section">
+      <div class="arch-box">
+        <div class="arch-title">What is this?</div>
+        <div class="arch-desc">A novel AI that uses <strong>swarm agents</strong> instead of neurons. Intelligence emerges from flocking behavior, semantic gravity, and phase transitions — no backpropagation, no weights, no layers.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title" style="font-size:.88rem">Architecture</div>
+      <div class="arch-box" id="archTokenizer"><div class="arch-title">① Tokenizer</div><div class="arch-desc">Splits input into semantic fragments</div></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" id="archGravity"><div class="arch-title">② Gravity Binder</div><div class="arch-desc">Builds attraction forces between co-occurring tokens</div></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" id="archSwarm"><div class="arch-title">③ Swarm Field</div><div class="arch-desc">Agents flock using separation, alignment, cohesion + semantic gravity</div></div>
+      <div class="arch-arrow">↓</div>
+      <div class="arch-box" id="archPhase"><div class="arch-title">④ Phase Decoder</div><div class="arch-desc">Reads emergent cluster formations as output tokens</div></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <label for="trainData">Training Data (paste text)</label>
+      <textarea id="trainData" placeholder="Paste any text here to train the swarm. The engine learns token co-occurrence patterns and builds gravitational bonds between related concepts...">The sun rises in the east and sets in the west. The moon orbits the earth. Stars shine brightly in the night sky. The earth revolves around the sun. Planets orbit stars in solar systems. Galaxies contain billions of stars. The universe is vast and expanding. Light travels at an incredible speed. Gravity holds planets in orbit. The cosmos is full of mysteries waiting to be discovered.</textarea>
+    </div>
+
+    <div class="section">
+      <label>Swarm Population</label>
+      <input type="range" id="popSlider" min="50" max="500" value="200">
+      <div class="range-info"><span>50</span><span id="popVal">200</span><span>500</span></div>
+    </div>
+
+    <div class="section">
+      <label>Cohesion Strength</label>
+      <input type="range" id="cohesionSlider" min="1" max="100" value="45" step="1">
+      <div class="range-info"><span>Weak</span><span id="cohesionVal">0.45</span><span>Strong</span></div>
+    </div>
+
+    <div class="section">
+      <label>Gravity Decay Rate</label>
+      <input type="range" id="gravitySlider" min="1" max="100" value="30" step="1">
+      <div class="range-info"><span>Fast</span><span id="gravityVal">0.30</span><span>Slow</span></div>
+    </div>
+
+    <div class="section">
+      <label>Phase Temperature</label>
+      <input type="range" id="tempSlider" min="1" max="100" value="50" step="1">
+      <div class="range-info"><span>Frozen</span><span id="tempVal">0.50</span><span>Chaotic</span></div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btnTrain" onclick="trainSwarm()">Train Swarm</button>
+      <button class="btn btn-secondary" id="btnReset" onclick="resetEngine()">Reset</button>
+    </div>
+  </div>
+
+  <!-- CENTER: Swarm Visualization -->
+  <div class="canvas-wrap">
+    <canvas id="swarmCanvas"></canvas>
+    <div class="canvas-overlay" id="canvasOverlay">
+      <div class="stat"><span>Agents</span><span id="statAgents">0</span></div>
+      <div class="stat"><span>Clusters</span><span id="statClusters">0</span></div>
+      <div class="stat"><span>Bonds</span><span id="statBonds">0</span></div>
+      <div class="stat"><span>Entropy</span><span id="statEntropy">0.00</span></div>
+      <div class="stat"><span>Phase</span><span id="statPhase">Idle</span></div>
+      <div class="stat"><span>FPS</span><span id="statFPS">0</span></div>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot idle" id="statusDot"></div>
+      <span id="statusText">Engine idle — paste training data and click Train</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Query & Output -->
+  <div class="panel" id="rightPanel">
+    <div class="panel-title"><span class="dot" style="background:var(--accent5)"></span> Query & Response</div>
+
+    <div class="section">
+      <label for="queryInput">Ask the Swarm</label>
+      <input type="text" id="queryInput" placeholder="Type a question or prompt..." onkeydown="if(event.key==='Enter')querySwarm()">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="querySwarm()">Query</button>
+        <button class="btn btn-secondary btn-sm" onclick="generateText()">Generate</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <label>Response</label>
+      <div class="output-box" id="outputBox"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="panel-title" style="font-size:.88rem"><span class="dot" style="background:var(--accent3)"></span> Swarm Metrics</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="value" id="metricVocab">0</div><div class="label">Vocabulary</div></div>
+        <div class="metric-card"><div class="value" id="metricGravBonds">0</div><div class="label">Grav. Bonds</div></div>
+        <div class="metric-card"><div class="value" id="metricCoherence">0</div><div class="label">Coherence %</div></div>
+        <div class="metric-card"><div class="value" id="metricEpoch">0</div><div class="label">Epochs</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="panel-title" style="font-size:.88rem"><span class="dot" style="background:var(--accent4)"></span> Concept Clusters</div>
+      <div id="conceptMap"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="panel-title" style="font-size:.88rem"><span class="dot" style="background:var(--accent2)"></span> Engine Log</div>
+      <div class="log" id="engineLog"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  MURMURATION COGNITIVE ENGINE
+//  A Swarm-Emergent Intelligence System
+//  No Neural Networks. No Gradient Descent. No Backpropagation.
+//
+//  Core Principles:
+//  1. Autonomous agents carry semantic tokens
+//  2. Flocking rules (separation, alignment, cohesion) + semantic gravity
+//  3. Learning = strengthening gravitational bonds between co-occurring tokens
+//  4. Inference = sending a resonance wave and reading emergent cluster patterns
+//  5. Phase transitions (order ↔ chaos) modulate creativity vs. precision
+// ============================================================
+
+// --- Canvas Setup ---
+const canvas = document.getElementById('swarmCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = canvas.width = rect.width;
+  H = canvas.height = rect.height;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// --- Engine State ---
+const ENGINE = {
+  agents: [],
+  gravityMap: new Map(),   // "tokenA|tokenB" -> strength
+  vocabulary: new Map(),   // token -> {count, color, id}
+  clusters: [],
+  trained: false,
+  running: false,
+  epoch: 0,
+  phase: 'idle',          // idle | training | resonating | generating | settled
+  temperature: 0.5,
+  cohesion: 0.45,
+  gravityDecay: 0.30,
+  maxAgents: 200,
+  frameCount: 0,
+  lastFpsTime: performance.now(),
+  fps: 0,
+};
+
+// --- Utility ---
+function log(msg, type = 'info') {
+  const el = document.getElementById('engineLog');
+  const ts = new Date().toLocaleTimeString();
+  el.innerHTML += `<div class="${type}">[${ts}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function setStatus(text, mode = 'idle') {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + mode;
+  ENGINE.phase = mode === 'training' ? 'training' : mode === 'idle' ? 'idle' : 'resonating';
+}
+
+function randRange(a, b) { return a + Math.random() * (b - a); }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// Deterministic hash for consistent colors
+function hashColor(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  const hue = ((h % 360) + 360) % 360;
+  return `hsl(${hue}, 70%, 65%)`;
+}
+
+// --- Tokenizer ---
+function tokenize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s'-]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 1);
+}
+
+// --- Slider Bindings ---
+document.getElementById('popSlider').oninput = function() {
+  ENGINE.maxAgents = +this.value;
+  document.getElementById('popVal').textContent = this.value;
+};
+document.getElementById('cohesionSlider').oninput = function() {
+  ENGINE.cohesion = +this.value / 100;
+  document.getElementById('cohesionVal').textContent = ENGINE.cohesion.toFixed(2);
+};
+document.getElementById('gravitySlider').oninput = function() {
+  ENGINE.gravityDecay = +this.value / 100;
+  document.getElementById('gravityVal').textContent = ENGINE.gravityDecay.toFixed(2);
+};
+document.getElementById('tempSlider').oninput = function() {
+  ENGINE.temperature = +this.value / 100;
+  document.getElementById('tempVal').textContent = ENGINE.temperature.toFixed(2);
+};
+
+// ============================================================
+//  AGENT CLASS — Each agent is an autonomous swarm particle
+//  carrying a semantic token
+// ============================================================
+class SwarmAgent {
+  constructor(token, x, y) {
+    this.token = token;
+    this.x = x || randRange(40, W - 40);
+    this.y = y || randRange(40, H - 40);
+    this.vx = randRange(-1, 1);
+    this.vy = randRange(-1, 1);
+    this.ax = 0;
+    this.ay = 0;
+    this.color = hashColor(token);
+    this.radius = 3 + Math.min(token.length, 8) * 0.4;
+    this.energy = 1.0;       // how "excited" the agent is
+    this.clusterId = -1;
+    this.trail = [];
+    this.resonance = 0;      // 0-1, how strongly activated by query
+  }
+
+  applyForce(fx, fy) {
+    this.ax += fx;
+    this.ay += fy;
+  }
+
+  update(dt) {
+    // Apply acceleration
+    this.vx += this.ax * dt;
+    this.vy += this.ay * dt;
+    this.ax = 0;
+    this.ay = 0;
+
+    // Speed limit based on temperature
+    const maxSpeed = 1.5 + ENGINE.temperature * 3;
+    const speed = Math.hypot(this.vx, this.vy);
+    if (speed > maxSpeed) {
+      this.vx = (this.vx / speed) * maxSpeed;
+      this.vy = (this.vy / speed) * maxSpeed;
+    }
+
+    // Damping
+    const damping = 0.98 - ENGINE.temperature * 0.03;
+    this.vx *= damping;
+    this.vy *= damping;
+
+    // Move
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Boundary wrapping with soft bounce
+    const margin = 20;
+    if (this.x < margin) { this.x = margin; this.vx *= -0.5; }
+    if (this.x > W - margin) { this.x = W - margin; this.vx *= -0.5; }
+    if (this.y < margin) { this.y = margin; this.vy *= -0.5; }
+    if (this.y > H - margin) { this.y = H - margin; this.vy *= -0.5; }
+
+    // Energy decay
+    this.energy *= 0.995;
+    this.energy = Math.max(0.1, this.energy);
+    this.resonance *= 0.99;
+
+    // Trail (for visual effect)
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 8) this.trail.shift();
+  }
+}
+
+// ============================================================
+//  CORE SWARM MECHANICS — The heart of the engine
+//  These replace neural network forward/backward passes
+// ============================================================
+
+// 1. SEPARATION: Avoid crowding neighbors
+function separation(agent, neighbors) {
+  let sx = 0, sy = 0, count = 0;
+  const minDist = 25;
+  for (const n of neighbors) {
+    const d = dist(agent, n);
+    if (d > 0 && d < minDist) {
+      sx += (agent.x - n.x) / d;
+      sy += (agent.y - n.y) / d;
+      count++;
+    }
+  }
+  if (count > 0) {
+    sx /= count;
+    sy /= count;
+  }
+  return { x: sx * 0.8, y: sy * 0.8 };
+}
+
+// 2. ALIGNMENT: Steer toward average heading of neighbors
+function alignment(agent, neighbors) {
+  let ax = 0, ay = 0, count = 0;
+  for (const n of neighbors) {
+    const d = dist(agent, n);
+    if (d > 0 && d < 80) {
+      ax += n.vx;
+      ay += n.vy;
+      count++;
+    }
+  }
+  if (count > 0) {
+    ax = ax / count - agent.vx;
+    ay = ay / count - agent.vy;
+  }
+  return { x: ax * 0.3, y: ay * 0.3 };
+}
+
+// 3. COHESION: Steer toward average position of neighbors
+function cohesion(agent, neighbors) {
+  let cx = 0, cy = 0, count = 0;
+  for (const n of neighbors) {
+    const d = dist(agent, n);
+    if (d > 0 && d < 120) {
+      cx += n.x;
+      cy += n.y;
+      count++;
+    }
+  }
+  if (count > 0) {
+    cx = cx / count - agent.x;
+    cy = cy / count - agent.y;
+    const mag = Math.hypot(cx, cy);
+    if (mag > 0) { cx /= mag; cy /= mag; }
+  }
+  return { x: cx * ENGINE.cohesion, y: cy * ENGINE.cohesion };
+}
+
+// 4. SEMANTIC GRAVITY: Attracted to agents with bonded tokens
+function semanticGravity(agent, neighbors) {
+  let gx = 0, gy = 0;
+  for (const n of neighbors) {
+    const key = gravityKey(agent.token, n.token);
+    const strength = ENGINE.gravityMap.get(key) || 0;
+    if (strength > 0.01) {
+      const d = dist(agent, n);
+      if (d > 5) {
+        const force = (strength * 2) / Math.max(d, 10);
+        gx += ((n.x - agent.x) / d) * force;
+        gy += ((n.y - agent.y) / d) * force;
+      }
+    }
+  }
+  return { x: gx, y: gy };
+}
+
+// 5. THERMAL NOISE: Random perturbation based on temperature
+function thermalNoise() {
+  const t = ENGINE.temperature;
+  return {
+    x: (Math.random() - 0.5) * t * 2,
+    y: (Math.random() - 0.5) * t * 2,
+  };
+}
+
+// Gravity map key (order-independent)
+function gravityKey(a, b) {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+// ============================================================
+//  TRAINING — Learn gravitational bonds from text
+//  This is NOT gradient descent. It's co-occurrence counting
+//  converted into gravitational attraction strengths.
+// ============================================================
+function trainSwarm() {
+  const text = document.getElementById('trainData').value.trim();
+  if (!text) { toast('Please paste training data first.'); return; }
+
+  setStatus('Training swarm...', 'training');
+  log('Starting training...', 'info');
+  highlightArch('archTokenizer');
+
+  const btn = document.getElementById('btnTrain');
+  btn.disabled = true;
+
+  // Step 1: Tokenize
+  const tokens = tokenize(text);
+  log(`Tokenized: ${tokens.length} tokens found`, 'info');
+
+  // Step 2: Build vocabulary
+  ENGINE.vocabulary.clear();
+  let idCounter = 0;
+  for (const t of tokens) {
+    if (!ENGINE.vocabulary.has(t)) {
+      ENGINE.vocabulary.set(t, { count: 0, color: hashColor(t), id: idCounter++ });
+    }
+    ENGINE.vocabulary.get(t).count++;
+  }
+  log(`Vocabulary: ${ENGINE.vocabulary.size} unique tokens`, 'success');
+
+  setTimeout(() => {
+    highlightArch('archGravity');
+
+    // Step 3: Build gravity bonds from co-occurrence
+    // Window-based: tokens within a window of 5 attract each other
+    const windowSize = 5;
+    ENGINE.gravityMap.clear();
+
+    for (let i = 0; i < tokens.length; i++) {
+      for (let j = i + 1; j < Math.min(i + windowSize, tokens.length); j++) {
+        if (tokens[i] !== tokens[j]) {
+          const key = gravityKey(tokens[i], tokens[j]);
+          const proximity = 1 - (j - i) / windowSize;  // closer = stronger
+          const current = ENGINE.gravityMap.get(key) || 0;
+          ENGINE.gravityMap.set(key, current + proximity * 0.5);
+        }
+      }
+    }
+
+    // Normalize gravity bonds
+    let maxGrav = 0;
+    for (const v of ENGINE.gravityMap.values()) maxGrav = Math.max(maxGrav, v);
+    if (maxGrav > 0) {
+      for (const [k, v] of ENGINE.gravityMap) {
+        ENGINE.gravityMap.set(k, v / maxGrav);
+      }
+    }
+
+    log(`Gravity bonds: ${ENGINE.gravityMap.size} bonds forged`, 'success');
+
+    setTimeout(() => {
+      highlightArch('archSwarm');
+
+      // Step 4: Spawn agents
+      spawnAgents(tokens);
+
+      ENGINE.trained = true;
+      ENGINE.epoch++;
+      updateMetrics();
+      updateConceptMap();
+
+      log('Swarm deployed! Agents are flocking.', 'success');
+      setStatus('Swarm active — agents flocking', '');
+      btn.disabled = false;
+
+      if (!ENGINE.running) {
+        ENGINE.running = true;
+        requestAnimationFrame(mainLoop);
+      }
+
+      toast('Training complete!');
+    }, 300);
+  }, 300);
+}
+
+function spawnAgents(tokens) {
+  ENGINE.agents = [];
+
+  // Get unique tokens weighted by frequency
+  const uniqueTokens = [...ENGINE.vocabulary.keys()];
+  const maxAgents = ENGINE.maxAgents;
+
+  // Distribute agent count proportionally to token frequency
+  const totalCount = [...ENGINE.vocabulary.values()].reduce((s, v) => s + v.count, 0);
+
+  for (const token of uniqueTokens) {
+    const info = ENGINE.vocabulary.get(token);
+    const agentCount = Math.max(1, Math.round((info.count / totalCount) * maxAgents));
+
+    for (let i = 0; i < agentCount && ENGINE.agents.length < maxAgents; i++) {
+      ENGINE.agents.push(new SwarmAgent(token));
+    }
+  }
+
+  log(`Spawned ${ENGINE.agents.length} swarm agents`, 'info');
+}
+
+// ============================================================
+//  MAIN SIMULATION LOOP
+// ============================================================
+function mainLoop(timestamp) {
+  if (!ENGINE.running) return;
+
+  // FPS calculation
+  ENGINE.frameCount++;
+  if (timestamp - ENGINE.lastFpsTime >= 1000) {
+    ENGINE.fps = ENGINE.frameCount;
+    ENGINE.frameCount = 0;
+    ENGINE.lastFpsTime = timestamp;
+  }
+
+  // Physics step
+  updateAgents();
+
+  // Detect clusters
+  detectClusters();
+
+  // Render
+  render();
+
+  // Update stats
+  updateStats();
+
+  requestAnimationFrame(mainLoop);
+}
+
+function updateAgents() {
+  const agents = ENGINE.agents;
+  const dt = 0.5;
+
+  // Spatial grid for efficiency
+  const cellSize = 130;
+  const grid = new Map();
+  for (const a of agents) {
+    const key = `${Math.floor(a.x / cellSize)},${Math.floor(a.y / cellSize)}`;
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(a);
+  }
+
+  function getNeighbors(agent) {
+    const cx = Math.floor(agent.x / cellSize);
+    const cy = Math.floor(agent.y / cellSize);
+    const neighbors = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const cell = grid.get(`${cx + dx},${cy + dy}`);
+        if (cell) {
+          for (const n of cell) {
+            if (n !== agent) neighbors.push(n);
+          }
+        }
+      }
+    }
+    return neighbors;
+  }
+
+  for (const agent of agents) {
+    const neighbors = getNeighbors(agent);
+
+    // Core flocking forces
+    const sep = separation(agent, neighbors);
+    const ali = alignment(agent, neighbors);
+    const coh = cohesion(agent, neighbors);
+    const grav = semanticGravity(agent, neighbors);
+    const noise = thermalNoise();
+
+    // Combine forces
+    agent.applyForce(
+      sep.x + ali.x + coh.x + grav.x + noise.x,
+      sep.y + ali.y + coh.y + grav.y + noise.y
+    );
+
+    agent.update(dt);
+  }
+}
+
+// ============================================================
+//  CLUSTER DETECTION — Using density-based approach
+//  Clusters are the "thoughts" of the swarm
+// ============================================================
+function detectClusters() {
+  const agents = ENGINE.agents;
+  const clusterDist = 60;
+
+  // Simple connected-component clustering
+  const visited = new Set();
+  const clusters = [];
+
+  for (const agent of agents) {
+    if (visited.has(agent)) continue;
+    const cluster = [];
+    const stack = [agent];
+    while (stack.length) {
+      const current = stack.pop();
+      if (visited.has(current)) continue;
+      visited.add(current);
+      cluster.push(current);
+      for (const other of agents) {
+        if (!visited.has(other) && dist(current, other) < clusterDist) {
+          stack.push(other);
+        }
+      }
+    }
+    if (cluster.length >= 2) {
+      clusters.push(cluster);
+    }
+  }
+
+  // Assign cluster IDs
+  for (let i = 0; i < clusters.length; i++) {
+    for (const agent of clusters[i]) {
+      agent.clusterId = i;
+    }
+  }
+
+  ENGINE.clusters = clusters;
+}
+
+// ============================================================
+//  QUERY / INFERENCE — Resonance Wave
+//  Instead of a forward pass, we "excite" matching agents
+//  and read the emergent response from cluster activity
+// ============================================================
+function querySwarm() {
+  if (!ENGINE.trained) {
+    toast('Train the swarm first!');
+    return;
+  }
+
+  const query = document.getElementById('queryInput').value.trim();
+  if (!query) return;
+
+  log(`Query: "${query}"`, 'info');
+  setStatus('Resonance wave propagating...', 'training');
+  highlightArch('archPhase');
+
+  const queryTokens = tokenize(query);
+  const output = document.getElementById('outputBox');
+  output.textContent = '';
+
+  // Step 1: Excite agents whose tokens match query tokens or are gravitationally bonded
+  for (const agent of ENGINE.agents) {
+    agent.resonance = 0;
+    agent.energy = 0.3;
+
+    // Direct match
+    if (queryTokens.includes(agent.token)) {
+      agent.resonance = 1.0;
+      agent.energy = 1.0;
+      // Push agent toward center to create visual wave
+      agent.applyForce((W / 2 - agent.x) * 0.01, (H / 2 - agent.y) * 0.01);
+    }
+
+    // Gravitational bond match
+    for (const qt of queryTokens) {
+      const key = gravityKey(agent.token, qt);
+      const bond = ENGINE.gravityMap.get(key) || 0;
+      if (bond > 0.1) {
+        agent.resonance = Math.max(agent.resonance, bond);
+        agent.energy = Math.max(agent.energy, bond);
+      }
+    }
+  }
+
+  // Step 2: Let resonance propagate for a few frames, then read output
+  setTimeout(() => {
+    // Propagate resonance through bonds (2 hops)
+    for (let hop = 0; hop < 2; hop++) {
+      for (const agent of ENGINE.agents) {
+        if (agent.resonance > 0.2) {
+          for (const other of ENGINE.agents) {
+            if (other !== agent) {
+              const key = gravityKey(agent.token, other.token);
+              const bond = ENGINE.gravityMap.get(key) || 0;
+              if (bond > 0.05) {
+                other.resonance = Math.max(other.resonance, agent.resonance * bond * 0.7);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Step 3: Collect resonating tokens, ranked by total resonance
+    const tokenResonance = new Map();
+    for (const agent of ENGINE.agents) {
+      if (agent.resonance > 0.1) {
+        const current = tokenResonance.get(agent.token) || 0;
+        tokenResonance.set(agent.token, current + agent.resonance);
+      }
+    }
+
+    // Sort by resonance strength
+    const sorted = [...tokenResonance.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .filter(([token]) => !queryTokens.includes(token)); // exclude query tokens
+
+    if (sorted.length === 0) {
+      output.textContent = 'The swarm found no resonating concepts for this query. Try training with more data.';
+      log('No resonance detected.', 'warn');
+    } else {
+      // Build response from top resonating tokens
+      const topTokens = sorted.slice(0, 15);
+
+      // Attempt to form coherent phrases using gravity bonds
+      const response = buildResponse(queryTokens, topTokens);
+      output.textContent = response;
+
+      log(`Response generated from ${topTokens.length} resonating tokens`, 'success');
+
+      // Update concept map highlighting
+      updateConceptMap(topTokens.map(t => t[0]));
+    }
+
+    setStatus('Swarm active — resonance complete', '');
+  }, 600);
+}
+
+// Build a response by following gravity chains
+function buildResponse(seedTokens, resonatingTokens) {
+  const allTokens = [...seedTokens, ...resonatingTokens.map(t => t[0])];
+  const used = new Set();
+  const sentences = [];
+
+  // Follow strongest gravity chains to build phrases
+  let current = seedTokens[0] || resonatingTokens[0]?.[0];
+  if (!current) return 'No response could be formed.';
+
+  for (let s = 0; s < 3; s++) {
+    const phrase = [current];
+    used.add(current);
+
+    for (let i = 0; i < 8; i++) {
+      let bestNext = null;
+      let bestScore = -1;
+
+      for (const token of allTokens) {
+        if (used.has(token)) continue;
+        const key = gravityKey(current, token);
+        const bond = ENGINE.gravityMap.get(key) || 0;
+        // Add some randomness based on temperature
+        const score = bond + Math.random() * ENGINE.temperature * 0.3;
+        if (score > bestScore) {
+          bestScore = score;
+          bestNext = token;
+        }
+      }
+
+      if (bestNext && bestScore > 0.05) {
+        phrase.push(bestNext);
+        used.add(bestNext);
+        current = bestNext;
+      } else break;
+    }
+
+    if (phrase.length > 1) {
+      sentences.push(phrase.join(' '));
+    }
+
+    // Pick next seed from unused resonating tokens
+    const nextSeed = resonatingTokens.find(t => !used.has(t[0]));
+    if (nextSeed) {
+      current = nextSeed[0];
+    } else break;
+  }
+
+  if (sentences.length === 0) {
+    return `Resonating concepts: ${resonatingTokens.slice(0, 10).map(t => t[0]).join(', ')}`;
+  }
+
+  return sentences.map(s => s.charAt(0).toUpperCase() + s.slice(1) + '.').join(' ');
+}
+
+// ============================================================
+//  TEXT GENERATION — Emergent text from swarm clusters
+// ============================================================
+function generateText() {
+  if (!ENGINE.trained) {
+    toast('Train the swarm first!');
+    return;
+  }
+
+  log('Generating text from swarm state...', 'info');
+  setStatus('Generating from cluster formations...', 'training');
+
+  const output = document.getElementById('outputBox');
+  output.textContent = '';
+
+  // Read current cluster formations
+  const clusterTokens = ENGINE.clusters.map(cluster => {
+    const tokenCounts = new Map();
+    for (const agent of cluster) {
+      tokenCounts.set(agent.token, (tokenCounts.get(agent.token) || 0) + 1);
+    }
+    return [...tokenCounts.entries()].sort((a, b) => b[1] - a[1]);
+  });
+
+  // For each cluster, generate a phrase by following gravity chains
+  const phrases = [];
+  for (const tokens of clusterTokens) {
+    if (tokens.length < 2) continue;
+
+    const phrase = [];
+    let current = tokens[0][0]; // start with most common token in cluster
+    phrase.push(current);
+    const used = new Set([current]);
+
+    for (let i = 0; i < 6; i++) {
+      let bestNext = null;
+      let bestScore = -1;
+
+      for (const [token] of tokens) {
+        if (used.has(token)) continue;
+        const key = gravityKey(current, token);
+        const bond = ENGINE.gravityMap.get(key) || 0;
+        const score = bond + Math.random() * ENGINE.temperature * 0.2;
+        if (score > bestScore) {
+          bestScore = score;
+          bestNext = token;
+        }
+      }
+
+      if (bestNext) {
+        phrase.push(bestNext);
+        used.add(bestNext);
+        current = bestNext;
+      } else break;
+    }
+
+    if (phrase.length >= 2) {
+      phrases.push(phrase.join(' '));
+    }
+  }
+
+  if (phrases.length === 0) {
+    output.textContent = 'The swarm has not yet formed coherent clusters. Let it settle or adjust temperature.';
+  } else {
+    const text = phrases.map(p => p.charAt(0).toUpperCase() + p.slice(1) + '.').join(' ');
+    output.textContent = text;
+    log(`Generated ${phrases.length} phrases from ${ENGINE.clusters.length} clusters`, 'success');
+  }
+
+  setStatus('Swarm active — generation complete', '');
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+function render() {
+  ctx.fillStyle = '#07070f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw gravity bonds between nearby bonded agents (subtle lines)
+  ctx.globalAlpha = 0.08;
+  for (let i = 0; i < ENGINE.agents.length; i++) {
+    const a = ENGINE.agents[i];
+    for (let j = i + 1; j < ENGINE.agents.length; j++) {
+      const b = ENGINE.agents[j];
+      const d = dist(a, b);
+      if (d < 80) {
+        const key = gravityKey(a.token, b.token);
+        const bond = ENGINE.gravityMap.get(key) || 0;
+        if (bond > 0.2) {
+          ctx.strokeStyle = a.color;
+          ctx.lineWidth = bond * 1.5;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw agents
+  for (const agent of ENGINE.agents) {
+    // Trail
+    if (agent.trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(agent.trail[0].x, agent.trail[0].y);
+      for (let i = 1; i < agent.trail.length; i++) {
+        ctx.lineTo(agent.trail[i].x, agent.trail[i].y);
+      }
+      ctx.strokeStyle = agent.color;
+      ctx.globalAlpha = 0.1 * agent.energy;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Glow for resonating agents
+    if (agent.resonance > 0.2) {
+      const glowRadius = agent.radius * 3 * agent.resonance;
+      const gradient = ctx.createRadialGradient(agent.x, agent.y, 0, agent.x, agent.y, glowRadius);
+      gradient.addColorStop(0, agent.color.replace('65%', '80%').replace(')', ', 0.3)').replace('hsl', 'hsla'));
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(agent.x, agent.y, glowRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Agent body
+    ctx.fillStyle = agent.color;
+    ctx.globalAlpha = 0.3 + agent.energy * 0.7;
+    ctx.beginPath();
+    ctx.arc(agent.x, agent.y, agent.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Token label (only for energized/resonating agents or when zoomed)
+    if (agent.resonance > 0.3 || agent.energy > 0.8) {
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = Math.min(1, agent.resonance + 0.3);
+      ctx.font = '9px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(agent.token, agent.x, agent.y - agent.radius - 4);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Cluster outlines (subtle)
+  for (const cluster of ENGINE.clusters) {
+    if (cluster.length < 3) continue;
+
+    // Find cluster center and radius
+    let cx = 0, cy = 0;
+    for (const a of cluster) { cx += a.x; cy += a.y; }
+    cx /= cluster.length;
+    cy /= cluster.length;
+
+    let maxR = 0;
+    for (const a of cluster) maxR = Math.max(maxR, dist({ x: cx, y: cy }, a));
+
+    ctx.strokeStyle = cluster[0].color;
+    ctx.globalAlpha = 0.06;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR + 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ============================================================
+//  UI UPDATES
+// ============================================================
+function updateStats() {
+  document.getElementById('statAgents').textContent = ENGINE.agents.length;
+  document.getElementById('statClusters').textContent = ENGINE.clusters.length;
+  document.getElementById('statBonds').textContent = ENGINE.gravityMap.size;
+  document.getElementById('statFPS').textContent = ENGINE.fps;
+
+  // Calculate entropy (measure of disorder)
+  const speeds = ENGINE.agents.map(a => Math.hypot(a.vx, a.vy));
+  const avgSpeed = speeds.reduce((s, v) => s + v, 0) / (speeds.length || 1);
+  const variance = speeds.reduce((s, v) => s + (v - avgSpeed) ** 2, 0) / (speeds.length || 1);
+  const entropy = Math.log(1 + variance).toFixed(2);
+  document.getElementById('statEntropy').textContent = entropy;
+
+  // Phase detection
+  let phase = 'Settled';
+  if (entropy > 2) phase = 'Chaotic';
+  else if (entropy > 1) phase = 'Turbulent';
+  else if (entropy > 0.5) phase = 'Flocking';
+  else if (entropy > 0.1) phase = 'Crystallizing';
+  document.getElementById('statPhase').textContent = phase;
+}
+
+function updateMetrics() {
+  document.getElementById('metricVocab').textContent = ENGINE.vocabulary.size;
+  document.getElementById('metricGravBonds').textContent = ENGINE.gravityMap.size;
+  document.getElementById('metricEpoch').textContent = ENGINE.epoch;
+
+  // Coherence: ratio of agents in clusters to total agents
+  const inCluster = ENGINE.agents.filter(a => a.clusterId >= 0).length;
+  const coherence = ENGINE.agents.length ? Math.round((inCluster / ENGINE.agents.length) * 100) : 0;
+  document.getElementById('metricCoherence').textContent = coherence;
+}
+
+function updateConceptMap(highlighted = []) {
+  const container = document.getElementById('conceptMap');
+  container.innerHTML = '';
+
+  const sorted = [...ENGINE.vocabulary.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 30);
+
+  for (const [token, info] of sorted) {
+    const tag = document.createElement('span');
+    tag.className = 'concept-tag' + (highlighted.includes(token) ? ' active' : '');
+    tag.textContent = token;
+    tag.style.borderColor = info.color;
+    if (highlighted.includes(token)) tag.style.color = info.color;
+    container.appendChild(tag);
+  }
+}
+
+function highlightArch(id) {
+  document.querySelectorAll('.arch-box').forEach(b => b.classList.remove('highlight'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('highlight');
+  setTimeout(() => el?.classList.remove('highlight'), 1500);
+}
+
+function resetEngine() {
+  ENGINE.agents = [];
+  ENGINE.gravityMap.clear();
+  ENGINE.vocabulary.clear();
+  ENGINE.clusters = [];
+  ENGINE.trained = false;
+  ENGINE.epoch = 0;
+  ENGINE.running = false;
+
+  ctx.fillStyle = '#07070f';
+  ctx.fillRect(0, 0, W, H);
+
+  document.getElementById('outputBox').textContent = '';
+  document.getElementById('conceptMap').innerHTML = '';
+  document.getElementById('engineLog').innerHTML = '';
+  updateMetrics();
+  updateStats();
+  setStatus('Engine idle — paste training data and click Train', 'idle');
+  log('Engine reset.', 'warn');
+  toast('Engine reset');
+}
+
+// Mouse interaction: clicking adds a disturbance
+canvas.addEventListener('click', (e) => {
+  if (!ENGINE.trained) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Push nearby agents away (disturbance wave)
+  for (const agent of ENGINE.agents) {
+    const d = dist(agent, { x: mx, y: my });
+    if (d < 150) {
+      const force = (150 - d) / 150 * 3;
+      agent.applyForce(
+        ((agent.x - mx) / d) * force,
+        ((agent.y - my) / d) * force
+      );
+      agent.energy = Math.min(1, agent.energy + 0.5);
+    }
+  }
+});
+
+// Initial render
+ctx.fillStyle = '#07070f';
+ctx.fillRect(0, 0, W, H);
+ctx.fillStyle = '#313147';
+ctx.font = '16px "Segoe UI", sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Paste text and click "Train Swarm" to begin', W / 2, H / 2 - 10);
+ctx.font = '12px "Segoe UI", sans-serif';
+ctx.fillText('The swarm will come alive here', W / 2, H / 2 + 14);
+
+log('Murmuration Cognitive Engine v1.0 initialized.', 'info');
+log('Architecture: Swarm-Emergent Intelligence', 'info');
+log('No neural networks. No gradient descent. No backpropagation.', 'info');
+log('Intelligence emerges from flocking + semantic gravity.', 'info');
+</script>
+</body>
+</html>

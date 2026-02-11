@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VORTEX FIELD INTELLIGENCE ENGINE</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @font-face { font-family: 'System'; src: local('Segoe UI'), local('Helvetica Neue'), local('Arial'); }
+
+  :root {
+    --bg-primary: #06080d;
+    --bg-secondary: #0c1018;
+    --bg-tertiary: #111827;
+    --bg-card: #0f1520;
+    --accent-1: #00e5ff;
+    --accent-2: #7c4dff;
+    --accent-3: #ff6d00;
+    --accent-4: #00e676;
+    --accent-5: #ff1744;
+    --text-primary: #e8eaf6;
+    --text-secondary: #90a4ae;
+    --text-dim: #546e7a;
+    --border: #1a2332;
+    --glow-1: rgba(0, 229, 255, 0.15);
+    --glow-2: rgba(124, 77, 255, 0.15);
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+  ::-webkit-scrollbar-thumb { background: var(--accent-2); border-radius: 3px; }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 30px 20px 20px;
+    position: relative;
+    z-index: 2;
+  }
+  .header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .header .subtitle {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .header .tagline {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Status Bar ── */
+  .status-bar {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 15px;
+  }
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+  }
+  .status-dot.active { background: var(--accent-4); box-shadow: 0 0 8px var(--accent-4); }
+  .status-dot.processing { background: var(--accent-1); box-shadow: 0 0 8px var(--accent-1); }
+  .status-dot.evolving { background: var(--accent-3); box-shadow: 0 0 8px var(--accent-3); }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ── Layout ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 0 20px 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .full-width { grid-column: 1 / -1; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent-1), var(--accent-2), transparent);
+    opacity: 0.6;
+  }
+  .card-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .icon { font-size: 0.9rem; }
+
+  /* ── Canvas containers ── */
+  .canvas-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+  }
+  .canvas-wrap canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ── Controls ── */
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    align-items: center;
+  }
+  .btn {
+    padding: 7px 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: inherit;
+  }
+  .btn:hover {
+    border-color: var(--accent-1);
+    background: rgba(0, 229, 255, 0.08);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+  }
+  .btn.active {
+    border-color: var(--accent-2);
+    background: rgba(124, 77, 255, 0.15);
+    color: var(--accent-2);
+  }
+  .btn.primary {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(124, 77, 255, 0.2));
+    border-color: var(--accent-1);
+  }
+  .btn.danger {
+    border-color: var(--accent-5);
+    color: var(--accent-5);
+  }
+  .btn.danger:hover {
+    background: rgba(255, 23, 68, 0.12);
+  }
+
+  select, input[type="range"] {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    font-family: inherit;
+    outline: none;
+  }
+  select:focus, input[type="range"]:focus { border-color: var(--accent-1); }
+  input[type="range"] { width: 100px; padding: 0; -webkit-appearance: none; height: 4px; background: var(--border); border: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent-1); cursor: pointer; }
+  label { font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── Metrics ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .metric {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .metric .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .metric .label {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* ── Console ── */
+  .console {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.68rem;
+    line-height: 1.6;
+    margin-top: 10px;
+  }
+  .console .line { color: var(--text-dim); }
+  .console .line.info { color: var(--accent-1); }
+  .console .line.success { color: var(--accent-4); }
+  .console .line.warn { color: var(--accent-3); }
+  .console .line.error { color: var(--accent-5); }
+  .console .line .timestamp { color: #37474f; margin-right: 8px; }
+
+  /* ── Draw Canvas ── */
+  .draw-area {
+    width: 200px; height: 200px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: crosshair;
+    background: #000;
+    image-rendering: pixelated;
+  }
+
+  /* ── Architecture Diagram ── */
+  .arch-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 15px 0;
+  }
+  .arch-node {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 120px;
+    transition: all 0.3s;
+  }
+  .arch-node:hover {
+    border-color: var(--accent-1);
+    box-shadow: 0 0 20px var(--glow-1);
+    transform: translateY(-2px);
+  }
+  .arch-node .name {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--accent-1);
+  }
+  .arch-node .desc {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .arch-node.n1 { border-color: rgba(0, 229, 255, 0.3); }
+  .arch-node.n2 { border-color: rgba(124, 77, 255, 0.3); }
+  .arch-node.n3 { border-color: rgba(255, 109, 0, 0.3); }
+  .arch-node.n4 { border-color: rgba(0, 230, 118, 0.3); }
+  .arch-node.n5 { border-color: rgba(255, 23, 68, 0.3); }
+  .arch-arrow {
+    color: var(--text-dim);
+    font-size: 1.2rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 1.4rem; letter-spacing: 3px; }
+  }
+
+  /* ── Ambient Background ── */
+  .ambient-bg {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.3;
+  }
+
+  .main-content { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+
+<canvas class="ambient-bg" id="ambientCanvas"></canvas>
+
+<div class="main-content">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Vortex Field Intelligence Engine</h1>
+    <div class="subtitle">Non-Neural Adaptive Computation Framework</div>
+    <div class="tagline">Flow Fields &bull; Harmonic Resonance &bull; Swarm Particles &bull; Evolutionary Rules &bull; Phase Memory</div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-item"><span class="status-dot active" id="dotFlow"></span> Flow Field</div>
+    <div class="status-item"><span class="status-dot processing" id="dotHarmonic"></span> Harmonic Engine</div>
+    <div class="status-item"><span class="status-dot evolving" id="dotEvolve"></span> Evolution Core</div>
+    <div class="status-item"><span class="status-dot active" id="dotSwarm"></span> Swarm Active</div>
+    <div class="status-item"><span class="status-dot processing" id="dotPhase"></span> Phase Memory</div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ═══ ARCHITECTURE OVERVIEW ═══ -->
+    <div class="card full-width">
+      <div class="card-title"><span class="icon">&#9670;</span> System Architecture — Five-Engine Topology</div>
+      <div class="arch-flow">
+        <div class="arch-node n1">
+          <div class="name">FLOW FIELD</div>
+          <div class="desc">Vector field encoding<br>Gradient trajectories</div>
+        </div>
+        <div class="arch-arrow">&#10140;</div>
+        <div class="arch-node n2">
+          <div class="name">HARMONIC RESONANCE</div>
+          <div class="desc">Frequency decomposition<br>Wave superposition</div>
+        </div>
+        <div class="arch-arrow">&#10140;</div>
+        <div class="arch-node n3">
+          <div class="name">SWARM PARTICLES</div>
+          <div class="desc">Collective intelligence<br>Emergent classification</div>
+        </div>
+        <div class="arch-arrow">&#10140;</div>
+        <div class="arch-node n4">
+          <div class="name">EVOLUTIONARY RULES</div>
+          <div class="desc">Genetic adaptation<br>Rule mutation</div>
+        </div>
+        <div class="arch-arrow">&#10140;</div>
+        <div class="arch-node n5">
+          <div class="name">PHASE MEMORY</div>
+          <div class="desc">Phase-locked storage<br>Resonance recall</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FLOW FIELD VISUALIZATION ═══ -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#9672;</span> Flow Field Processor</div>
+      <div class="canvas-wrap"><canvas id="flowCanvas"></canvas></div>
+      <div class="controls-row">
+        <label>Viscosity</label>
+        <input type="range" id="viscosity" min="0" max="100" value="30">
+        <label>Turbulence</label>
+        <input type="range" id="turbulence" min="0" max="100" value="50">
+        <button class="btn" onclick="resetFlowField()">Reset Field</button>
+      </div>
+    </div>
+
+    <!-- ═══ HARMONIC RESONANCE ═══ -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#9836;</span> Harmonic Resonance Analyzer</div>
+      <div class="canvas-wrap"><canvas id="harmonicCanvas"></canvas></div>
+      <div class="controls-row">
+        <label>Frequency Bands</label>
+        <input type="range" id="freqBands" min="4" max="64" value="24">
+        <label>Resonance Threshold</label>
+        <input type="range" id="resThreshold" min="0" max="100" value="45">
+      </div>
+    </div>
+
+    <!-- ═══ SWARM INTELLIGENCE ═══ -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#10022;</span> Swarm Particle Intelligence</div>
+      <div class="canvas-wrap"><canvas id="swarmCanvas"></canvas></div>
+      <div class="controls-row">
+        <label>Particles</label>
+        <input type="range" id="swarmCount" min="50" max="500" value="200">
+        <label>Cohesion</label>
+        <input type="range" id="cohesion" min="0" max="100" value="60">
+        <label>Separation</label>
+        <input type="range" id="separation" min="0" max="100" value="40">
+      </div>
+    </div>
+
+    <!-- ═══ EVOLUTIONARY ENGINE ═══ -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#9851;</span> Evolutionary Rule Engine</div>
+      <div class="canvas-wrap"><canvas id="evolveCanvas"></canvas></div>
+      <div class="controls-row">
+        <label>Mutation Rate</label>
+        <input type="range" id="mutRate" min="1" max="100" value="15">
+        <label>Population</label>
+        <input type="range" id="popSize" min="10" max="200" value="80">
+        <button class="btn" onclick="resetEvolution()">New Generation</button>
+      </div>
+    </div>
+
+    <!-- ═══ TRAINING / INFERENCE PANEL ═══ -->
+    <div class="card full-width">
+      <div class="card-title"><span class="icon">&#9881;</span> Training &amp; Inference Control Center</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+
+        <!-- Draw Input -->
+        <div style="text-align: center;">
+          <div style="font-size: 0.68rem; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 1px;">DRAW INPUT PATTERN</div>
+          <canvas class="draw-area" id="drawCanvas" width="200" height="200"></canvas>
+          <div class="controls-row" style="justify-content: center; margin-top: 8px;">
+            <button class="btn" onclick="clearDraw()">Clear</button>
+          </div>
+        </div>
+
+        <!-- Training Controls -->
+        <div style="flex: 1; min-width: 250px;">
+          <div style="font-size: 0.68rem; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 1px;">DATASET &amp; TRAINING</div>
+          <div class="controls-row">
+            <select id="datasetSelect">
+              <option value="shapes">Geometric Shapes</option>
+              <option value="digits">Digit Patterns</option>
+              <option value="symbols">Symbol Recognition</option>
+              <option value="custom">Custom Patterns</option>
+            </select>
+            <button class="btn primary" onclick="startTraining()">Train System</button>
+            <button class="btn" onclick="runInference()">Classify Input</button>
+            <button class="btn danger" onclick="resetAll()">Full Reset</button>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric"><div class="value" id="metricAccuracy">0.0%</div><div class="label">Accuracy</div></div>
+            <div class="metric"><div class="value" id="metricGeneration">0</div><div class="label">Generation</div></div>
+            <div class="metric"><div class="value" id="metricConvergence">0.0</div><div class="label">Convergence</div></div>
+            <div class="metric"><div class="value" id="metricEntropy">1.0</div><div class="label">Field Entropy</div></div>
+            <div class="metric"><div class="value" id="metricResonance">0.0</div><div class="label">Resonance Peak</div></div>
+            <div class="metric"><div class="value" id="metricSwarmFit">0.0</div><div class="label">Swarm Fitness</div></div>
+          </div>
+
+          <!-- Classification Result -->
+          <div id="classResult" style="margin-top: 14px; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; display: none;">
+            <div style="font-size: 0.65rem; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase;">Classification Result</div>
+            <div id="classLabel" style="font-size: 1.4rem; font-weight: 700; color: var(--accent-4); margin-top: 4px;"></div>
+            <div id="classConf" style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px;"></div>
+          </div>
+        </div>
+
+        <!-- Phase Memory -->
+        <div style="text-align: center;">
+          <div style="font-size: 0.68rem; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 1px;">PHASE MEMORY STATE</div>
+          <canvas id="phaseCanvas" width="200" height="200" style="border: 1px solid var(--border); border-radius: 6px; background: #000;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SYSTEM CONSOLE ═══ -->
+    <div class="card full-width">
+      <div class="card-title"><span class="icon">&#9002;</span> System Console</div>
+      <div class="console" id="console"></div>
+    </div>
+
+  </div><!-- /main-grid -->
+</div><!-- /main-content -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  VORTEX FIELD INTELLIGENCE ENGINE
+//  A completely novel AI architecture — NO neural networks.
+//
+//  Core Paradigm:
+//  1) FLOW FIELD — encodes data as vector flow gradients
+//  2) HARMONIC RESONANCE — frequency-domain pattern matching
+//  3) SWARM PARTICLES — collective emergent classification
+//  4) EVOLUTIONARY RULES — genetic rule adaptation
+//  5) PHASE MEMORY — phase-locked associative storage
+// ═══════════════════════════════════════════════════════════════
+
+// ── Utility ──
+const { sin, cos, sqrt, abs, PI, random, floor, min, max, atan2, exp, log } = Math;
+const TAU = PI * 2;
+const clamp = (v, lo, hi) => min(hi, max(lo, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const rnd = (a = 0, b = 1) => a + random() * (b - a);
+const rndInt = (a, b) => floor(rnd(a, b + 1));
+const dist = (x1, y1, x2, y2) => sqrt((x2-x1)**2 + (y2-y1)**2);
+
+function timestamp() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
+}
+
+// ── Console Logger ──
+const consoleEl = document.getElementById('console');
+function log2(msg, type = '') {
+  const line = document.createElement('div');
+  line.className = 'line ' + type;
+  line.innerHTML = `<span class="timestamp">[${timestamp()}]</span>${msg}`;
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+  if (consoleEl.children.length > 200) consoleEl.removeChild(consoleEl.firstChild);
+}
+
+// ── Canvas Setup ──
+function setupCanvas(id) {
+  const canvas = document.getElementById(id);
+  const ctx = canvas.getContext('2d');
+  const resize = () => {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * (window.devicePixelRatio || 1);
+    canvas.height = rect.height * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  };
+  resize();
+  return { canvas, ctx, resize, w: () => canvas.width / (window.devicePixelRatio||1), h: () => canvas.height / (window.devicePixelRatio||1) };
+}
+
+// ═══════════════════════════════════════
+//  ENGINE 1: FLOW FIELD PROCESSOR
+//  Encodes information as vector fields.
+//  Uses Perlin-like noise gradients to
+//  create flow trajectories that encode
+//  spatial features of input data.
+// ═══════════════════════════════════════
+
+class FlowFieldEngine {
+  constructor() {
+    this.gridSize = 20;
+    this.field = [];
+    this.particles = [];
+    this.time = 0;
+    this.viscosity = 0.3;
+    this.turbulence = 0.5;
+    this.reset();
+  }
+
+  reset() {
+    this.field = [];
+    for (let i = 0; i < this.gridSize * this.gridSize; i++) {
+      this.field.push({ angle: rnd(0, TAU), magnitude: rnd(0.2, 1) });
+    }
+    this.particles = [];
+    for (let i = 0; i < 300; i++) {
+      this.particles.push({ x: rnd(), y: rnd(), vx: 0, vy: 0, life: rnd(0.5, 1), age: 0 });
+    }
+  }
+
+  // Encode an image/pattern into the flow field
+  encodePattern(data, w, h) {
+    for (let gy = 0; gy < this.gridSize; gy++) {
+      for (let gx = 0; gx < this.gridSize; gx++) {
+        const px = floor((gx / this.gridSize) * w);
+        const py = floor((gy / this.gridSize) * h);
+        const idx = (py * w + px);
+        const val = data[idx] || 0;
+
+        // Compute gradient from surrounding pixels
+        const left = data[idx - 1] || 0;
+        const right = data[idx + 1] || 0;
+        const up = data[idx - w] || 0;
+        const down = data[idx + w] || 0;
+        const dx = right - left;
+        const dy = down - up;
+
+        const angle = atan2(dy, dx) + val * PI * 0.5;
+        const magnitude = clamp(sqrt(dx*dx + dy*dy) + val * 0.5, 0, 1);
+
+        const fi = gy * this.gridSize + gx;
+        this.field[fi].angle = angle;
+        this.field[fi].magnitude = magnitude;
+      }
+    }
+    log2('Flow field encoded from pattern data', 'info');
+  }
+
+  // Extract a feature signature from the flow field
+  extractSignature() {
+    const sig = [];
+    for (let i = 0; i < this.field.length; i++) {
+      sig.push(this.field[i].angle / TAU);
+      sig.push(this.field[i].magnitude);
+    }
+    return sig;
+  }
+
+  update(dt) {
+    this.time += dt;
+    const visc = this.viscosity;
+    const turb = this.turbulence;
+
+    // Evolve field slightly
+    for (let i = 0; i < this.field.length; i++) {
+      this.field[i].angle += sin(this.time * 0.5 + i * 0.1) * turb * 0.02;
+    }
+
+    // Move particles through field
+    for (const p of this.particles) {
+      const gx = floor(p.x * this.gridSize);
+      const gy = floor(p.y * this.gridSize);
+      const fi = clamp(gy, 0, this.gridSize-1) * this.gridSize + clamp(gx, 0, this.gridSize-1);
+      const cell = this.field[fi];
+
+      const fx = cos(cell.angle) * cell.magnitude * 0.01;
+      const fy = sin(cell.angle) * cell.magnitude * 0.01;
+
+      p.vx = p.vx * (1 - visc) + fx;
+      p.vy = p.vy * (1 - visc) + fy;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.age += dt;
+
+      if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1 || p.age > p.life) {
+        p.x = rnd(); p.y = rnd(); p.vx = 0; p.vy = 0; p.age = 0;
+      }
+    }
+  }
+
+  draw(ctx, w, h) {
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw field vectors
+    const cellW = w / this.gridSize;
+    const cellH = h / this.gridSize;
+    for (let gy = 0; gy < this.gridSize; gy++) {
+      for (let gx = 0; gx < this.gridSize; gx++) {
+        const cell = this.field[gy * this.gridSize + gx];
+        const cx = (gx + 0.5) * cellW;
+        const cy = (gy + 0.5) * cellH;
+        const len = cell.magnitude * min(cellW, cellH) * 0.4;
+
+        ctx.strokeStyle = `hsla(${(cell.angle / TAU) * 360}, 80%, 50%, ${cell.magnitude * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + cos(cell.angle) * len, cy + sin(cell.angle) * len);
+        ctx.stroke();
+      }
+    }
+
+    // Draw particles
+    for (const p of this.particles) {
+      const speed = sqrt(p.vx**2 + p.vy**2);
+      const hue = (speed * 20000) % 360;
+      const alpha = (1 - p.age / p.life) * 0.8;
+      ctx.fillStyle = `hsla(${180 + hue * 0.5}, 90%, 60%, ${alpha})`;
+      ctx.fillRect(p.x * w - 1, p.y * h - 1, 2, 2);
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  ENGINE 2: HARMONIC RESONANCE ANALYZER
+//  Decomposes patterns into frequency
+//  spectra using custom wave analysis.
+//  Pattern matching via resonance peaks.
+// ═══════════════════════════════════════
+
+class HarmonicResonanceEngine {
+  constructor() {
+    this.numBands = 24;
+    this.spectrum = new Float32Array(64);
+    this.resonanceMap = new Float32Array(64);
+    this.threshold = 0.45;
+    this.storedSpectra = new Map(); // class label -> spectrum
+    this.time = 0;
+  }
+
+  // Decompose a 1D signal into frequency components using DFT
+  decompose(signal) {
+    const N = signal.length;
+    const spec = new Float32Array(this.numBands);
+    for (let k = 0; k < this.numBands; k++) {
+      let re = 0, im = 0;
+      for (let n = 0; n < N; n++) {
+        const angle = -TAU * k * n / N;
+        re += signal[n] * cos(angle);
+        im += signal[n] * sin(angle);
+      }
+      spec[k] = sqrt(re*re + im*im) / N;
+    }
+    return spec;
+  }
+
+  // Encode a 2D pattern into harmonics
+  encodePattern(data, w, h) {
+    // Project 2D to 1D via multiple angle sweeps
+    const combinedSpectrum = new Float32Array(this.numBands);
+    const numSweeps = 8;
+
+    for (let s = 0; s < numSweeps; s++) {
+      const angle = (s / numSweeps) * PI;
+      const signal = [];
+      const steps = max(w, h);
+
+      for (let t = 0; t < steps; t++) {
+        const cx = w / 2 + cos(angle) * (t - steps/2);
+        const cy = h / 2 + sin(angle) * (t - steps/2);
+        const ix = clamp(floor(cx), 0, w-1);
+        const iy = clamp(floor(cy), 0, h-1);
+        signal.push(data[iy * w + ix] || 0);
+      }
+
+      const spec = this.decompose(signal);
+      for (let k = 0; k < this.numBands; k++) {
+        combinedSpectrum[k] += spec[k] / numSweeps;
+      }
+    }
+
+    this.spectrum = combinedSpectrum;
+    return combinedSpectrum;
+  }
+
+  // Store a spectrum as a known class
+  storeClass(label, spectrum) {
+    this.storedSpectra.set(label, new Float32Array(spectrum));
+  }
+
+  // Find resonance — compare input spectrum against stored classes
+  findResonance(inputSpectrum) {
+    let bestMatch = null;
+    let bestScore = -1;
+    const results = [];
+
+    for (const [label, stored] of this.storedSpectra) {
+      let dotProduct = 0, normA = 0, normB = 0;
+      for (let i = 0; i < this.numBands; i++) {
+        dotProduct += inputSpectrum[i] * stored[i];
+        normA += inputSpectrum[i] ** 2;
+        normB += stored[i] ** 2;
+      }
+      const similarity = normA > 0 && normB > 0 ? dotProduct / (sqrt(normA) * sqrt(normB)) : 0;
+      results.push({ label, score: similarity });
+      if (similarity > bestScore) {
+        bestScore = similarity;
+        bestMatch = label;
+      }
+    }
+
+    // Update resonance map for visualization
+    for (let i = 0; i < this.numBands; i++) {
+      this.resonanceMap[i] = bestScore > this.threshold ? inputSpectrum[i] * bestScore : inputSpectrum[i] * 0.3;
+    }
+
+    return { label: bestMatch, confidence: bestScore, all: results.sort((a,b) => b.score - a.score) };
+  }
+
+  update(dt) {
+    this.time += dt;
+  }
+
+  draw(ctx, w, h) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    const bandW = w / this.numBands;
+    const midY = h * 0.5;
+
+    // Draw spectrum bars
+    for (let i = 0; i < this.numBands; i++) {
+      const val = this.spectrum[i] || 0;
+      const resVal = this.resonanceMap[i] || 0;
+      const barH = val * h * 0.8;
+      const resH = resVal * h * 0.8;
+
+      // Spectrum bar
+      const hue = (i / this.numBands) * 270;
+      const wave = sin(this.time * 3 + i * 0.3) * 0.1 + 0.9;
+      ctx.fillStyle = `hsla(${hue}, 85%, 55%, 0.4)`;
+      ctx.fillRect(i * bandW + 1, midY - barH * 0.5, bandW - 2, barH);
+
+      // Resonance overlay
+      ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${resVal * wave})`;
+      ctx.fillRect(i * bandW + 2, midY - resH * 0.25, bandW - 4, resH * 0.5);
+
+      // Active wave animation
+      const waveY = sin(this.time * 4 + i * 0.5) * val * 30;
+      ctx.fillStyle = `hsla(${hue}, 90%, 80%, ${val * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(i * bandW + bandW * 0.5, midY + waveY, 2 + val * 3, 0, TAU);
+      ctx.fill();
+    }
+
+    // Draw waveform overlay
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      let y = midY;
+      for (let k = 0; k < min(this.numBands, 16); k++) {
+        y += sin(x * 0.02 * (k + 1) + this.time * 2) * (this.spectrum[k] || 0) * 20;
+      }
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════
+//  ENGINE 3: SWARM PARTICLE INTELLIGENCE
+//  Uses swarm behavior (boids-like) for
+//  collective classification. Particles
+//  cluster around attractors defined by
+//  training data patterns.
+// ═══════════════════════════════════════
+
+class SwarmIntelligenceEngine {
+  constructor() {
+    this.particles = [];
+    this.attractors = [];
+    this.cohesion = 0.6;
+    this.separation = 0.4;
+    this.count = 200;
+    this.time = 0;
+    this.bestFitness = 0;
+    this.init();
+  }
+
+  init() {
+    this.particles = [];
+    for (let i = 0; i < this.count; i++) {
+      this.particles.push({
+        x: rnd(), y: rnd(),
+        vx: rnd(-0.005, 0.005), vy: rnd(-0.005, 0.005),
+        classId: -1,
+        fitness: 0,
+        color: `hsl(${rnd(180, 220)}, 80%, 60%)`
+      });
+    }
+  }
+
+  // Add an attractor (training example)
+  addAttractor(x, y, label, signature) {
+    this.attractors.push({ x, y, label, signature, radius: 0.1, strength: 1 });
+  }
+
+  clearAttractors() {
+    this.attractors = [];
+  }
+
+  // Classify based on which attractor cluster a probe particle is pulled to
+  classify(signature) {
+    if (this.attractors.length === 0) return { label: 'Unknown', confidence: 0 };
+
+    // Find closest attractor by signature similarity
+    let bestLabel = 'Unknown';
+    let bestSim = -1;
+    const scores = {};
+
+    for (const att of this.attractors) {
+      if (!att.signature) continue;
+      let dot = 0, nA = 0, nB = 0;
+      const len = min(signature.length, att.signature.length);
+      for (let i = 0; i < len; i++) {
+        dot += signature[i] * att.signature[i];
+        nA += signature[i] ** 2;
+        nB += att.signature[i] ** 2;
+      }
+      const sim = nA > 0 && nB > 0 ? dot / (sqrt(nA) * sqrt(nB)) : 0;
+      if (!scores[att.label] || sim > scores[att.label]) scores[att.label] = sim;
+      if (sim > bestSim) { bestSim = sim; bestLabel = att.label; }
+    }
+
+    return { label: bestLabel, confidence: bestSim, scores };
+  }
+
+  update(dt) {
+    this.time += dt;
+    const coh = this.cohesion * 0.001;
+    const sep = this.separation * 0.001;
+
+    // Update particles
+    for (let i = 0; i < this.particles.length; i++) {
+      const p = this.particles[i];
+
+      // Attraction to attractors
+      for (const att of this.attractors) {
+        const d = dist(p.x, p.y, att.x, att.y);
+        if (d < att.radius && d > 0.001) {
+          const force = att.strength * 0.0005 / d;
+          p.vx += (att.x - p.x) * force;
+          p.vy += (att.y - p.y) * force;
+        }
+      }
+
+      // Cohesion & separation with nearby particles
+      let cx = 0, cy = 0, sx = 0, sy = 0, neighbors = 0;
+      for (let j = 0; j < this.particles.length; j += 3) { // sample for performance
+        if (i === j) continue;
+        const q = this.particles[j];
+        const d = dist(p.x, p.y, q.x, q.y);
+        if (d < 0.1 && d > 0) {
+          cx += q.x; cy += q.y;
+          sx += (p.x - q.x) / d;
+          sy += (p.y - q.y) / d;
+          neighbors++;
+        }
+      }
+      if (neighbors > 0) {
+        cx /= neighbors; cy /= neighbors;
+        p.vx += (cx - p.x) * coh;
+        p.vy += (cy - p.y) * coh;
+        p.vx += sx * sep;
+        p.vy += sy * sep;
+      }
+
+      // Damping
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+
+      // Limit speed
+      const speed = sqrt(p.vx**2 + p.vy**2);
+      if (speed > 0.01) { p.vx = (p.vx/speed) * 0.01; p.vy = (p.vy/speed) * 0.01; }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap
+      if (p.x < 0) p.x += 1; if (p.x > 1) p.x -= 1;
+      if (p.y < 0) p.y += 1; if (p.y > 1) p.y -= 1;
+
+      // Fitness
+      let minDist = Infinity;
+      for (const att of this.attractors) {
+        const d = dist(p.x, p.y, att.x, att.y);
+        if (d < minDist) { minDist = d; p.classId = this.attractors.indexOf(att); }
+      }
+      p.fitness = max(0, 1 - minDist * 5);
+    }
+
+    this.bestFitness = this.particles.reduce((a, p) => max(a, p.fitness), 0);
+  }
+
+  draw(ctx, w, h) {
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw attractors
+    for (const att of this.attractors) {
+      const ax = att.x * w, ay = att.y * h;
+      const pulse = sin(this.time * 3) * 0.3 + 0.7;
+
+      // Glow
+      const grad = ctx.createRadialGradient(ax, ay, 0, ax, ay, att.radius * w * pulse);
+      const hue = (this.attractors.indexOf(att) * 60 + 30) % 360;
+      grad.addColorStop(0, `hsla(${hue}, 100%, 60%, 0.15)`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fillRect(ax - att.radius * w, ay - att.radius * h, att.radius * w * 2, att.radius * h * 2);
+
+      // Center dot
+      ctx.fillStyle = `hsla(${hue}, 90%, 70%, 0.9)`;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 4, 0, TAU);
+      ctx.fill();
+
+      // Label
+      ctx.fillStyle = `hsla(${hue}, 80%, 80%, 0.7)`;
+      ctx.font = '10px sans-serif';
+      ctx.fillText(att.label, ax + 8, ay - 8);
+    }
+
+    // Draw particles
+    for (const p of this.particles) {
+      const hue = p.classId >= 0 ? (p.classId * 60 + 30) % 360 : 200;
+      const alpha = 0.3 + p.fitness * 0.7;
+      ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+      ctx.fillRect(p.x * w - 1, p.y * h - 1, 2, 2);
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  ENGINE 4: EVOLUTIONARY RULE ENGINE
+//  Genetic algorithm that evolves a
+//  population of classification rules.
+//  Each "chromosome" is a rule set.
+// ═══════════════════════════════════════
+
+class EvolutionaryRuleEngine {
+  constructor() {
+    this.popSize = 80;
+    this.mutationRate = 0.15;
+    this.generation = 0;
+    this.population = [];
+    this.bestFitness = 0;
+    this.fitnessHistory = [];
+    this.trainingData = [];
+    this.time = 0;
+    this.initPopulation();
+  }
+
+  initPopulation() {
+    this.population = [];
+    const ruleSize = 50;
+    for (let i = 0; i < this.popSize; i++) {
+      const chromosome = {
+        rules: [],
+        fitness: 0,
+        age: 0
+      };
+      for (let r = 0; r < ruleSize; r++) {
+        chromosome.rules.push({
+          threshold: rnd(-1, 1),
+          weight: rnd(-2, 2),
+          featureIdx: rndInt(0, 49),
+          operator: ['>', '<', '==', '!='][rndInt(0, 3)],
+          output: rndInt(0, 9)
+        });
+      }
+      this.population.push(chromosome);
+    }
+    this.generation = 0;
+    this.fitnessHistory = [];
+  }
+
+  // Evaluate a chromosome against a feature vector
+  evaluate(chromosome, features) {
+    const votes = {};
+    for (const rule of chromosome.rules) {
+      const fIdx = rule.featureIdx % features.length;
+      const fVal = features[fIdx];
+      let matches = false;
+      switch(rule.operator) {
+        case '>': matches = fVal > rule.threshold; break;
+        case '<': matches = fVal < rule.threshold; break;
+        case '==': matches = abs(fVal - rule.threshold) < 0.1; break;
+        case '!=': matches = abs(fVal - rule.threshold) >= 0.1; break;
+      }
+      if (matches) {
+        const out = rule.output;
+        votes[out] = (votes[out] || 0) + abs(rule.weight);
+      }
+    }
+
+    let bestLabel = 0, bestScore = 0;
+    for (const [label, score] of Object.entries(votes)) {
+      if (score > bestScore) { bestScore = score; bestLabel = parseInt(label); }
+    }
+    return { label: bestLabel, confidence: bestScore / (chromosome.rules.length + 1) };
+  }
+
+  // Set training data: [{features: [], label: number}]
+  setTrainingData(data) {
+    this.trainingData = data;
+  }
+
+  // Run one generation of evolution
+  evolveGeneration() {
+    if (this.trainingData.length === 0) return;
+
+    // Evaluate fitness
+    for (const chromo of this.population) {
+      let correct = 0;
+      for (const sample of this.trainingData) {
+        const result = this.evaluate(chromo, sample.features);
+        if (result.label === sample.label) correct++;
+      }
+      chromo.fitness = correct / this.trainingData.length;
+      chromo.age++;
+    }
+
+    // Sort by fitness
+    this.population.sort((a, b) => b.fitness - a.fitness);
+    this.bestFitness = this.population[0].fitness;
+    this.fitnessHistory.push(this.bestFitness);
+
+    // Selection: tournament
+    const newPop = [];
+    // Keep top 10% (elitism)
+    const elite = floor(this.popSize * 0.1);
+    for (let i = 0; i < elite; i++) {
+      newPop.push(JSON.parse(JSON.stringify(this.population[i])));
+    }
+
+    // Crossover + mutation for the rest
+    while (newPop.length < this.popSize) {
+      const p1 = this.population[rndInt(0, floor(this.popSize * 0.3))];
+      const p2 = this.population[rndInt(0, floor(this.popSize * 0.5))];
+      const child = { rules: [], fitness: 0, age: 0 };
+
+      for (let r = 0; r < p1.rules.length; r++) {
+        const parent = random() < 0.5 ? p1 : p2;
+        const rule = { ...parent.rules[r] };
+
+        // Mutation
+        if (random() < this.mutationRate) {
+          const mutType = rndInt(0, 3);
+          switch(mutType) {
+            case 0: rule.threshold += rnd(-0.5, 0.5); break;
+            case 1: rule.weight += rnd(-0.5, 0.5); break;
+            case 2: rule.featureIdx = rndInt(0, 49); break;
+            case 3: rule.operator = ['>', '<', '==', '!='][rndInt(0, 3)]; break;
+          }
+        }
+        child.rules.push(rule);
+      }
+      newPop.push(child);
+    }
+
+    this.population = newPop;
+    this.generation++;
+  }
+
+  update(dt) {
+    this.time += dt;
+  }
+
+  draw(ctx, w, h) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw fitness history
+    if (this.fitnessHistory.length > 1) {
+      ctx.strokeStyle = 'rgba(0, 230, 118, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const startX = 40;
+      const graphW = w - 60;
+      const graphH = h - 40;
+      const step = graphW / max(1, this.fitnessHistory.length - 1);
+
+      for (let i = 0; i < this.fitnessHistory.length; i++) {
+        const x = startX + i * step;
+        const y = 20 + graphH * (1 - this.fitnessHistory[i]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Glow
+      ctx.strokeStyle = 'rgba(0, 230, 118, 0.15)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+    }
+
+    // Draw population fitness as dots
+    const dotArea = { x: 40, y: 20, w: w - 60, h: h - 40 };
+    for (let i = 0; i < min(this.population.length, 80); i++) {
+      const chromo = this.population[i];
+      const x = dotArea.x + (i / 80) * dotArea.w;
+      const y = dotArea.y + dotArea.h * (1 - chromo.fitness);
+      const hue = chromo.fitness * 120;
+      ctx.fillStyle = `hsla(${hue}, 80%, 55%, ${0.4 + chromo.fitness * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + chromo.fitness * 3, 0, TAU);
+      ctx.fill();
+    }
+
+    // Axes labels
+    ctx.fillStyle = 'rgba(144, 164, 174, 0.5)';
+    ctx.font = '9px sans-serif';
+    ctx.fillText('FITNESS', 2, 15);
+    ctx.fillText(`GEN: ${this.generation}`, w - 60, h - 5);
+    ctx.fillText('1.0', 2, 25);
+    ctx.fillText('0.0', 2, h - 20);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = 20 + (h - 40) * (i / 4);
+      ctx.beginPath();
+      ctx.moveTo(40, y);
+      ctx.lineTo(w - 20, y);
+      ctx.stroke();
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+//  ENGINE 5: PHASE MEMORY
+//  Stores patterns as phase relationships.
+//  Recall via phase-lock matching.
+// ═══════════════════════════════════════
+
+class PhaseMemoryEngine {
+  constructor() {
+    this.memorySlots = 32;
+    this.phases = new Float32Array(this.memorySlots);
+    this.amplitudes = new Float32Array(this.memorySlots);
+    this.storedPatterns = new Map();
+    this.time = 0;
+  }
+
+  // Encode features into phase representation
+  encodeToPhases(features) {
+    const phases = new Float32Array(this.memorySlots);
+    const amps = new Float32Array(this.memorySlots);
+
+    for (let i = 0; i < this.memorySlots; i++) {
+      let phaseSum = 0;
+      let ampSum = 0;
+      const samplesPerSlot = max(1, floor(features.length / this.memorySlots));
+      for (let j = 0; j < samplesPerSlot; j++) {
+        const idx = (i * samplesPerSlot + j) % features.length;
+        phaseSum += features[idx] * TAU;
+        ampSum += abs(features[idx]);
+      }
+      phases[i] = phaseSum / samplesPerSlot;
+      amps[i] = ampSum / samplesPerSlot;
+    }
+    return { phases, amplitudes: amps };
+  }
+
+  // Store a pattern in phase memory
+  store(label, features) {
+    const encoded = this.encodeToPhases(features);
+    this.storedPatterns.set(label, encoded);
+  }
+
+  // Recall — find the stored pattern with closest phase match
+  recall(features) {
+    const input = this.encodeToPhases(features);
+    this.phases = input.phases;
+    this.amplitudes = input.amplitudes;
+
+    let bestLabel = null;
+    let bestCoherence = -1;
+
+    for (const [label, stored] of this.storedPatterns) {
+      let coherence = 0;
+      for (let i = 0; i < this.memorySlots; i++) {
+        // Phase coherence: cos of phase difference
+        const phaseDiff = input.phases[i] - stored.phases[i];
+        coherence += cos(phaseDiff) * input.amplitudes[i] * stored.amplitudes[i];
+      }
+      coherence /= this.memorySlots;
+      if (coherence > bestCoherence) {
+        bestCoherence = coherence;
+        bestLabel = label;
+      }
+    }
+
+    return { label: bestLabel, coherence: bestCoherence };
+  }
+
+  update(dt) {
+    this.time += dt;
+  }
+
+  draw(ctx, w, h) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const radius = min(w, h) * 0.38;
+
+    // Draw phase ring
+    ctx.strokeStyle = 'rgba(124, 77, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, TAU);
+    ctx.stroke();
+
+    // Draw memory slots as phase vectors
+    for (let i = 0; i < this.memorySlots; i++) {
+      const baseAngle = (i / this.memorySlots) * TAU - PI / 2;
+      const phase = this.phases[i] || 0;
+      const amp = this.amplitudes[i] || 0;
+      const len = amp * radius * 0.8;
+      const angle = baseAngle + phase * 0.1;
+
+      const x1 = cx + cos(baseAngle) * (radius - 5);
+      const y1 = cy + sin(baseAngle) * (radius - 5);
+      const x2 = cx + cos(angle) * (radius - 5 - len);
+      const y2 = cy + sin(angle) * (radius - 5 - len);
+
+      const wave = sin(this.time * 3 + i * 0.5) * 0.3 + 0.7;
+      const hue = (phase / TAU * 360 + 180) % 360;
+      ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${amp * wave * 0.8})`;
+      ctx.lineWidth = 1 + amp * 2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      // Dot at tip
+      ctx.fillStyle = `hsla(${hue}, 90%, 70%, ${amp * 0.9})`;
+      ctx.beginPath();
+      ctx.arc(x2, y2, 2, 0, TAU);
+      ctx.fill();
+    }
+
+    // Center pulse
+    const pulse = sin(this.time * 2) * 0.3 + 0.7;
+    const cGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 20 * pulse);
+    cGrad.addColorStop(0, 'rgba(124, 77, 255, 0.5)');
+    cGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = cGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20 * pulse, 0, TAU);
+    ctx.fill();
+  }
+}
+
+
+// ═══════════════════════════════════════
+//  INTEGRATED VORTEX SYSTEM
+//  Combines all five engines into a
+//  unified intelligence framework.
+// ═══════════════════════════════════════
+
+class VortexIntelligenceSystem {
+  constructor() {
+    this.flowField = new FlowFieldEngine();
+    this.harmonics = new HarmonicResonanceEngine();
+    this.swarm = new SwarmIntelligenceEngine();
+    this.evolution = new EvolutionaryRuleEngine();
+    this.phaseMemory = new PhaseMemoryEngine();
+
+    this.trained = false;
+    this.trainingClasses = [];
+
+    log2('Vortex Field Intelligence Engine initialized', 'success');
+    log2('Five-engine topology online: Flow | Harmonic | Swarm | Evolution | Phase', 'info');
+  }
+
+  // Generate synthetic training data for a dataset
+  generateDataset(type) {
+    const data = [];
+    const classes = [];
+
+    switch(type) {
+      case 'shapes':
+        classes.push('Circle', 'Square', 'Triangle', 'Cross', 'Diamond');
+        for (const cls of classes) {
+          for (let s = 0; s < 10; s++) {
+            const pattern = this.generateShapePattern(cls, 20, 20);
+            data.push({ features: pattern, label: classes.indexOf(cls), labelName: cls });
+          }
+        }
+        break;
+      case 'digits':
+        for (let d = 0; d < 10; d++) {
+          classes.push(String(d));
+          for (let s = 0; s < 8; s++) {
+            const pattern = this.generateDigitPattern(d, 20, 20);
+            data.push({ features: pattern, label: d, labelName: String(d) });
+          }
+        }
+        break;
+      case 'symbols':
+        classes.push('Plus', 'Minus', 'Multiply', 'Slash', 'Dot');
+        for (const cls of classes) {
+          for (let s = 0; s < 10; s++) {
+            const pattern = this.generateSymbolPattern(cls, 20, 20);
+            data.push({ features: pattern, label: classes.indexOf(cls), labelName: cls });
+          }
+        }
+        break;
+      case 'custom':
+        classes.push('Pattern A', 'Pattern B', 'Pattern C');
+        for (const cls of classes) {
+          for (let s = 0; s < 15; s++) {
+            const pattern = [];
+            const seed = classes.indexOf(cls) * 100 + s;
+            for (let i = 0; i < 400; i++) {
+              pattern.push(sin(seed + i * 0.1 * (classes.indexOf(cls) + 1)) * 0.5 + rnd(-0.1, 0.1) + 0.5);
+            }
+            data.push({ features: pattern, label: classes.indexOf(cls), labelName: cls });
+          }
+        }
+        break;
+    }
+
+    this.trainingClasses = classes;
+    return data;
+  }
+
+  generateShapePattern(shape, w, h) {
+    const data = new Array(w * h).fill(0);
+    const cx = w / 2 + rnd(-2, 2), cy = h / 2 + rnd(-2, 2);
+    const size = rnd(5, 8);
+    const noise = () => rnd(-0.1, 0.1);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = x - cx, dy = y - cy;
+        let val = 0;
+        switch(shape) {
+          case 'Circle':
+            val = sqrt(dx*dx + dy*dy) < size ? 0.9 + noise() : noise() * 0.1;
+            break;
+          case 'Square':
+            val = abs(dx) < size && abs(dy) < size ? 0.9 + noise() : noise() * 0.1;
+            break;
+          case 'Triangle':
+            val = dy > -size && dy < size && abs(dx) < (size - dy) * 0.5 + 1 ? 0.9 + noise() : noise() * 0.1;
+            break;
+          case 'Cross':
+            val = (abs(dx) < 2 && abs(dy) < size) || (abs(dy) < 2 && abs(dx) < size) ? 0.9 + noise() : noise() * 0.1;
+            break;
+          case 'Diamond':
+            val = abs(dx) + abs(dy) < size ? 0.9 + noise() : noise() * 0.1;
+            break;
+        }
+        data[y * w + x] = clamp(val, 0, 1);
+      }
+    }
+    return data;
+  }
+
+  generateDigitPattern(digit, w, h) {
+    const data = new Array(w * h).fill(0);
+    const cx = w / 2, cy = h / 2;
+    const noise = () => rnd(-0.08, 0.08);
+
+    // Simplified digit patterns using geometric primitives
+    const segments = {
+      0: [[0,-4,0,4,'v'],[0,-4,0,4,'h',4],[-4,0,4,0,'h'],[0,4,0,-4,'h',-4]],
+      1: [[0,-4,0,4,'v']],
+      2: [[-3,-4,3,-4,'h'],[3,-4,3,0,'v'],[3,0,-3,0,'h'],[-3,0,-3,4,'v'],[-3,4,3,4,'h']],
+      3: [[-3,-4,3,-4,'h'],[3,-4,3,0,'v'],[-1,0,3,0,'h'],[3,0,3,4,'v'],[-3,4,3,4,'h']],
+      4: [[-3,-4,-3,0,'v'],[-3,0,3,0,'h'],[3,-4,3,4,'v']],
+      5: [[3,-4,-3,-4,'h'],[-3,-4,-3,0,'v'],[-3,0,3,0,'h'],[3,0,3,4,'v'],[-3,4,3,4,'h']],
+      6: [[-3,-4,-3,4,'v'],[-3,0,3,0,'h'],[3,0,3,4,'v'],[-3,4,3,4,'h']],
+      7: [[-3,-4,3,-4,'h'],[3,-4,0,4,'v']],
+      8: [[-3,-4,3,-4,'h'],[-3,-4,-3,4,'v'],[3,-4,3,4,'v'],[-3,0,3,0,'h'],[-3,4,3,4,'h']],
+      9: [[-3,-4,3,-4,'h'],[-3,-4,-3,0,'v'],[3,-4,3,4,'v'],[-3,0,3,0,'h']]
+    };
+
+    const segs = segments[digit] || [];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = x - cx, dy = y - cy;
+        for (const seg of segs) {
+          // Approximate line segments
+          const [x1, y1, x2, y2] = seg;
+          const lx = x2 - x1, ly = y2 - y1;
+          const len = sqrt(lx*lx + ly*ly) || 1;
+          const t = clamp(((dx - x1) * lx + (dy - y1) * ly) / (len * len), 0, 1);
+          const px = x1 + t * lx, py = y1 + t * ly;
+          const d = sqrt((dx - px)**2 + (dy - py)**2);
+          if (d < 1.8) {
+            data[y * w + x] = clamp(0.9 + noise(), 0, 1);
+          }
+        }
+      }
+    }
+    return data;
+  }
+
+  generateSymbolPattern(symbol, w, h) {
+    const data = new Array(w * h).fill(0);
+    const cx = w / 2 + rnd(-1, 1), cy = h / 2 + rnd(-1, 1);
+    const noise = () => rnd(-0.08, 0.08);
+    const sz = rnd(4, 6);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = x - cx, dy = y - cy;
+        let val = 0;
+        switch(symbol) {
+          case 'Plus':
+            if ((abs(dx) < 1.5 && abs(dy) < sz) || (abs(dy) < 1.5 && abs(dx) < sz))
+              val = 0.9 + noise();
+            break;
+          case 'Minus':
+            if (abs(dy) < 1.5 && abs(dx) < sz)
+              val = 0.9 + noise();
+            break;
+          case 'Multiply':
+            if (abs(abs(dx) - abs(dy)) < 1.5 && abs(dx) < sz)
+              val = 0.9 + noise();
+            break;
+          case 'Slash':
+            if (abs(dx + dy) < 1.5 && abs(dy) < sz)
+              val = 0.9 + noise();
+            break;
+          case 'Dot':
+            if (sqrt(dx*dx + dy*dy) < 3)
+              val = 0.9 + noise();
+            break;
+        }
+        data[y * w + x] = clamp(val, 0, 1);
+      }
+    }
+    return data;
+  }
+
+  // Full training pipeline
+  async train(datasetType) {
+    log2(`Initiating training on "${datasetType}" dataset...`, 'info');
+    const dataset = this.generateDataset(datasetType);
+    log2(`Generated ${dataset.length} samples across ${this.trainingClasses.length} classes`, 'info');
+
+    // Phase 1: Encode patterns into flow field signatures
+    log2('Phase 1/5: Flow field encoding...', 'info');
+    const signatures = [];
+    for (const sample of dataset) {
+      this.flowField.encodePattern(sample.features, 20, 20);
+      const sig = this.flowField.extractSignature();
+      signatures.push({ ...sample, flowSig: sig });
+    }
+    await sleep(100);
+
+    // Phase 2: Harmonic decomposition
+    log2('Phase 2/5: Harmonic resonance decomposition...', 'info');
+    for (const sample of signatures) {
+      const spectrum = this.harmonics.encodePattern(sample.features, 20, 20);
+      sample.spectrum = new Float32Array(spectrum);
+    }
+
+    // Store class-averaged spectra
+    const classSpectra = {};
+    for (const sample of signatures) {
+      if (!classSpectra[sample.label]) classSpectra[sample.label] = { sum: new Float32Array(this.harmonics.numBands), count: 0 };
+      for (let i = 0; i < this.harmonics.numBands; i++) {
+        classSpectra[sample.label].sum[i] += sample.spectrum[i];
+      }
+      classSpectra[sample.label].count++;
+    }
+    for (const [label, data] of Object.entries(classSpectra)) {
+      const avg = new Float32Array(this.harmonics.numBands);
+      for (let i = 0; i < avg.length; i++) avg[i] = data.sum[i] / data.count;
+      this.harmonics.storeClass(this.trainingClasses[label] || label, avg);
+    }
+    await sleep(100);
+
+    // Phase 3: Swarm attractor placement
+    log2('Phase 3/5: Swarm attractor placement...', 'info');
+    this.swarm.clearAttractors();
+    for (const [label, data] of Object.entries(classSpectra)) {
+      const angle = (parseInt(label) / this.trainingClasses.length) * TAU;
+      const r = 0.25;
+      const x = 0.5 + cos(angle) * r;
+      const y = 0.5 + sin(angle) * r;
+      const avgSig = [];
+      const samplesOfClass = signatures.filter(s => s.label === parseInt(label));
+      if (samplesOfClass.length > 0) {
+        for (let i = 0; i < samplesOfClass[0].flowSig.length; i++) {
+          let sum = 0;
+          for (const s of samplesOfClass) sum += s.flowSig[i];
+          avgSig.push(sum / samplesOfClass.length);
+        }
+      }
+      this.swarm.addAttractor(x, y, this.trainingClasses[label] || label, avgSig);
+    }
+    await sleep(100);
+
+    // Phase 4: Evolutionary rule training
+    log2('Phase 4/5: Evolutionary rule engine training...', 'info');
+    const evoData = signatures.map(s => ({ features: s.flowSig.slice(0, 50), label: s.label }));
+    this.evolution.setTrainingData(evoData);
+    this.evolution.initPopulation();
+
+    const numGenerations = 50;
+    for (let g = 0; g < numGenerations; g++) {
+      this.evolution.evolveGeneration();
+      if (g % 10 === 0) {
+        log2(`  Generation ${g}: best fitness = ${(this.evolution.bestFitness * 100).toFixed(1)}%`, 'info');
+        updateMetrics();
+      }
+      await sleep(20);
+    }
+    log2(`  Final generation ${this.evolution.generation}: best fitness = ${(this.evolution.bestFitness * 100).toFixed(1)}%`, 'success');
+    await sleep(100);
+
+    // Phase 5: Phase memory storage
+    log2('Phase 5/5: Phase memory encoding...', 'info');
+    for (const [label, data] of Object.entries(classSpectra)) {
+      const samplesOfClass = signatures.filter(s => s.label === parseInt(label));
+      if (samplesOfClass.length > 0) {
+        this.phaseMemory.store(this.trainingClasses[label] || label, samplesOfClass[0].flowSig);
+      }
+    }
+
+    this.trained = true;
+    log2('All five engines trained and synchronized', 'success');
+    log2(`System ready — ${this.trainingClasses.length} classes learned: [${this.trainingClasses.join(', ')}]`, 'success');
+    updateMetrics();
+  }
+
+  // Classify an input pattern
+  classify(inputData, w, h) {
+    if (!this.trained) {
+      log2('System not trained — please train first', 'error');
+      return null;
+    }
+
+    log2('Running five-engine classification pipeline...', 'info');
+
+    // Flow field encoding
+    this.flowField.encodePattern(inputData, w, h);
+    const flowSig = this.flowField.extractSignature();
+
+    // Harmonic analysis
+    const spectrum = this.harmonics.encodePattern(inputData, w, h);
+    const harmonicResult = this.harmonics.findResonance(spectrum);
+
+    // Swarm classification
+    const swarmResult = this.swarm.classify(flowSig);
+
+    // Evolutionary rule evaluation
+    const evoResult = this.evolution.evaluate(this.evolution.population[0], flowSig.slice(0, 50));
+
+    // Phase memory recall
+    const phaseResult = this.phaseMemory.recall(flowSig);
+
+    // Ensemble: weighted voting from all engines
+    const votes = {};
+    const addVote = (label, weight) => {
+      if (label != null) votes[label] = (votes[label] || 0) + weight;
+    };
+
+    addVote(harmonicResult.label, harmonicResult.confidence * 3);
+    addVote(swarmResult.label, swarmResult.confidence * 2);
+    if (this.trainingClasses[evoResult.label]) {
+      addVote(this.trainingClasses[evoResult.label], evoResult.confidence * 2);
+    }
+    addVote(phaseResult.label, max(0, phaseResult.coherence) * 2.5);
+
+    let bestLabel = 'Unknown', bestScore = 0, totalScore = 0;
+    for (const [label, score] of Object.entries(votes)) {
+      totalScore += score;
+      if (score > bestScore) { bestScore = score; bestLabel = label; }
+    }
+    const confidence = totalScore > 0 ? bestScore / totalScore : 0;
+
+    log2(`Harmonic: ${harmonicResult.label} (${(harmonicResult.confidence*100).toFixed(1)}%)`, 'info');
+    log2(`Swarm: ${swarmResult.label} (${(swarmResult.confidence*100).toFixed(1)}%)`, 'info');
+    log2(`Evolution: ${this.trainingClasses[evoResult.label] || '?'} (${(evoResult.confidence*100).toFixed(1)}%)`, 'info');
+    log2(`Phase: ${phaseResult.label} (${(phaseResult.coherence*100).toFixed(1)}%)`, 'info');
+    log2(`ENSEMBLE RESULT: "${bestLabel}" — confidence ${(confidence*100).toFixed(1)}%`, 'success');
+
+    return { label: bestLabel, confidence, harmonicResult, swarmResult, evoResult, phaseResult };
+  }
+}
+
+
+// ═══════════════════════════════════════
+//  INITIALIZATION & ANIMATION
+// ═══════════════════════════════════════
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Initialize system
+const VIS = new VortexIntelligenceSystem();
+
+// Setup canvases
+const flowVis = setupCanvas('flowCanvas');
+const harmonicVis = setupCanvas('harmonicCanvas');
+const swarmVis = setupCanvas('swarmCanvas');
+const evolveVis = setupCanvas('evolveCanvas');
+const phaseCanvas = document.getElementById('phaseCanvas');
+const phaseCtx = phaseCanvas.getContext('2d');
+
+// Ambient background
+const ambientCanvas = document.getElementById('ambientCanvas');
+const ambientCtx = ambientCanvas.getContext('2d');
+ambientCanvas.width = window.innerWidth;
+ambientCanvas.height = window.innerHeight;
+
+// Drawing canvas
+const drawCanvas = document.getElementById('drawCanvas');
+const drawCtx = drawCanvas.getContext('2d');
+let isDrawing = false;
+drawCtx.fillStyle = '#000';
+drawCtx.fillRect(0, 0, 200, 200);
+
+drawCanvas.addEventListener('mousedown', (e) => { isDrawing = true; drawStroke(e); });
+drawCanvas.addEventListener('mousemove', (e) => { if (isDrawing) drawStroke(e); });
+drawCanvas.addEventListener('mouseup', () => isDrawing = false);
+drawCanvas.addEventListener('mouseleave', () => isDrawing = false);
+
+// Touch support
+drawCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; drawStrokeTouch(e); });
+drawCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (isDrawing) drawStrokeTouch(e); });
+drawCanvas.addEventListener('touchend', () => isDrawing = false);
+
+function drawStroke(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  drawCtx.fillStyle = '#00e5ff';
+  drawCtx.beginPath();
+  drawCtx.arc(x, y, 8, 0, TAU);
+  drawCtx.fill();
+}
+
+function drawStrokeTouch(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  drawCtx.fillStyle = '#00e5ff';
+  drawCtx.beginPath();
+  drawCtx.arc(x, y, 8, 0, TAU);
+  drawCtx.fill();
+}
+
+function clearDraw() {
+  drawCtx.fillStyle = '#000';
+  drawCtx.fillRect(0, 0, 200, 200);
+  document.getElementById('classResult').style.display = 'none';
+}
+
+// Get drawn image as feature array
+function getDrawnFeatures() {
+  const imgData = drawCtx.getImageData(0, 0, 200, 200);
+  const downW = 20, downH = 20;
+  const features = [];
+  const cellW = 200 / downW, cellH = 200 / downH;
+
+  for (let y = 0; y < downH; y++) {
+    for (let x = 0; x < downW; x++) {
+      let sum = 0, count = 0;
+      for (let dy = 0; dy < cellH; dy++) {
+        for (let dx = 0; dx < cellW; dx++) {
+          const px = floor(x * cellW + dx);
+          const py = floor(y * cellH + dy);
+          const idx = (py * 200 + px) * 4;
+          sum += (imgData.data[idx] + imgData.data[idx+1] + imgData.data[idx+2]) / (3 * 255);
+          count++;
+        }
+      }
+      features.push(sum / count);
+    }
+  }
+  return features;
+}
+
+// Controls
+function resetFlowField() {
+  VIS.flowField.reset();
+  log2('Flow field reset', 'warn');
+}
+
+function resetEvolution() {
+  VIS.evolution.initPopulation();
+  log2('Evolution reset — new population spawned', 'warn');
+}
+
+function resetAll() {
+  VIS.flowField.reset();
+  VIS.swarm.init();
+  VIS.swarm.clearAttractors();
+  VIS.evolution.initPopulation();
+  VIS.harmonics.storedSpectra.clear();
+  VIS.phaseMemory.storedPatterns.clear();
+  VIS.trained = false;
+  VIS.trainingClasses = [];
+  clearDraw();
+  log2('Full system reset', 'warn');
+  updateMetrics();
+}
+
+async function startTraining() {
+  const dataset = document.getElementById('datasetSelect').value;
+  await VIS.train(dataset);
+}
+
+function runInference() {
+  const features = getDrawnFeatures();
+  const hasContent = features.some(v => v > 0.05);
+  if (!hasContent) {
+    log2('Draw a pattern first before classifying', 'warn');
+    return;
+  }
+
+  const result = VIS.classify(features, 20, 20);
+  if (result) {
+    const resultDiv = document.getElementById('classResult');
+    resultDiv.style.display = 'block';
+    document.getElementById('classLabel').textContent = result.label;
+    document.getElementById('classConf').textContent =
+      `Confidence: ${(result.confidence * 100).toFixed(1)}% — via 5-engine ensemble voting`;
+  }
+  updateMetrics();
+}
+
+function updateMetrics() {
+  document.getElementById('metricAccuracy').textContent = `${(VIS.evolution.bestFitness * 100).toFixed(1)}%`;
+  document.getElementById('metricGeneration').textContent = VIS.evolution.generation;
+  const convergence = VIS.evolution.fitnessHistory.length > 1
+    ? abs(VIS.evolution.fitnessHistory[VIS.evolution.fitnessHistory.length-1] -
+          VIS.evolution.fitnessHistory[max(0, VIS.evolution.fitnessHistory.length-2)])
+    : 0;
+  document.getElementById('metricConvergence').textContent = convergence.toFixed(4);
+
+  // Field entropy: measure flow field disorder
+  let entropy = 0;
+  for (const cell of VIS.flowField.field) {
+    const p = cell.magnitude;
+    if (p > 0) entropy -= p * log(p);
+  }
+  document.getElementById('metricEntropy').textContent = (entropy / VIS.flowField.field.length).toFixed(3);
+
+  // Resonance peak
+  const maxRes = VIS.harmonics.spectrum.reduce((a, v) => max(a, v), 0);
+  document.getElementById('metricResonance').textContent = maxRes.toFixed(3);
+
+  // Swarm fitness
+  document.getElementById('metricSwarmFit').textContent = VIS.swarm.bestFitness.toFixed(3);
+}
+
+// Bind sliders
+document.getElementById('viscosity').addEventListener('input', e => VIS.flowField.viscosity = e.target.value / 100);
+document.getElementById('turbulence').addEventListener('input', e => VIS.flowField.turbulence = e.target.value / 100);
+document.getElementById('freqBands').addEventListener('input', e => VIS.harmonics.numBands = parseInt(e.target.value));
+document.getElementById('resThreshold').addEventListener('input', e => VIS.harmonics.threshold = e.target.value / 100);
+document.getElementById('swarmCount').addEventListener('input', e => { VIS.swarm.count = parseInt(e.target.value); VIS.swarm.init(); });
+document.getElementById('cohesion').addEventListener('input', e => VIS.swarm.cohesion = e.target.value / 100);
+document.getElementById('separation').addEventListener('input', e => VIS.swarm.separation = e.target.value / 100);
+document.getElementById('mutRate').addEventListener('input', e => VIS.evolution.mutationRate = e.target.value / 100);
+document.getElementById('popSize').addEventListener('input', e => { VIS.evolution.popSize = parseInt(e.target.value); });
+
+// ── Main Animation Loop ──
+let lastTime = performance.now();
+
+function animate(now) {
+  const dt = min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  // Update engines
+  VIS.flowField.update(dt);
+  VIS.harmonics.update(dt);
+  VIS.swarm.update(dt);
+  VIS.evolution.update(dt);
+  VIS.phaseMemory.update(dt);
+
+  // Draw engines
+  VIS.flowField.draw(flowVis.ctx, flowVis.w(), flowVis.h());
+  VIS.harmonics.draw(harmonicVis.ctx, harmonicVis.w(), harmonicVis.h());
+  VIS.swarm.draw(swarmVis.ctx, swarmVis.w(), swarmVis.h());
+  VIS.evolution.draw(evolveVis.ctx, evolveVis.w(), evolveVis.h());
+  VIS.phaseMemory.draw(phaseCtx, 200, 200);
+
+  // Ambient background
+  drawAmbient(dt);
+
+  requestAnimationFrame(animate);
+}
+
+function drawAmbient(dt) {
+  ambientCtx.fillStyle = 'rgba(6, 8, 13, 0.03)';
+  ambientCtx.fillRect(0, 0, ambientCanvas.width, ambientCanvas.height);
+
+  const t = performance.now() / 1000;
+  for (let i = 0; i < 3; i++) {
+    const x = ambientCanvas.width * (0.3 + i * 0.2) + sin(t * 0.3 + i) * 100;
+    const y = ambientCanvas.height * 0.5 + cos(t * 0.2 + i * 2) * 200;
+    const r = 200 + sin(t * 0.5 + i) * 100;
+    const grad = ambientCtx.createRadialGradient(x, y, 0, x, y, r);
+    const hue = [190, 270, 30][i];
+    grad.addColorStop(0, `hsla(${hue}, 80%, 40%, 0.015)`);
+    grad.addColorStop(1, 'transparent');
+    ambientCtx.fillStyle = grad;
+    ambientCtx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+}
+
+// Handle resize
+window.addEventListener('resize', () => {
+  flowVis.resize();
+  harmonicVis.resize();
+  swarmVis.resize();
+  evolveVis.resize();
+  ambientCanvas.width = window.innerWidth;
+  ambientCanvas.height = window.innerHeight;
+});
+
+// Start
+requestAnimationFrame(animate);
+log2('System boot complete — all visualizations active', 'success');
+log2('Select a dataset and click "Train System" to begin learning', 'info');
+
+</script>
+</body>
+</html>

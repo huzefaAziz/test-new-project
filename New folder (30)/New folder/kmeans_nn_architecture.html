@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Means Neural Network Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        input[type="number"], select {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: auto;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .canvas-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .canvas-wrapper {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .canvas-wrapper h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.3em;
+        }
+
+        canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .info-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .info-panel h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid #333;
+        }
+
+        @media (max-width: 1024px) {
+            .canvas-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .description {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .description h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .description p {
+            line-height: 1.6;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 K-Means Neural Network Architecture</h1>
+        
+        <div class="description">
+            <h3>About This Architecture</h3>
+            <p>
+                This visualization demonstrates a K-Means clustering neural network, an unsupervised learning algorithm 
+                that partitions data into K distinct clusters. The network architecture shows how input features flow through 
+                distance calculation layers to centroid nodes, ultimately assigning each data point to the nearest cluster center. 
+                Watch as the algorithm iteratively updates cluster centers to minimize intra-cluster variance.
+            </p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="numClusters">Number of Clusters (K):</label>
+                <input type="number" id="numClusters" min="2" max="8" value="3">
+            </div>
+            <div class="control-group">
+                <label for="numPoints">Number of Data Points:</label>
+                <input type="number" id="numPoints" min="20" max="200" value="100">
+            </div>
+            <div class="control-group">
+                <label for="learningSpeed">Animation Speed:</label>
+                <select id="learningSpeed">
+                    <option value="2000">Slow</option>
+                    <option value="1000" selected>Medium</option>
+                    <option value="500">Fast</option>
+                </select>
+            </div>
+            <button onclick="initializeKMeans()">Initialize New Data</button>
+            <button onclick="runKMeansStep()">Single Step</button>
+            <button onclick="toggleAutoRun(event)">Auto Run</button>
+            <button onclick="resetKMeans()">Reset</button>
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <h2>Data Space & Clustering</h2>
+                <canvas id="dataCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <h2>Neural Network Architecture</h2>
+                <canvas id="networkCanvas" width="600" height="600"></canvas>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h2>Clustering Statistics</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Iteration</div>
+                    <div class="stat-value" id="iteration">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Inertia (SSE)</div>
+                    <div class="stat-value" id="inertia">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Convergence</div>
+                    <div class="stat-value" id="convergence">Not Started</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active Clusters</div>
+                    <div class="stat-value" id="activeClusters">0</div>
+                </div>
+            </div>
+            <div class="legend" id="legend"></div>
+        </div>
+    </div>
+
+    <script>
+        const dataCanvas = document.getElementById('dataCanvas');
+        const networkCanvas = document.getElementById('networkCanvas');
+        const dataCtx = dataCanvas.getContext('2d');
+        const networkCtx = networkCanvas.getContext('2d');
+
+        let dataPoints = [];
+        let centroids = [];
+        let clusters = [];
+        let iteration = 0;
+        let converged = false;
+        let autoRunning = false;
+        let autoRunInterval = null;
+
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+            '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'
+        ];
+
+        class DataPoint {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.cluster = -1;
+            }
+        }
+
+        class Centroid {
+            constructor(x, y, index) {
+                this.x = x;
+                this.y = y;
+                this.index = index;
+                this.prevX = x;
+                this.prevY = y;
+            }
+        }
+
+        function initializeKMeans() {
+            const numClusters = parseInt(document.getElementById('numClusters').value);
+            const numPoints = parseInt(document.getElementById('numPoints').value);
+
+            dataPoints = [];
+            centroids = [];
+            clusters = Array(numClusters).fill(0).map(() => []);
+            iteration = 0;
+            converged = false;
+
+            // Generate random data points with some clustering tendency
+            for (let i = 0; i < numPoints; i++) {
+                const clusterCenter = Math.floor(Math.random() * 3);
+                const baseX = (clusterCenter % 2) * 300 + 150;
+                const baseY = Math.floor(clusterCenter / 2) * 300 + 150;
+                const x = baseX + (Math.random() - 0.5) * 150;
+                const y = baseY + (Math.random() - 0.5) * 150;
+                dataPoints.push(new DataPoint(
+                    Math.max(20, Math.min(580, x)),
+                    Math.max(20, Math.min(580, y))
+                ));
+            }
+
+            // Initialize centroids randomly
+            for (let i = 0; i < numClusters; i++) {
+                centroids.push(new Centroid(
+                    Math.random() * 560 + 20,
+                    Math.random() * 560 + 20,
+                    i
+                ));
+            }
+
+            updateDisplay();
+            updateLegend();
+        }
+
+        function assignClusters() {
+            clusters = Array(centroids.length).fill(0).map(() => []);
+            
+            dataPoints.forEach(point => {
+                let minDist = Infinity;
+                let closestCentroid = 0;
+
+                centroids.forEach((centroid, idx) => {
+                    const dist = Math.sqrt(
+                        Math.pow(point.x - centroid.x, 2) + 
+                        Math.pow(point.y - centroid.y, 2)
+                    );
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestCentroid = idx;
+                    }
+                });
+
+                point.cluster = closestCentroid;
+                clusters[closestCentroid].push(point);
+            });
+        }
+
+        function updateCentroids() {
+            let moved = false;
+            
+            centroids.forEach((centroid, idx) => {
+                centroid.prevX = centroid.x;
+                centroid.prevY = centroid.y;
+
+                if (clusters[idx].length > 0) {
+                    const sumX = clusters[idx].reduce((sum, p) => sum + p.x, 0);
+                    const sumY = clusters[idx].reduce((sum, p) => sum + p.y, 0);
+                    const newX = sumX / clusters[idx].length;
+                    const newY = sumY / clusters[idx].length;
+
+                    const movement = Math.sqrt(
+                        Math.pow(newX - centroid.x, 2) + 
+                        Math.pow(newY - centroid.y, 2)
+                    );
+
+                    if (movement > 0.1) {
+                        moved = true;
+                    }
+
+                    centroid.x = newX;
+                    centroid.y = newY;
+                }
+            });
+
+            return moved;
+        }
+
+        function calculateInertia() {
+            let inertia = 0;
+            dataPoints.forEach(point => {
+                const centroid = centroids[point.cluster];
+                if (centroid) {
+                    inertia += Math.pow(point.x - centroid.x, 2) + 
+                               Math.pow(point.y - centroid.y, 2);
+                }
+            });
+            return inertia;
+        }
+
+        function runKMeansStep() {
+            if (converged) return;
+
+            assignClusters();
+            const moved = updateCentroids();
+            iteration++;
+
+            if (!moved) {
+                converged = true;
+            }
+
+            updateDisplay();
+            updateStats();
+        }
+
+        function toggleAutoRun(event) {
+            autoRunning = !autoRunning;
+            const button = event ? event.target : document.querySelector('button:nth-of-type(3)');
+            
+            if (autoRunning) {
+                button.textContent = 'Stop';
+                button.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                const speed = parseInt(document.getElementById('learningSpeed').value);
+                autoRunInterval = setInterval(() => {
+                    if (!converged) {
+                        runKMeansStep();
+                    } else {
+                        const stopEvent = { target: button };
+                        toggleAutoRun(stopEvent);
+                    }
+                }, speed);
+            } else {
+                button.textContent = 'Auto Run';
+                button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                if (autoRunInterval) {
+                    clearInterval(autoRunInterval);
+                    autoRunInterval = null;
+                }
+            }
+        }
+
+        function resetKMeans() {
+            iteration = 0;
+            converged = false;
+            if (autoRunning) toggleAutoRun();
+            
+            // Re-initialize centroids
+            centroids.forEach(centroid => {
+                centroid.x = Math.random() * 560 + 20;
+                centroid.y = Math.random() * 560 + 20;
+            });
+
+            updateDisplay();
+            updateStats();
+        }
+
+        function drawDataSpace() {
+            dataCtx.clearRect(0, 0, dataCanvas.width, dataCanvas.height);
+
+            // Draw Voronoi-like regions (optional, for visual clarity)
+            dataPoints.forEach(point => {
+                dataCtx.fillStyle = colors[point.cluster] + '40';
+                dataCtx.fillRect(point.x - 3, point.y - 3, 6, 6);
+            });
+
+            // Draw connections from points to centroids
+            dataPoints.forEach(point => {
+                if (point.cluster >= 0) {
+                    const centroid = centroids[point.cluster];
+                    dataCtx.strokeStyle = colors[point.cluster] + '20';
+                    dataCtx.lineWidth = 1;
+                    dataCtx.beginPath();
+                    dataCtx.moveTo(point.x, point.y);
+                    dataCtx.lineTo(centroid.x, centroid.y);
+                    dataCtx.stroke();
+                }
+            });
+
+            // Draw data points
+            dataPoints.forEach(point => {
+                dataCtx.fillStyle = point.cluster >= 0 ? colors[point.cluster] : '#999';
+                dataCtx.beginPath();
+                dataCtx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+                dataCtx.fill();
+                dataCtx.strokeStyle = '#333';
+                dataCtx.lineWidth = 1;
+                dataCtx.stroke();
+            });
+
+            // Draw centroids
+            centroids.forEach((centroid, idx) => {
+                // Draw centroid with larger marker
+                dataCtx.fillStyle = colors[idx];
+                dataCtx.strokeStyle = '#333';
+                dataCtx.lineWidth = 3;
+                dataCtx.beginPath();
+                dataCtx.arc(centroid.x, centroid.y, 12, 0, Math.PI * 2);
+                dataCtx.fill();
+                dataCtx.stroke();
+
+                // Draw inner circle
+                dataCtx.fillStyle = 'white';
+                dataCtx.beginPath();
+                dataCtx.arc(centroid.x, centroid.y, 5, 0, Math.PI * 2);
+                dataCtx.fill();
+
+                // Draw label
+                dataCtx.fillStyle = '#333';
+                dataCtx.font = 'bold 12px Arial';
+                dataCtx.textAlign = 'center';
+                dataCtx.fillText(`C${idx + 1}`, centroid.x, centroid.y - 20);
+            });
+        }
+
+        function drawNetworkArchitecture() {
+            networkCtx.clearRect(0, 0, networkCanvas.width, networkCanvas.height);
+
+            const layerSpacing = 150;
+            const nodeRadius = 15;
+            
+            // Layer positions
+            const inputX = 100;
+            const distanceX = 250;
+            const centroidX = 400;
+            const outputX = 550;
+
+            // Draw input layer (2 nodes for 2D coordinates)
+            const inputNodes = [
+                { x: inputX, y: 250, label: 'X' },
+                { x: inputX, y: 350, label: 'Y' }
+            ];
+
+            // Draw distance calculation layer
+            const distanceNodes = centroids.map((_, idx) => ({
+                x: distanceX,
+                y: 200 + idx * 60,
+                label: `D${idx + 1}`
+            }));
+
+            // Draw centroid layer
+            const centroidNodes = centroids.map((_, idx) => ({
+                x: centroidX,
+                y: 200 + idx * 60,
+                label: `C${idx + 1}`
+            }));
+
+            // Draw output layer (argmin)
+            const outputNode = { x: outputX, y: 300, label: 'Cluster' };
+
+            // Draw connections from input to distance layer
+            inputNodes.forEach(input => {
+                distanceNodes.forEach(dist => {
+                    networkCtx.strokeStyle = '#ccc';
+                    networkCtx.lineWidth = 1;
+                    networkCtx.beginPath();
+                    networkCtx.moveTo(input.x + nodeRadius, input.y);
+                    networkCtx.lineTo(dist.x - nodeRadius, dist.y);
+                    networkCtx.stroke();
+                });
+            });
+
+            // Draw connections from distance to centroid layer
+            distanceNodes.forEach((dist, idx) => {
+                const centroid = centroidNodes[idx];
+                networkCtx.strokeStyle = colors[idx];
+                networkCtx.lineWidth = 2;
+                networkCtx.beginPath();
+                networkCtx.moveTo(dist.x + nodeRadius, dist.y);
+                networkCtx.lineTo(centroid.x - nodeRadius, centroid.y);
+                networkCtx.stroke();
+            });
+
+            // Draw connections from centroids to output
+            centroidNodes.forEach((centroid, idx) => {
+                const clusterSize = clusters[idx] ? clusters[idx].length : 0;
+                networkCtx.strokeStyle = colors[idx];
+                networkCtx.lineWidth = Math.max(1, clusterSize / 10);
+                networkCtx.globalAlpha = 0.6;
+                networkCtx.beginPath();
+                networkCtx.moveTo(centroid.x + nodeRadius, centroid.y);
+                networkCtx.lineTo(outputNode.x - nodeRadius, outputNode.y);
+                networkCtx.stroke();
+                networkCtx.globalAlpha = 1;
+            });
+
+            // Draw input nodes
+            inputNodes.forEach(node => {
+                networkCtx.fillStyle = '#667eea';
+                networkCtx.beginPath();
+                networkCtx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+                networkCtx.fill();
+                networkCtx.strokeStyle = '#333';
+                networkCtx.lineWidth = 2;
+                networkCtx.stroke();
+                
+                networkCtx.fillStyle = 'white';
+                networkCtx.font = 'bold 14px Arial';
+                networkCtx.textAlign = 'center';
+                networkCtx.textBaseline = 'middle';
+                networkCtx.fillText(node.label, node.x, node.y);
+            });
+
+            // Draw distance nodes
+            distanceNodes.forEach(node => {
+                networkCtx.fillStyle = '#764ba2';
+                networkCtx.beginPath();
+                networkCtx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+                networkCtx.fill();
+                networkCtx.strokeStyle = '#333';
+                networkCtx.lineWidth = 2;
+                networkCtx.stroke();
+                
+                networkCtx.fillStyle = 'white';
+                networkCtx.font = 'bold 11px Arial';
+                networkCtx.textAlign = 'center';
+                networkCtx.textBaseline = 'middle';
+                networkCtx.fillText(node.label, node.x, node.y);
+            });
+
+            // Draw centroid nodes
+            centroidNodes.forEach((node, idx) => {
+                networkCtx.fillStyle = colors[idx];
+                networkCtx.beginPath();
+                networkCtx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+                networkCtx.fill();
+                networkCtx.strokeStyle = '#333';
+                networkCtx.lineWidth = 2;
+                networkCtx.stroke();
+                
+                networkCtx.fillStyle = 'white';
+                networkCtx.font = 'bold 11px Arial';
+                networkCtx.textAlign = 'center';
+                networkCtx.textBaseline = 'middle';
+                networkCtx.fillText(node.label, node.x, node.y);
+
+                // Show cluster size
+                networkCtx.fillStyle = '#333';
+                networkCtx.font = '10px Arial';
+                networkCtx.fillText(`(${clusters[idx] ? clusters[idx].length : 0})`, node.x, node.y + 25);
+            });
+
+            // Draw output node
+            networkCtx.fillStyle = '#27ae60';
+            networkCtx.beginPath();
+            networkCtx.arc(outputNode.x, outputNode.y, nodeRadius * 1.2, 0, Math.PI * 2);
+            networkCtx.fill();
+            networkCtx.strokeStyle = '#333';
+            networkCtx.lineWidth = 2;
+            networkCtx.stroke();
+            
+            networkCtx.fillStyle = 'white';
+            networkCtx.font = 'bold 11px Arial';
+            networkCtx.textAlign = 'center';
+            networkCtx.textBaseline = 'middle';
+            networkCtx.fillText('OUT', outputNode.x, outputNode.y);
+
+            // Draw layer labels
+            networkCtx.fillStyle = '#333';
+            networkCtx.font = 'bold 14px Arial';
+            networkCtx.textAlign = 'center';
+            networkCtx.fillText('Input', inputX, 150);
+            networkCtx.fillText('Distance', distanceX, 150);
+            networkCtx.fillText('Centroids', centroidX, 150);
+            networkCtx.fillText('Assignment', outputX, 150);
+
+            // Draw formulas
+            networkCtx.font = '11px Arial';
+            networkCtx.fillStyle = '#666';
+            networkCtx.fillText('√[(x-cx)²+(y-cy)²]', distanceX, 520);
+            networkCtx.fillText('argmin(distances)', outputX, 520);
+        }
+
+        function updateDisplay() {
+            drawDataSpace();
+            drawNetworkArchitecture();
+        }
+
+        function updateStats() {
+            document.getElementById('iteration').textContent = iteration;
+            document.getElementById('inertia').textContent = calculateInertia().toFixed(2);
+            document.getElementById('convergence').textContent = converged ? 'Converged ✓' : 'Running...';
+            document.getElementById('activeClusters').textContent = 
+                clusters.filter(c => c.length > 0).length + '/' + centroids.length;
+        }
+
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '<strong>Cluster Colors:</strong>';
+            
+            centroids.forEach((_, idx) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background-color: ${colors[idx]}"></div>
+                    <span>Cluster ${idx + 1}</span>
+                `;
+                legend.appendChild(item);
+            });
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initializeKMeans();
+        };
+    </script>
+</body>
+</html>

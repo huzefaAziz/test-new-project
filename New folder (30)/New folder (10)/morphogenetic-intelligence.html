@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morphogenetic Intelligence Engine</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg-deep: #030a0f;
+    --bg-panel: #081018;
+    --bg-card: #0c1a25;
+    --border: #0f3a4a;
+    --accent-1: #00e5a0;
+    --accent-2: #00b4d8;
+    --accent-3: #9b5de5;
+    --accent-4: #f72585;
+    --text: #c8e6f0;
+    --text-dim: #5a8a9a;
+    --text-bright: #eafaff;
+    --glow-green: rgba(0,229,160,0.3);
+    --glow-blue: rgba(0,180,216,0.3);
+    --glow-purple: rgba(155,93,229,0.3);
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* === HEADER === */
+  .header {
+    background: linear-gradient(135deg, #040e15 0%, #0a1f2e 50%, #0d1520 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-4));
+    animation: headerGlow 4s linear infinite;
+  }
+  @keyframes headerGlow {
+    0%,100%{ filter: brightness(1); }
+    50%{ filter: brightness(1.5); }
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo-icon {
+    width: 48px; height: 48px;
+    position: relative;
+  }
+  .logo-icon canvas { width: 48px; height: 48px; }
+  .logo-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: uppercase;
+  }
+  .logo-subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-1);
+    box-shadow: 0 0 8px var(--accent-1);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:0.5; transform:scale(0.8); }
+  }
+
+  /* === MAIN LAYOUT === */
+  .main-container {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    grid-template-rows: 1fr auto;
+    gap: 0;
+    height: calc(100vh - 80px);
+  }
+
+  /* === PANELS === */
+  .panel {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+  .panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,180,216,0.2);
+  }
+
+  .control-group {
+    margin-bottom: 18px;
+  }
+  .control-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .control-value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-1);
+    float: right;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--bg-card);
+    border-radius: 2px;
+    outline: none;
+    margin-top: 4px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--glow-blue);
+  }
+
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    margin-top: 4px;
+  }
+  select:focus, input[type="number"]:focus {
+    border-color: var(--accent-2);
+    box-shadow: 0 0 8px var(--glow-blue);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1px solid;
+    border-radius: 6px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, rgba(0,229,160,0.15), rgba(0,180,216,0.15));
+    border-color: var(--accent-1);
+    color: var(--accent-1);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, rgba(0,229,160,0.3), rgba(0,180,216,0.3));
+    box-shadow: 0 0 20px var(--glow-green);
+  }
+  .btn-secondary {
+    background: rgba(155,93,229,0.1);
+    border-color: var(--accent-3);
+    color: var(--accent-3);
+  }
+  .btn-secondary:hover {
+    background: rgba(155,93,229,0.25);
+    box-shadow: 0 0 20px var(--glow-purple);
+  }
+  .btn-danger {
+    background: rgba(247,37,133,0.1);
+    border-color: var(--accent-4);
+    color: var(--accent-4);
+  }
+  .btn-danger:hover { background: rgba(247,37,133,0.25); }
+  .btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* === CENTER CANVAS AREA === */
+  .center-area {
+    background: var(--bg-deep);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    position: relative;
+  }
+  .viz-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .viz-tab {
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Rajdhani', sans-serif;
+  }
+  .viz-tab.active {
+    color: var(--accent-1);
+    border-color: var(--accent-1);
+    background: rgba(0,229,160,0.08);
+  }
+
+  .canvas-container {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.3);
+  }
+  .canvas-container canvas {
+    display: block;
+    cursor: crosshair;
+  }
+  .canvas-overlay {
+    position: absolute;
+    top: 8px; left: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-1);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* === INFO CARDS === */
+  .info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .info-card-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent-2);
+    margin-bottom: 8px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .info-row .label { color: var(--text-dim); }
+  .info-row .value { color: var(--text-bright); }
+
+  .metric-bar {
+    height: 6px;
+    background: var(--bg-deep);
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .metric-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  /* === LOG AREA === */
+  .log-area {
+    grid-column: 1 / -1;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    padding: 8px 16px;
+    max-height: 120px;
+    overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+  }
+  .log-entry {
+    padding: 2px 0;
+    color: var(--text-dim);
+  }
+  .log-entry .timestamp { color: var(--accent-2); margin-right: 10px; }
+  .log-entry.success .msg { color: var(--accent-1); }
+  .log-entry.error .msg { color: var(--accent-4); }
+  .log-entry.info .msg { color: var(--accent-2); }
+  .log-entry.warn .msg { color: #f0a030; }
+
+  /* === DRAWING PAD === */
+  .draw-pad-container {
+    margin-top: 10px;
+  }
+  .draw-pad {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: crosshair;
+    image-rendering: pixelated;
+  }
+
+  /* === MORPHOGEN CLASS LIST === */
+  .class-list { list-style: none; }
+  .class-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 13px;
+  }
+  .class-item:hover { background: rgba(0,180,216,0.1); }
+  .class-item.active { border: 1px solid var(--accent-2); background: rgba(0,180,216,0.08); }
+  .class-swatch {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .class-count {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* === RESULTS PANEL === */
+  .result-bar {
+    margin-bottom: 8px;
+  }
+  .result-bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
+  .result-bar-name { color: var(--text); }
+  .result-bar-pct {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent-1);
+  }
+  .result-bar-track {
+    height: 8px;
+    background: var(--bg-deep);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .result-bar-value {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+
+  /* === CONCEPT DIAGRAM === */
+  .concept-section {
+    margin-top: 12px;
+    padding: 10px;
+    background: rgba(0,229,160,0.03);
+    border: 1px solid rgba(0,229,160,0.1);
+    border-radius: 6px;
+  }
+  .concept-section h4 {
+    font-size: 11px;
+    color: var(--accent-1);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .concept-section p {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-2); }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 1100px) {
+    .main-container { grid-template-columns: 240px 1fr 260px; }
+  }
+
+  .separator {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  .training-samples-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .training-sample {
+    aspect-ratio: 1;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    image-rendering: pixelated;
+  }
+
+  .epoch-counter {
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 28px;
+    color: var(--accent-1);
+    text-shadow: 0 0 20px var(--glow-green);
+    margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="header">
+  <div class="logo-area">
+    <div class="logo-icon"><canvas id="logoCanvas" width="96" height="96"></canvas></div>
+    <div>
+      <div class="logo-title">Morphogenetic Intelligence Engine</div>
+      <div class="logo-subtitle">Reaction-Diffusion Computation &bull; Non-Neural AI</div>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-indicator"><div class="status-dot" id="statusDot"></div><span id="statusText">IDLE</span></div>
+  </div>
+</div>
+
+<!-- ============ MAIN ============ -->
+<div class="main-container">
+
+  <!-- LEFT PANEL -->
+  <div class="panel" id="leftPanel">
+    <div class="panel-title">Morphogen Controls</div>
+
+    <div class="control-group">
+      <div class="control-label">Diffusion Rate A <span class="control-value" id="valDa">1.00</span></div>
+      <input type="range" id="sliderDa" min="0.1" max="2.0" step="0.01" value="1.00">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Diffusion Rate B <span class="control-value" id="valDb">0.50</span></div>
+      <input type="range" id="sliderDb" min="0.05" max="1.5" step="0.01" value="0.50">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Feed Rate (F) <span class="control-value" id="valF">0.055</span></div>
+      <input type="range" id="sliderF" min="0.01" max="0.10" step="0.001" value="0.055">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Kill Rate (k) <span class="control-value" id="valK">0.062</span></div>
+      <input type="range" id="sliderK" min="0.03" max="0.07" step="0.001" value="0.062">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Reaction Intensity <span class="control-value" id="valReact">1.00</span></div>
+      <input type="range" id="sliderReact" min="0.1" max="3.0" step="0.05" value="1.00">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Stigmergic Decay <span class="control-value" id="valDecay">0.99</span></div>
+      <input type="range" id="sliderDecay" min="0.90" max="1.00" step="0.001" value="0.990">
+    </div>
+
+    <div class="separator"></div>
+    <div class="panel-title">Field Size</div>
+    <div class="control-group">
+      <select id="fieldSize">
+        <option value="64">64 x 64</option>
+        <option value="96" selected>96 x 96</option>
+        <option value="128">128 x 128</option>
+      </select>
+    </div>
+
+    <div class="separator"></div>
+    <div class="panel-title">Morphogen Classes</div>
+    <ul class="class-list" id="classList"></ul>
+    <div style="margin-top:8px; display:flex; gap:6px;">
+      <input type="text" id="newClassName" placeholder="Class name..." style="flex:1; background:var(--bg-card); border:1px solid var(--border); color:var(--text); padding:6px 8px; border-radius:4px; font-size:12px; font-family:'Share Tech Mono',monospace; outline:none;">
+      <button class="btn btn-primary" style="width:auto; padding:6px 12px; margin:0;" onclick="addClass()">+</button>
+    </div>
+
+    <div class="separator"></div>
+    <div class="panel-title">Actions</div>
+    <button class="btn btn-primary" id="btnTrain" onclick="startTraining()">Train Morphogenesis</button>
+    <button class="btn btn-secondary" id="btnClassify" onclick="classifyDrawing()">Classify Input</button>
+    <button class="btn btn-secondary" onclick="runDemo()">Load Demo Data</button>
+    <button class="btn btn-danger" onclick="resetEngine()">Reset Engine</button>
+  </div>
+
+  <!-- CENTER AREA -->
+  <div class="center-area">
+    <div class="viz-tabs">
+      <div class="viz-tab active" data-tab="field" onclick="switchTab(this)">Diffusion Field</div>
+      <div class="viz-tab" data-tab="stigmergy" onclick="switchTab(this)">Stigmergic Map</div>
+      <div class="viz-tab" data-tab="chemotaxis" onclick="switchTab(this)">Chemotaxis Flow</div>
+      <div class="viz-tab" data-tab="attractors" onclick="switchTab(this)">Attractor Space</div>
+    </div>
+    <div class="canvas-container">
+      <canvas id="mainCanvas" width="576" height="576"></canvas>
+      <div class="canvas-overlay" id="canvasOverlay">FIELD: IDLE | STEP: 0</div>
+    </div>
+    <div style="margin-top: 12px; display:flex; gap:8px; align-items:center;">
+      <span style="font-size:11px; color:var(--text-dim); font-family:'Share Tech Mono',monospace;">DRAW INPUT:</span>
+      <canvas id="drawCanvas" width="192" height="192" class="draw-pad" style="width:140px;height:140px;"></canvas>
+      <button class="btn btn-danger" style="width:auto;padding:6px 12px;margin:0;font-size:11px;" onclick="clearDrawing()">Clear</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel" id="rightPanel">
+    <div class="panel-title">Engine Metrics</div>
+    <div class="info-card">
+      <div class="info-card-title">Field State</div>
+      <div class="info-row"><span class="label">Morphogen A (mean)</span><span class="value" id="metricA">0.000</span></div>
+      <div class="info-row"><span class="label">Morphogen B (mean)</span><span class="value" id="metricB">0.000</span></div>
+      <div class="info-row"><span class="label">Entropy</span><span class="value" id="metricEntropy">0.000</span></div>
+      <div class="info-row"><span class="label">Stability</span><span class="value" id="metricStability">0.000</span></div>
+      <div class="info-row"><span class="label">Step</span><span class="value" id="metricStep">0</span></div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-title">Training Progress</div>
+      <div class="epoch-counter" id="epochCounter">0</div>
+      <div class="control-label" style="text-align:center;">Epochs Crystallized</div>
+      <div class="metric-bar" style="margin-top:8px;">
+        <div class="metric-bar-fill" id="trainProgress" style="width:0%; background:linear-gradient(90deg,var(--accent-1),var(--accent-2));"></div>
+      </div>
+      <div class="info-row" style="margin-top:6px;"><span class="label">Convergence</span><span class="value" id="metricConvergence">0.0%</span></div>
+      <div class="info-row"><span class="label">Field Energy</span><span class="value" id="metricEnergy">0.000</span></div>
+    </div>
+
+    <div class="panel-title" style="margin-top:8px;">Classification Results</div>
+    <div id="resultsContainer">
+      <div style="font-size:12px; color:var(--text-dim); font-family:'Share Tech Mono',monospace; text-align:center; padding:20px 0;">
+        No classification yet.<br>Draw a pattern and click Classify.
+      </div>
+    </div>
+
+    <div class="separator"></div>
+    <div class="panel-title">Training Samples</div>
+    <div class="training-samples-grid" id="samplesGrid"></div>
+
+    <div class="concept-section" style="margin-top:16px;">
+      <h4>How It Works</h4>
+      <p>
+        This engine uses <strong>reaction-diffusion equations</strong> (Gray-Scott model) instead of neural networks. 
+        Patterns are learned through <strong>morphogenetic crystallization</strong> — stable chemical patterns that emerge 
+        from diffusion dynamics. Classification uses <strong>stigmergic resonance matching</strong> and 
+        <strong>chemotactic gradient descent</strong> through morphogen fields.
+      </p>
+    </div>
+  </div>
+
+  <!-- LOG AREA -->
+  <div class="log-area" id="logArea"></div>
+</div>
+
+<script>
+// =====================================================================
+// MORPHOGENETIC INTELLIGENCE ENGINE
+// A non-neural-network AI system based on reaction-diffusion dynamics,
+// stigmergic memory, and chemotactic classification.
+// =====================================================================
+
+// ===== UTILITY =====
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function timestamp() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
+}
+
+// ===== LOGGING =====
+function log(msg, type = 'info') {
+  const area = document.getElementById('logArea');
+  const div = document.createElement('div');
+  div.className = `log-entry ${type}`;
+  div.innerHTML = `<span class="timestamp">[${timestamp()}]</span><span class="msg">${msg}</span>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ===== COLOR PALETTES =====
+const CLASS_COLORS = [
+  [0, 229, 160],    // green
+  [0, 180, 216],    // blue
+  [155, 93, 229],   // purple
+  [247, 37, 133],   // pink
+  [255, 183, 3],    // amber
+  [38, 198, 218],   // cyan
+  [255, 111, 97],   // coral
+  [129, 212, 105],  // lime
+];
+
+// =====================================================================
+// CORE: REACTION-DIFFUSION FIELD
+// =====================================================================
+class ReactionDiffusionField {
+  constructor(size = 96) {
+    this.size = size;
+    this.a = new Float32Array(size * size);  // morphogen A concentration
+    this.b = new Float32Array(size * size);  // morphogen B concentration
+    this.aNext = new Float32Array(size * size);
+    this.bNext = new Float32Array(size * size);
+    this.Da = 1.0;   // diffusion rate of A
+    this.Db = 0.5;   // diffusion rate of B
+    this.f = 0.055;  // feed rate
+    this.k = 0.062;  // kill rate
+    this.reactivity = 1.0;
+    this.step = 0;
+    this.reset();
+  }
+
+  reset() {
+    this.a.fill(1.0);
+    this.b.fill(0.0);
+    this.step = 0;
+  }
+
+  // Seed a region with morphogen B
+  seed(cx, cy, radius, intensity = 1.0) {
+    const s = this.size;
+    for (let y = Math.max(0, cy - radius); y < Math.min(s, cy + radius); y++) {
+      for (let x = Math.max(0, cx - radius); x < Math.min(s, cx + radius); x++) {
+        const dx = x - cx, dy = y - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < radius) {
+          const falloff = 1.0 - dist / radius;
+          const idx = y * s + x;
+          this.b[idx] = clamp(this.b[idx] + intensity * falloff, 0, 1);
+          this.a[idx] = clamp(this.a[idx] - intensity * falloff * 0.5, 0, 1);
+        }
+      }
+    }
+  }
+
+  // Seed from a pattern (2D array normalized 0-1)
+  seedFromPattern(pattern, patSize) {
+    const scale = this.size / patSize;
+    for (let py = 0; py < patSize; py++) {
+      for (let px = 0; px < patSize; px++) {
+        const val = pattern[py * patSize + px];
+        if (val > 0.1) {
+          const fx = Math.floor(px * scale);
+          const fy = Math.floor(py * scale);
+          for (let dy = 0; dy < Math.ceil(scale); dy++) {
+            for (let dx = 0; dx < Math.ceil(scale); dx++) {
+              const tx = clamp(fx + dx, 0, this.size - 1);
+              const ty = clamp(fy + dy, 0, this.size - 1);
+              const idx = ty * this.size + tx;
+              this.b[idx] = clamp(val * 0.9, 0, 1);
+              this.a[idx] = clamp(1.0 - val * 0.5, 0, 1);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Laplacian using 9-point stencil
+  laplacian(arr, x, y) {
+    const s = this.size;
+    const cx = y * s + x;
+    const w = [0.05, 0.2, 0.05, 0.2, -1.0, 0.2, 0.05, 0.2, 0.05];
+    let sum = 0;
+    let i = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = (x + dx + s) % s;
+        const ny = (y + dy + s) % s;
+        sum += arr[ny * s + nx] * w[i];
+        i++;
+      }
+    }
+    return sum;
+  }
+
+  // Perform one simulation step
+  simulate(steps = 1) {
+    for (let iter = 0; iter < steps; iter++) {
+      const s = this.size;
+      const dt = 1.0;
+      for (let y = 0; y < s; y++) {
+        for (let x = 0; x < s; x++) {
+          const idx = y * s + x;
+          const a = this.a[idx];
+          const b = this.b[idx];
+          const la = this.laplacian(this.a, x, y);
+          const lb = this.laplacian(this.b, x, y);
+          const reaction = a * b * b * this.reactivity;
+          this.aNext[idx] = clamp(a + dt * (this.Da * la - reaction + this.f * (1 - a)), 0, 1);
+          this.bNext[idx] = clamp(b + dt * (this.Db * lb + reaction - (this.f + this.k) * b), 0, 1);
+        }
+      }
+      // swap
+      [this.a, this.aNext] = [this.aNext, this.a];
+      [this.b, this.bNext] = [this.bNext, this.b];
+      this.step++;
+    }
+  }
+
+  // Get field statistics
+  getStats() {
+    let sumA = 0, sumB = 0, sumAB = 0;
+    const n = this.size * this.size;
+    for (let i = 0; i < n; i++) {
+      sumA += this.a[i];
+      sumB += this.b[i];
+      sumAB += this.a[i] * this.b[i];
+    }
+    const meanA = sumA / n;
+    const meanB = sumB / n;
+    // entropy approximation
+    let entropy = 0;
+    for (let i = 0; i < n; i++) {
+      const p = clamp(this.b[i], 0.001, 0.999);
+      entropy -= p * Math.log2(p) + (1 - p) * Math.log2(1 - p);
+    }
+    entropy /= n;
+    return { meanA, meanB, entropy, energy: sumAB / n };
+  }
+
+  // Extract fingerprint: spatial frequency signature
+  getFingerprint(bins = 32) {
+    const s = this.size;
+    const fp = new Float32Array(bins * bins);
+    const blockW = s / bins;
+    for (let by = 0; by < bins; by++) {
+      for (let bx = 0; bx < bins; bx++) {
+        let sum = 0, count = 0;
+        for (let dy = 0; dy < blockW; dy++) {
+          for (let dx = 0; dx < blockW; dx++) {
+            const x = Math.floor(bx * blockW + dx);
+            const y = Math.floor(by * blockW + dy);
+            if (x < s && y < s) {
+              sum += this.b[y * s + x];
+              count++;
+            }
+          }
+        }
+        fp[by * bins + bx] = count > 0 ? sum / count : 0;
+      }
+    }
+    return fp;
+  }
+
+  // Clone the field state
+  cloneState() {
+    return {
+      a: new Float32Array(this.a),
+      b: new Float32Array(this.b),
+      size: this.size,
+      Da: this.Da, Db: this.Db, f: this.f, k: this.k,
+      reactivity: this.reactivity
+    };
+  }
+}
+
+// =====================================================================
+// STIGMERGIC MEMORY
+// Instead of weights, stores "pheromone trails" — accumulated traces
+// left by training patterns that bias future classification.
+// =====================================================================
+class StigmergicMemory {
+  constructor(size) {
+    this.size = size;
+    this.trails = new Map(); // className -> Float32Array (pheromone field)
+    this.decay = 0.99;
+    this.deposit = 0.3;
+  }
+
+  ensureTrail(className) {
+    if (!this.trails.has(className)) {
+      this.trails.set(className, new Float32Array(this.size * this.size));
+    }
+  }
+
+  // Deposit pheromone from a pattern fingerprint
+  depositTrail(className, fingerprint, strength = 1.0) {
+    this.ensureTrail(className);
+    const trail = this.trails.get(className);
+    const scale = this.size / Math.sqrt(fingerprint.length);
+    const fpSize = Math.sqrt(fingerprint.length);
+    for (let fy = 0; fy < fpSize; fy++) {
+      for (let fx = 0; fx < fpSize; fx++) {
+        const val = fingerprint[fy * fpSize + fx];
+        for (let dy = 0; dy < Math.ceil(scale); dy++) {
+          for (let dx = 0; dx < Math.ceil(scale); dx++) {
+            const tx = clamp(Math.floor(fx * scale + dx), 0, this.size - 1);
+            const ty = clamp(Math.floor(fy * scale + dy), 0, this.size - 1);
+            const idx = ty * this.size + tx;
+            trail[idx] = clamp(trail[idx] + val * this.deposit * strength, 0, 1);
+          }
+        }
+      }
+    }
+  }
+
+  // Decay all trails
+  decayAll() {
+    for (const [, trail] of this.trails) {
+      for (let i = 0; i < trail.length; i++) {
+        trail[i] *= this.decay;
+      }
+    }
+  }
+
+  // Compute resonance between a fingerprint and a class trail
+  resonance(className, fingerprint) {
+    if (!this.trails.has(className)) return 0;
+    const trail = this.trails.get(className);
+    const fpSize = Math.sqrt(fingerprint.length);
+    const scale = this.size / fpSize;
+    let dotProduct = 0, normA = 0, normB = 0;
+    for (let fy = 0; fy < fpSize; fy++) {
+      for (let fx = 0; fx < fpSize; fx++) {
+        const val = fingerprint[fy * fpSize + fx];
+        const tx = clamp(Math.floor(fx * scale + scale / 2), 0, this.size - 1);
+        const ty = clamp(Math.floor(fy * scale + scale / 2), 0, this.size - 1);
+        const tVal = trail[ty * this.size + tx];
+        dotProduct += val * tVal;
+        normA += val * val;
+        normB += tVal * tVal;
+      }
+    }
+    const denom = Math.sqrt(normA) * Math.sqrt(normB);
+    return denom > 0 ? dotProduct / denom : 0;
+  }
+}
+
+// =====================================================================
+// CHEMOTAXIS CLASSIFIER
+// Particles navigate through gradient fields to find attractor basins.
+// Classification is determined by which attractor basin captures the
+// most particles — a form of gradient-driven swarm computation.
+// =====================================================================
+class ChemotaxisClassifier {
+  constructor(size) {
+    this.size = size;
+    this.attractors = new Map(); // className -> { field, center, strength }
+    this.particles = [];
+    this.particleCount = 200;
+  }
+
+  // Store an attractor field for a class
+  setAttractor(className, field, params) {
+    this.attractors.set(className, {
+      field: new Float32Array(field),
+      params: params,
+      captures: 0
+    });
+  }
+
+  // Run chemotaxis: release particles on input field, let them follow gradients
+  classify(inputFingerprint, steps = 50) {
+    const fpSize = Math.sqrt(inputFingerprint.length);
+    this.particles = [];
+
+    // Initialize particles at positions where input is active
+    const activePositions = [];
+    for (let y = 0; y < fpSize; y++) {
+      for (let x = 0; x < fpSize; x++) {
+        if (inputFingerprint[y * fpSize + x] > 0.15) {
+          activePositions.push([x / fpSize, y / fpSize]);
+        }
+      }
+    }
+
+    if (activePositions.length === 0) return new Map();
+
+    // Create particles
+    for (let i = 0; i < this.particleCount; i++) {
+      const pos = activePositions[Math.floor(Math.random() * activePositions.length)];
+      this.particles.push({
+        x: pos[0] + (Math.random() - 0.5) * 0.05,
+        y: pos[1] + (Math.random() - 0.5) * 0.05,
+        vx: 0, vy: 0,
+        captured: null
+      });
+    }
+
+    // Simulate chemotaxis
+    for (let step = 0; step < steps; step++) {
+      for (const p of this.particles) {
+        if (p.captured) continue;
+
+        let bestGrad = { x: 0, y: 0 };
+        let bestClass = null;
+        let bestStrength = -Infinity;
+
+        for (const [className, attractor] of this.attractors) {
+          const grad = this.sampleGradient(attractor.field, p.x, p.y);
+          const strength = grad.x * grad.x + grad.y * grad.y;
+          if (strength > bestStrength) {
+            bestStrength = strength;
+            bestGrad = grad;
+            bestClass = className;
+          }
+        }
+
+        // Move along gradient + small random walk
+        const noise = 0.002;
+        p.vx = p.vx * 0.8 + bestGrad.x * 0.5 + (Math.random() - 0.5) * noise;
+        p.vy = p.vy * 0.8 + bestGrad.y * 0.5 + (Math.random() - 0.5) * noise;
+        p.x = clamp(p.x + p.vx, 0, 1);
+        p.y = clamp(p.y + p.vy, 0, 1);
+
+        // Check capture
+        if (bestClass) {
+          const att = this.attractors.get(bestClass);
+          const ix = clamp(Math.floor(p.x * this.size), 0, this.size - 1);
+          const iy = clamp(Math.floor(p.y * this.size), 0, this.size - 1);
+          if (att.field[iy * this.size + ix] > 0.5) {
+            p.captured = bestClass;
+            att.captures++;
+          }
+        }
+      }
+    }
+
+    // Count captures
+    const results = new Map();
+    for (const [className] of this.attractors) {
+      results.set(className, 0);
+    }
+    for (const p of this.particles) {
+      if (p.captured && results.has(p.captured)) {
+        results.set(p.captured, results.get(p.captured) + 1);
+      }
+    }
+    return results;
+  }
+
+  sampleGradient(field, nx, ny) {
+    const s = this.size;
+    const x = clamp(nx * s, 1, s - 2);
+    const y = clamp(ny * s, 1, s - 2);
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const gx = field[iy * s + Math.min(ix + 1, s - 1)] - field[iy * s + Math.max(ix - 1, 0)];
+    const gy = field[Math.min(iy + 1, s - 1) * s + ix] - field[Math.max(iy - 1, 0) * s + ix];
+    return { x: gx * 0.01, y: gy * 0.01 };
+  }
+}
+
+// =====================================================================
+// MAIN ENGINE: MORPHOGENETIC INTELLIGENCE
+// =====================================================================
+class MorphogeneticEngine {
+  constructor() {
+    this.fieldSize = 96;
+    this.field = new ReactionDiffusionField(this.fieldSize);
+    this.memory = new StigmergicMemory(this.fieldSize);
+    this.chemotaxis = new ChemotaxisClassifier(this.fieldSize);
+    this.classes = [];
+    this.trainingData = new Map(); // className -> [patterns]
+    this.classAttractors = new Map(); // className -> { field snapshot, fingerprint }
+    this.isTraining = false;
+    this.currentEpoch = 0;
+    this.maxEpochs = 30;
+    this.convergence = 0;
+    this.currentTab = 'field';
+  }
+
+  addClass(name) {
+    if (this.classes.find(c => c.name === name)) return false;
+    const colorIdx = this.classes.length % CLASS_COLORS.length;
+    this.classes.push({ name, color: CLASS_COLORS[colorIdx], sampleCount: 0 });
+    this.trainingData.set(name, []);
+    return true;
+  }
+
+  addTrainingSample(className, pattern, patSize) {
+    if (!this.trainingData.has(className)) return;
+    this.trainingData.get(className).push({ pattern: new Float32Array(pattern), size: patSize });
+    const cls = this.classes.find(c => c.name === className);
+    if (cls) cls.sampleCount++;
+  }
+
+  async train(progressCb) {
+    if (this.isTraining) return;
+    this.isTraining = true;
+    this.currentEpoch = 0;
+
+    log('Initializing morphogenetic training...', 'info');
+    log(`Classes: ${this.classes.map(c => c.name).join(', ')}`, 'info');
+
+    const totalSamples = [...this.trainingData.values()].reduce((s, a) => s + a.length, 0);
+    if (totalSamples === 0) {
+      log('No training samples! Add samples first.', 'error');
+      this.isTraining = false;
+      return;
+    }
+
+    for (let epoch = 0; epoch < this.maxEpochs; epoch++) {
+      this.currentEpoch = epoch + 1;
+
+      for (const [className, samples] of this.trainingData) {
+        if (samples.length === 0) continue;
+
+        // For each class, run reaction-diffusion on its patterns
+        // and crystallize the result into the stigmergic memory
+        for (const sample of samples) {
+          // Reset field and seed with pattern
+          this.field.reset();
+          this.field.Da = parseFloat(document.getElementById('sliderDa').value);
+          this.field.Db = parseFloat(document.getElementById('sliderDb').value);
+          this.field.f = parseFloat(document.getElementById('sliderF').value);
+          this.field.k = parseFloat(document.getElementById('sliderK').value);
+          this.field.reactivity = parseFloat(document.getElementById('sliderReact').value);
+
+          // Slightly vary parameters per class to create distinct attractors
+          const classIdx = this.classes.findIndex(c => c.name === className);
+          this.field.f += classIdx * 0.003;
+          this.field.k += classIdx * 0.001;
+
+          this.field.seedFromPattern(sample.pattern, sample.size);
+
+          // Run reaction-diffusion to crystallize
+          const stepsPerEpoch = 20;
+          this.field.simulate(stepsPerEpoch);
+
+          // Extract fingerprint and deposit into stigmergic memory
+          const fp = this.field.getFingerprint(32);
+          this.memory.depositTrail(className, fp, 1.0 / samples.length);
+
+          // Store attractor field for chemotaxis
+          this.classAttractors.set(className, {
+            field: this.field.cloneState(),
+            fingerprint: new Float32Array(fp)
+          });
+
+          // Set chemotaxis attractor
+          this.chemotaxis.setAttractor(className, this.field.b, { f: this.field.f, k: this.field.k });
+        }
+      }
+
+      // Decay stigmergic trails for temporal reinforcement
+      this.memory.decayAll();
+
+      // Calculate convergence
+      let totalRes = 0, count = 0;
+      for (const [className, samples] of this.trainingData) {
+        if (samples.length === 0) continue;
+        for (const sample of samples) {
+          this.field.reset();
+          this.field.seedFromPattern(sample.pattern, sample.size);
+          this.field.simulate(10);
+          const fp = this.field.getFingerprint(32);
+          const res = this.memory.resonance(className, fp);
+          totalRes += res;
+          count++;
+        }
+      }
+      this.convergence = count > 0 ? totalRes / count : 0;
+
+      if (progressCb) progressCb(epoch + 1, this.maxEpochs, this.convergence);
+
+      // Yield to UI
+      await new Promise(r => setTimeout(r, 30));
+    }
+
+    // Final crystallization pass
+    log(`Training complete. Convergence: ${(this.convergence * 100).toFixed(1)}%`, 'success');
+    log(`Stigmergic trails deposited for ${this.classes.length} classes`, 'success');
+    this.isTraining = false;
+  }
+
+  classify(pattern, patSize) {
+    if (this.classes.length === 0) return [];
+
+    // Phase 1: Reaction-Diffusion Fingerprinting
+    this.field.reset();
+    this.field.Da = parseFloat(document.getElementById('sliderDa').value);
+    this.field.Db = parseFloat(document.getElementById('sliderDb').value);
+    this.field.f = parseFloat(document.getElementById('sliderF').value);
+    this.field.k = parseFloat(document.getElementById('sliderK').value);
+    this.field.reactivity = parseFloat(document.getElementById('sliderReact').value);
+    this.field.seedFromPattern(pattern, patSize);
+    this.field.simulate(30);
+    const fp = this.field.getFingerprint(32);
+
+    // Phase 2: Stigmergic Resonance Matching
+    const resonanceScores = [];
+    for (const cls of this.classes) {
+      const res = this.memory.resonance(cls.name, fp);
+      resonanceScores.push({ name: cls.name, score: res, color: cls.color });
+    }
+
+    // Phase 3: Chemotactic Gradient Classification
+    const chemResults = this.chemotaxis.classify(fp, 40);
+
+    // Phase 4: Fusion — combine stigmergic resonance with chemotactic captures
+    const totalCaptures = [...chemResults.values()].reduce((s, v) => s + v, 0) || 1;
+    const results = resonanceScores.map(r => {
+      const chemScore = (chemResults.get(r.name) || 0) / totalCaptures;
+      // Weighted fusion: 60% stigmergic + 40% chemotactic
+      const fused = r.score * 0.6 + chemScore * 0.4;
+      return { ...r, chemScore, fusedScore: fused };
+    });
+
+    // Normalize
+    const maxScore = Math.max(...results.map(r => r.fusedScore), 0.001);
+    results.forEach(r => r.confidence = r.fusedScore / maxScore);
+    results.sort((a, b) => b.confidence - a.confidence);
+
+    return results;
+  }
+}
+
+// =====================================================================
+// VISUALIZATION
+// =====================================================================
+class Renderer {
+  constructor(canvas, engine) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.engine = engine;
+    this.animating = false;
+    this.imgData = null;
+  }
+
+  renderField() {
+    const s = this.engine.field.size;
+    const cw = this.canvas.width, ch = this.canvas.height;
+    if (!this.imgData || this.imgData.width !== cw) {
+      this.imgData = this.ctx.createImageData(cw, ch);
+    }
+    const data = this.imgData.data;
+    const scale = cw / s;
+
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        const fx = Math.floor(x / scale);
+        const fy = Math.floor(y / scale);
+        const idx = clamp(fy, 0, s - 1) * s + clamp(fx, 0, s - 1);
+        const a = this.engine.field.a[idx];
+        const b = this.engine.field.b[idx];
+        const pi = (y * cw + x) * 4;
+
+        // Bioluminescent color mapping
+        const r = clamp(Math.floor((1 - a) * 20 + b * 180 + b * b * 75), 0, 255);
+        const g = clamp(Math.floor(a * 10 + b * 255 * 0.9), 0, 255);
+        const bl = clamp(Math.floor(a * 30 + b * 120 + (1 - a) * 40), 0, 255);
+
+        data[pi] = r;
+        data[pi + 1] = g;
+        data[pi + 2] = bl;
+        data[pi + 3] = 255;
+      }
+    }
+    this.ctx.putImageData(this.imgData, 0, 0);
+  }
+
+  renderStigmergy() {
+    const cw = this.canvas.width, ch = this.canvas.height;
+    this.ctx.fillStyle = '#030a0f';
+    this.ctx.fillRect(0, 0, cw, ch);
+
+    const mem = this.engine.memory;
+    const s = mem.size;
+    const scale = cw / s;
+
+    let classIdx = 0;
+    for (const [className, trail] of mem.trails) {
+      const color = CLASS_COLORS[classIdx % CLASS_COLORS.length];
+      for (let y = 0; y < s; y++) {
+        for (let x = 0; x < s; x++) {
+          const val = trail[y * s + x];
+          if (val > 0.01) {
+            const alpha = clamp(val * 1.5, 0, 0.9);
+            this.ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+            this.ctx.fillRect(x * scale, y * scale, Math.ceil(scale), Math.ceil(scale));
+          }
+        }
+      }
+      classIdx++;
+    }
+
+    // Labels
+    this.ctx.font = '12px Share Tech Mono';
+    classIdx = 0;
+    for (const [className] of mem.trails) {
+      const color = CLASS_COLORS[classIdx % CLASS_COLORS.length];
+      this.ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+      this.ctx.fillText(className, 10, 20 + classIdx * 18);
+      classIdx++;
+    }
+  }
+
+  renderChemotaxis() {
+    const cw = this.canvas.width, ch = this.canvas.height;
+    this.ctx.fillStyle = '#030a0f';
+    this.ctx.fillRect(0, 0, cw, ch);
+
+    const particles = this.engine.chemotaxis.particles;
+    if (particles.length === 0) {
+      this.ctx.font = '14px Share Tech Mono';
+      this.ctx.fillStyle = '#5a8a9a';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText('Run classification to see chemotactic flow', cw / 2, ch / 2);
+      this.ctx.textAlign = 'left';
+      return;
+    }
+
+    // Draw attractor fields faintly
+    let ci = 0;
+    for (const [, att] of this.engine.chemotaxis.attractors) {
+      const color = CLASS_COLORS[ci % CLASS_COLORS.length];
+      const s = this.engine.chemotaxis.size;
+      const scale = cw / s;
+      for (let y = 0; y < s; y += 2) {
+        for (let x = 0; x < s; x += 2) {
+          const val = att.field[y * s + x];
+          if (val > 0.05) {
+            this.ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${val * 0.15})`;
+            this.ctx.fillRect(x * scale, y * scale, scale * 2, scale * 2);
+          }
+        }
+      }
+      ci++;
+    }
+
+    // Draw particles
+    for (const p of particles) {
+      let color;
+      if (p.captured) {
+        const cIdx = this.engine.classes.findIndex(c => c.name === p.captured);
+        color = CLASS_COLORS[cIdx % CLASS_COLORS.length];
+      } else {
+        color = [200, 200, 200];
+      }
+      this.ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},0.9)`;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x * cw, p.y * ch, p.captured ? 3 : 2, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      if (p.captured) {
+        this.ctx.strokeStyle = `rgba(${color[0]},${color[1]},${color[2]},0.3)`;
+        this.ctx.beginPath();
+        this.ctx.arc(p.x * cw, p.y * ch, 6, 0, Math.PI * 2);
+        this.ctx.stroke();
+      }
+    }
+  }
+
+  renderAttractors() {
+    const cw = this.canvas.width, ch = this.canvas.height;
+    this.ctx.fillStyle = '#030a0f';
+    this.ctx.fillRect(0, 0, cw, ch);
+
+    const attractors = this.engine.classAttractors;
+    if (attractors.size === 0) {
+      this.ctx.font = '14px Share Tech Mono';
+      this.ctx.fillStyle = '#5a8a9a';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText('Train the engine to see attractor basins', cw / 2, ch / 2);
+      this.ctx.textAlign = 'left';
+      return;
+    }
+
+    // Arrange attractors in a grid
+    const count = attractors.size;
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const cellW = cw / cols, cellH = ch / rows;
+
+    let idx = 0;
+    for (const [className, att] of attractors) {
+      const col = idx % cols, row = Math.floor(idx / cols);
+      const ox = col * cellW, oy = row * cellH;
+      const color = CLASS_COLORS[idx % CLASS_COLORS.length];
+
+      // Render the attractor's fingerprint
+      const fp = att.fingerprint;
+      const fpSize = Math.sqrt(fp.length);
+      const pixW = cellW / fpSize, pixH = cellH / fpSize;
+
+      for (let fy = 0; fy < fpSize; fy++) {
+        for (let fx = 0; fx < fpSize; fx++) {
+          const val = fp[fy * fpSize + fx];
+          if (val > 0.01) {
+            this.ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${clamp(val * 2, 0, 1)})`;
+            this.ctx.fillRect(ox + fx * pixW, oy + fy * pixH, Math.ceil(pixW), Math.ceil(pixH));
+          }
+        }
+      }
+
+      // Border and label
+      this.ctx.strokeStyle = `rgba(${color[0]},${color[1]},${color[2]},0.5)`;
+      this.ctx.strokeRect(ox + 2, oy + 2, cellW - 4, cellH - 4);
+      this.ctx.font = '12px Share Tech Mono';
+      this.ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+      this.ctx.fillText(className, ox + 8, oy + 18);
+      idx++;
+    }
+  }
+
+  render() {
+    switch (this.engine.currentTab) {
+      case 'field': this.renderField(); break;
+      case 'stigmergy': this.renderStigmergy(); break;
+      case 'chemotaxis': this.renderChemotaxis(); break;
+      case 'attractors': this.renderAttractors(); break;
+    }
+  }
+}
+
+// =====================================================================
+// UI CONTROLLER
+// =====================================================================
+const engine = new MorphogeneticEngine();
+const mainCanvas = document.getElementById('mainCanvas');
+const renderer = new Renderer(mainCanvas, engine);
+
+// Drawing state
+const drawCanvas = document.getElementById('drawCanvas');
+const drawCtx = drawCanvas.getContext('2d');
+let isDrawing = false;
+let drawData = new Float32Array(24 * 24); // 24x24 drawing grid
+const DRAW_GRID = 24;
+
+function initDrawCanvas() {
+  drawCtx.fillStyle = '#030a0f';
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  drawData.fill(0);
+}
+initDrawCanvas();
+
+drawCanvas.addEventListener('mousedown', (e) => { isDrawing = true; drawOnCanvas(e); });
+drawCanvas.addEventListener('mousemove', (e) => { if (isDrawing) drawOnCanvas(e); });
+drawCanvas.addEventListener('mouseup', () => isDrawing = false);
+drawCanvas.addEventListener('mouseleave', () => isDrawing = false);
+
+function drawOnCanvas(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  const gx = Math.floor(x * DRAW_GRID);
+  const gy = Math.floor(y * DRAW_GRID);
+
+  // Draw with some spread
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const px = gx + dx, py = gy + dy;
+      if (px >= 0 && px < DRAW_GRID && py >= 0 && py < DRAW_GRID) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const strength = dist === 0 ? 1.0 : 0.4;
+        drawData[py * DRAW_GRID + px] = clamp(drawData[py * DRAW_GRID + px] + strength, 0, 1);
+      }
+    }
+  }
+  renderDrawCanvas();
+}
+
+function renderDrawCanvas() {
+  const pixW = drawCanvas.width / DRAW_GRID;
+  const pixH = drawCanvas.height / DRAW_GRID;
+  drawCtx.fillStyle = '#030a0f';
+  drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+  // Get active class color
+  const activeClass = document.querySelector('.class-item.active');
+  let color = [0, 229, 160];
+  if (activeClass) {
+    const idx = engine.classes.findIndex(c => c.name === activeClass.dataset.name);
+    if (idx >= 0) color = CLASS_COLORS[idx % CLASS_COLORS.length];
+  }
+
+  for (let y = 0; y < DRAW_GRID; y++) {
+    for (let x = 0; x < DRAW_GRID; x++) {
+      const val = drawData[y * DRAW_GRID + x];
+      if (val > 0.01) {
+        const alpha = clamp(val, 0, 1);
+        drawCtx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`;
+        drawCtx.fillRect(x * pixW, y * pixH, Math.ceil(pixW), Math.ceil(pixH));
+      }
+    }
+  }
+
+  // Grid lines
+  drawCtx.strokeStyle = 'rgba(15,58,74,0.3)';
+  drawCtx.lineWidth = 0.5;
+  for (let i = 0; i <= DRAW_GRID; i++) {
+    drawCtx.beginPath();
+    drawCtx.moveTo(i * pixW, 0);
+    drawCtx.lineTo(i * pixW, drawCanvas.height);
+    drawCtx.stroke();
+    drawCtx.beginPath();
+    drawCtx.moveTo(0, i * pixH);
+    drawCtx.lineTo(drawCanvas.width, i * pixH);
+    drawCtx.stroke();
+  }
+}
+
+function clearDrawing() {
+  initDrawCanvas();
+  renderDrawCanvas();
+  log('Drawing pad cleared', 'info');
+}
+
+// ===== Slider bindings =====
+['Da','Db','F','K','React','Decay'].forEach(name => {
+  const slider = document.getElementById('slider' + name);
+  const val = document.getElementById('val' + name);
+  slider.addEventListener('input', () => {
+    val.textContent = parseFloat(slider.value).toFixed(name === 'F' || name === 'K' ? 3 : 2);
+  });
+});
+
+// ===== Class management =====
+let activeClassName = null;
+
+function addClass(name) {
+  const input = document.getElementById('newClassName');
+  const n = name || input.value.trim();
+  if (!n) return;
+  if (engine.addClass(n)) {
+    log(`Added morphogen class: "${n}"`, 'success');
+    input.value = '';
+    updateClassList();
+  } else {
+    log(`Class "${n}" already exists`, 'warn');
+  }
+}
+
+function updateClassList() {
+  const list = document.getElementById('classList');
+  list.innerHTML = '';
+  engine.classes.forEach((cls, i) => {
+    const li = document.createElement('li');
+    li.className = `class-item ${activeClassName === cls.name ? 'active' : ''}`;
+    li.dataset.name = cls.name;
+    const [r, g, b] = cls.color;
+    li.innerHTML = `
+      <div class="class-swatch" style="background:rgb(${r},${g},${b})"></div>
+      <span>${cls.name}</span>
+      <span class="class-count">${cls.sampleCount} samples</span>
+    `;
+    li.onclick = () => {
+      activeClassName = cls.name;
+      updateClassList();
+    };
+    list.appendChild(li);
+  });
+}
+
+// ===== Add training sample (from draw pad to active class) =====
+mainCanvas.addEventListener('dblclick', () => {
+  if (!activeClassName) {
+    log('Select a class first before adding training samples', 'warn');
+    return;
+  }
+  const hasContent = drawData.some(v => v > 0.1);
+  if (!hasContent) {
+    log('Draw a pattern first', 'warn');
+    return;
+  }
+  engine.addTrainingSample(activeClassName, drawData, DRAW_GRID);
+  log(`Added training sample to class "${activeClassName}"`, 'success');
+  updateClassList();
+  addSampleThumbnail(drawData, DRAW_GRID, activeClassName);
+  clearDrawing();
+});
+
+function addSampleThumbnail(data, size, className) {
+  const grid = document.getElementById('samplesGrid');
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  canvas.className = 'training-sample';
+  canvas.title = className;
+  const ctx = canvas.getContext('2d');
+  const idx = engine.classes.findIndex(c => c.name === className);
+  const color = CLASS_COLORS[idx % CLASS_COLORS.length];
+  const imgData = ctx.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) {
+    const val = data[i];
+    imgData.data[i * 4] = Math.floor(color[0] * val);
+    imgData.data[i * 4 + 1] = Math.floor(color[1] * val);
+    imgData.data[i * 4 + 2] = Math.floor(color[2] * val);
+    imgData.data[i * 4 + 3] = val > 0.05 ? 255 : 0;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  grid.appendChild(canvas);
+}
+
+// ===== Training =====
+async function startTraining() {
+  if (engine.isTraining) return;
+  const totalSamples = [...engine.trainingData.values()].reduce((s, a) => s + a.length, 0);
+  if (totalSamples === 0) {
+    log('No training samples! Draw patterns, select a class, and double-click the main canvas to add samples.', 'error');
+    return;
+  }
+
+  document.getElementById('btnTrain').disabled = true;
+  setStatus('TRAINING', 'var(--accent-3)');
+
+  await engine.train((epoch, max, convergence) => {
+    document.getElementById('epochCounter').textContent = epoch;
+    document.getElementById('trainProgress').style.width = `${(epoch / max) * 100}%`;
+    document.getElementById('metricConvergence').textContent = `${(convergence * 100).toFixed(1)}%`;
+
+    const stats = engine.field.getStats();
+    document.getElementById('metricA').textContent = stats.meanA.toFixed(3);
+    document.getElementById('metricB').textContent = stats.meanB.toFixed(3);
+    document.getElementById('metricEntropy').textContent = stats.entropy.toFixed(3);
+    document.getElementById('metricEnergy').textContent = stats.energy.toFixed(3);
+    document.getElementById('metricStep').textContent = engine.field.step;
+
+    renderer.render();
+    document.getElementById('canvasOverlay').textContent =
+      `FIELD: TRAINING | EPOCH: ${epoch}/${max} | STEP: ${engine.field.step}`;
+  });
+
+  document.getElementById('btnTrain').disabled = false;
+  setStatus('TRAINED', 'var(--accent-1)');
+  renderer.render();
+}
+
+// ===== Classification =====
+function classifyDrawing() {
+  const hasContent = drawData.some(v => v > 0.1);
+  if (!hasContent) {
+    log('Draw a pattern to classify', 'warn');
+    return;
+  }
+  if (engine.classes.length === 0) {
+    log('Add classes and train first', 'error');
+    return;
+  }
+
+  setStatus('CLASSIFYING', 'var(--accent-2)');
+  log('Running morphogenetic classification...', 'info');
+
+  // Seed and run
+  const results = engine.classify(drawData, DRAW_GRID);
+
+  if (results.length === 0) {
+    log('No classification results. Train the engine first.', 'warn');
+    setStatus('IDLE', 'var(--accent-1)');
+    return;
+  }
+
+  // Update metrics
+  const stats = engine.field.getStats();
+  document.getElementById('metricA').textContent = stats.meanA.toFixed(3);
+  document.getElementById('metricB').textContent = stats.meanB.toFixed(3);
+  document.getElementById('metricEntropy').textContent = stats.entropy.toFixed(3);
+  document.getElementById('metricEnergy').textContent = stats.energy.toFixed(3);
+  document.getElementById('metricStep').textContent = engine.field.step;
+  document.getElementById('metricStability').textContent = (1 - stats.entropy / 2).toFixed(3);
+
+  // Display results
+  const container = document.getElementById('resultsContainer');
+  container.innerHTML = '';
+  results.forEach(r => {
+    const [cr, cg, cb] = r.color;
+    const pct = (r.confidence * 100).toFixed(1);
+    const div = document.createElement('div');
+    div.className = 'result-bar';
+    div.innerHTML = `
+      <div class="result-bar-header">
+        <span class="result-bar-name">${r.name}</span>
+        <span class="result-bar-pct">${pct}%</span>
+      </div>
+      <div class="result-bar-track">
+        <div class="result-bar-value" style="width:${pct}%; background: linear-gradient(90deg, rgba(${cr},${cg},${cb},0.8), rgba(${cr},${cg},${cb},0.4));"></div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  log(`Classification: ${results[0].name} (${(results[0].confidence * 100).toFixed(1)}%)`, 'success');
+  setStatus('CLASSIFIED', 'var(--accent-1)');
+
+  // Re-render with classification state
+  renderer.render();
+  document.getElementById('canvasOverlay').textContent =
+    `FIELD: CLASSIFIED | RESULT: ${results[0].name} | STEP: ${engine.field.step}`;
+}
+
+// ===== Demo =====
+function runDemo() {
+  resetEngine();
+  log('Loading demo dataset...', 'info');
+
+  // Create demo classes
+  ['Circle', 'Square', 'Triangle', 'Cross'].forEach(n => engine.addClass(n));
+  updateClassList();
+
+  // Generate synthetic patterns
+  function genCircle() {
+    const d = new Float32Array(DRAW_GRID * DRAW_GRID);
+    const cx = 12 + (Math.random() - 0.5) * 4;
+    const cy = 12 + (Math.random() - 0.5) * 4;
+    const r = 6 + Math.random() * 3;
+    for (let y = 0; y < DRAW_GRID; y++) {
+      for (let x = 0; x < DRAW_GRID; x++) {
+        const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+        if (Math.abs(dist - r) < 1.8) d[y * DRAW_GRID + x] = clamp(1 - Math.abs(dist - r) / 1.8, 0, 1);
+      }
+    }
+    return d;
+  }
+
+  function genSquare() {
+    const d = new Float32Array(DRAW_GRID * DRAW_GRID);
+    const x1 = 4 + Math.floor(Math.random() * 3);
+    const y1 = 4 + Math.floor(Math.random() * 3);
+    const x2 = 18 + Math.floor(Math.random() * 3);
+    const y2 = 18 + Math.floor(Math.random() * 3);
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        if (y === y1 || y === y2 || x === x1 || x === x2) {
+          d[y * DRAW_GRID + x] = 0.9 + Math.random() * 0.1;
+        }
+      }
+    }
+    return d;
+  }
+
+  function genTriangle() {
+    const d = new Float32Array(DRAW_GRID * DRAW_GRID);
+    const top = [12 + (Math.random() - 0.5) * 2, 3 + Math.random() * 2];
+    const bl = [3 + Math.random() * 2, 20 + Math.random() * 2];
+    const br = [20 + Math.random() * 2, 20 + Math.random() * 2];
+    const lines = [[top, bl], [bl, br], [br, top]];
+    for (const [p1, p2] of lines) {
+      const steps = 40;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = Math.round(lerp(p1[0], p2[0], t));
+        const y = Math.round(lerp(p1[1], p2[1], t));
+        if (x >= 0 && x < DRAW_GRID && y >= 0 && y < DRAW_GRID) {
+          d[y * DRAW_GRID + x] = 0.9;
+          if (x + 1 < DRAW_GRID) d[y * DRAW_GRID + x + 1] = 0.5;
+          if (y + 1 < DRAW_GRID) d[(y + 1) * DRAW_GRID + x] = 0.5;
+        }
+      }
+    }
+    return d;
+  }
+
+  function genCross() {
+    const d = new Float32Array(DRAW_GRID * DRAW_GRID);
+    const cx = 12 + (Math.random() - 0.5) * 3;
+    const cy = 12 + (Math.random() - 0.5) * 3;
+    const arm = 7 + Math.random() * 2;
+    const thickness = 1.5;
+    for (let y = 0; y < DRAW_GRID; y++) {
+      for (let x = 0; x < DRAW_GRID; x++) {
+        const dx = Math.abs(x - cx), dy = Math.abs(y - cy);
+        if ((dx < thickness && dy < arm) || (dy < thickness && dx < arm)) {
+          d[y * DRAW_GRID + x] = 0.9;
+        }
+      }
+    }
+    return d;
+  }
+
+  const generators = { Circle: genCircle, Square: genSquare, Triangle: genTriangle, Cross: genCross };
+
+  for (const [className, gen] of Object.entries(generators)) {
+    for (let i = 0; i < 5; i++) {
+      const pattern = gen();
+      engine.addTrainingSample(className, pattern, DRAW_GRID);
+      addSampleThumbnail(pattern, DRAW_GRID, className);
+    }
+  }
+
+  updateClassList();
+  log('Demo loaded: 4 classes, 5 samples each (Circle, Square, Triangle, Cross)', 'success');
+  log('Click "Train Morphogenesis" to begin training', 'info');
+}
+
+function resetEngine() {
+  engine.field.reset();
+  engine.memory = new StigmergicMemory(engine.fieldSize);
+  engine.chemotaxis = new ChemotaxisClassifier(engine.fieldSize);
+  engine.classes = [];
+  engine.trainingData = new Map();
+  engine.classAttractors = new Map();
+  engine.currentEpoch = 0;
+  engine.convergence = 0;
+  activeClassName = null;
+
+  updateClassList();
+  document.getElementById('samplesGrid').innerHTML = '';
+  document.getElementById('resultsContainer').innerHTML = `
+    <div style="font-size:12px; color:var(--text-dim); font-family:'Share Tech Mono',monospace; text-align:center; padding:20px 0;">
+      No classification yet.<br>Draw a pattern and click Classify.
+    </div>`;
+  document.getElementById('epochCounter').textContent = '0';
+  document.getElementById('trainProgress').style.width = '0%';
+  document.getElementById('metricConvergence').textContent = '0.0%';
+  document.getElementById('metricA').textContent = '0.000';
+  document.getElementById('metricB').textContent = '0.000';
+  document.getElementById('metricEntropy').textContent = '0.000';
+  document.getElementById('metricStability').textContent = '0.000';
+  document.getElementById('metricStep').textContent = '0';
+  document.getElementById('metricEnergy').textContent = '0.000';
+  clearDrawing();
+
+  renderer.render();
+  setStatus('IDLE', 'var(--accent-1)');
+  document.getElementById('canvasOverlay').textContent = 'FIELD: IDLE | STEP: 0';
+  log('Engine reset', 'info');
+}
+
+function setStatus(text, color) {
+  document.getElementById('statusText').textContent = text;
+  document.getElementById('statusDot').style.background = color;
+  document.getElementById('statusDot').style.boxShadow = `0 0 8px ${color}`;
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.viz-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  engine.currentTab = el.dataset.tab;
+  renderer.render();
+}
+
+// ===== Logo Animation =====
+function animateLogo() {
+  const c = document.getElementById('logoCanvas');
+  const ctx = c.getContext('2d');
+  const w = c.width, h = c.height;
+  let t = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    t += 0.03;
+
+    // Draw a small reaction-diffusion-like pattern
+    for (let y = 0; y < w; y += 3) {
+      for (let x = 0; x < h; x += 3) {
+        const nx = x / w - 0.5, ny = y / h - 0.5;
+        const v = Math.sin(nx * 12 + t) * Math.cos(ny * 12 + t * 0.7)
+                + Math.sin(Math.sqrt(nx * nx + ny * ny) * 20 - t * 2) * 0.5;
+        const intensity = (v + 1.5) / 3;
+        const r = Math.floor(intensity * 0);
+        const g = Math.floor(intensity * 229);
+        const b = Math.floor(intensity * 160);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(x, y, 3, 3);
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ===== Field animation loop =====
+let animRunning = false;
+function startFieldAnimation() {
+  if (animRunning) return;
+  animRunning = true;
+  function tick() {
+    if (!engine.isTraining && engine.field.step > 0) {
+      // Continue simulating the field for visual effect
+      engine.field.simulate(2);
+      renderer.render();
+      document.getElementById('canvasOverlay').textContent =
+        `FIELD: EVOLVING | STEP: ${engine.field.step}`;
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ===== Initial render =====
+renderer.render();
+animateLogo();
+
+// Initialize with a random seed for visual interest
+(function initSeed() {
+  const s = engine.field.size;
+  for (let i = 0; i < 8; i++) {
+    engine.field.seed(
+      Math.floor(Math.random() * s),
+      Math.floor(Math.random() * s),
+      3 + Math.floor(Math.random() * 5),
+      0.8
+    );
+  }
+  engine.field.simulate(10);
+  renderer.render();
+  startFieldAnimation();
+  document.getElementById('canvasOverlay').textContent = `FIELD: SEEDED | STEP: ${engine.field.step}`;
+  log('Morphogenetic Intelligence Engine initialized', 'success');
+  log('System ready. Add classes, draw patterns, double-click canvas to add samples, then train.', 'info');
+})();
+
+// ===== Field size change =====
+document.getElementById('fieldSize').addEventListener('change', (e) => {
+  const newSize = parseInt(e.target.value);
+  engine.fieldSize = newSize;
+  engine.field = new ReactionDiffusionField(newSize);
+  engine.memory = new StigmergicMemory(newSize);
+  engine.chemotaxis = new ChemotaxisClassifier(newSize);
+  renderer.render();
+  log(`Field size changed to ${newSize}x${newSize}`, 'info');
+});
+</script>
+</body>
+</html>

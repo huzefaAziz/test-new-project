@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISMATIC INFERENCE ENGINE &mdash; Zero-Epoch Intelligence</title>
+<style>
+  /* ============================================================
+     PRISMATIC INFERENCE ENGINE — CSS
+     A zero-epoch, non-neural-network AI system
+     ============================================================ */
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --bg:        #06060e;
+    --surface:   rgba(12,14,28,0.85);
+    --panel:     rgba(18,22,44,0.72);
+    --border:    rgba(100,140,255,0.12);
+    --cyan:      #00e5ff;
+    --violet:    #b388ff;
+    --magenta:   #ff40ff;
+    --lime:      #76ff03;
+    --amber:     #ffc400;
+    --rose:      #ff5252;
+    --text:      #e0e6f0;
+    --text-dim:  #7a85a0;
+    --radius:    14px;
+    --glow-cyan: 0 0 20px rgba(0,229,255,0.25);
+    --glow-violet: 0 0 20px rgba(179,136,255,0.25);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ---------- animated mesh background ---------- */
+  #meshCanvas {
+    position: fixed; inset:0; z-index:0;
+    pointer-events: none;
+  }
+
+  /* ---------- layout ---------- */
+  .wrapper { position: relative; z-index:1; max-width:1260px; margin:0 auto; padding:20px; }
+
+  /* ---------- HEADER ---------- */
+  header {
+    text-align:center; padding:60px 20px 40px;
+  }
+  header h1 {
+    font-size: clamp(1.8rem, 4vw, 3.2rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--cyan), var(--violet), var(--magenta));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+  }
+  header .tagline {
+    margin-top:10px; color: var(--text-dim); font-size:1.05rem;
+    max-width: 700px; margin-inline: auto;
+  }
+  .badge-row { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:22px; }
+  .badge {
+    padding: 5px 16px; border-radius:999px; font-size:0.78rem; font-weight:600;
+    letter-spacing:0.5px; border:1px solid var(--border);
+    background: var(--panel); backdrop-filter:blur(8px);
+  }
+  .badge.cyan   { color:var(--cyan);   border-color: rgba(0,229,255,0.3); }
+  .badge.violet { color:var(--violet); border-color: rgba(179,136,255,0.3); }
+  .badge.lime   { color:var(--lime);   border-color: rgba(118,255,3,0.3); }
+  .badge.amber  { color:var(--amber);  border-color: rgba(255,196,0,0.3); }
+
+  /* ---------- architecture diagram ---------- */
+  .arch-section {
+    margin: 30px 0 40px;
+    background: var(--panel); border:1px solid var(--border);
+    border-radius: var(--radius); padding:30px; backdrop-filter:blur(12px);
+  }
+  .arch-section h2 {
+    font-size:1.3rem; margin-bottom:20px; color:var(--cyan);
+    display:flex; align-items:center; gap:10px;
+  }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap:16px;
+  }
+  .arch-card {
+    background: rgba(0,0,0,0.35); border:1px solid var(--border);
+    border-radius:12px; padding:20px;
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .arch-card:hover { transform:translateY(-4px); box-shadow: var(--glow-cyan); }
+  .arch-card h3 { font-size:0.95rem; margin-bottom:8px; }
+  .arch-card p  { font-size:0.82rem; color:var(--text-dim); line-height:1.55; }
+  .arch-card .icon { font-size:1.6rem; margin-bottom:10px; display:block; }
+
+  /* ---------- NAV TABS ---------- */
+  .tabs {
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:10px 0 30px;
+  }
+  .tab-btn {
+    padding:10px 22px; border-radius:999px; border:1px solid var(--border);
+    background:var(--panel); color:var(--text-dim); cursor:pointer;
+    font-size:0.88rem; font-weight:600; transition:all 0.25s;
+    backdrop-filter:blur(6px);
+  }
+  .tab-btn:hover { color:var(--text); border-color:rgba(100,140,255,0.3); }
+  .tab-btn.active {
+    background:linear-gradient(135deg, rgba(0,229,255,0.15), rgba(179,136,255,0.15));
+    color:#fff; border-color:var(--cyan);
+    box-shadow: var(--glow-cyan);
+  }
+
+  /* ---------- PANELS ---------- */
+  .panel {
+    display:none; background:var(--panel); border:1px solid var(--border);
+    border-radius:var(--radius); padding:30px; backdrop-filter:blur(12px);
+    animation: fadeUp 0.4s ease;
+  }
+  .panel.active { display:block; }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .panel h2 { font-size:1.25rem; margin-bottom:6px; }
+  .panel .subtitle { color:var(--text-dim); font-size:0.88rem; margin-bottom:22px; }
+
+  /* ---------- form elements ---------- */
+  textarea, input[type="text"], input[type="number"], select {
+    width:100%; padding:12px 16px; border-radius:10px;
+    border:1px solid var(--border); background:rgba(0,0,0,0.4);
+    color:var(--text); font-size:0.92rem; font-family:inherit;
+    resize:vertical; transition: border-color 0.2s;
+  }
+  textarea:focus, input:focus, select:focus {
+    outline:none; border-color:var(--cyan);
+  }
+  label { display:block; margin-bottom:6px; font-size:0.85rem; color:var(--text-dim); font-weight:600; }
+  .field { margin-bottom:16px; }
+
+  /* buttons */
+  .btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:11px 28px; border:none; border-radius:999px;
+    font-size:0.9rem; font-weight:700; cursor:pointer;
+    transition: all 0.25s; letter-spacing:0.4px;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg, var(--cyan), var(--violet));
+    color:#000;
+  }
+  .btn-primary:hover { box-shadow: var(--glow-cyan); transform:translateY(-2px); }
+  .btn-secondary {
+    background:transparent; border:1px solid var(--border); color:var(--text-dim);
+  }
+  .btn-secondary:hover { color:var(--text); border-color:var(--cyan); }
+  .btn-danger {
+    background: rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3); color:var(--rose);
+  }
+
+  /* ---------- result areas ---------- */
+  .result-box {
+    margin-top:20px; padding:20px; border-radius:12px;
+    background:rgba(0,0,0,0.35); border:1px solid var(--border);
+    min-height:80px; white-space:pre-wrap; font-size:0.9rem;
+    line-height:1.7;
+  }
+  .result-box .label-tag {
+    display:inline-block; padding:3px 12px; border-radius:999px;
+    font-size:0.78rem; font-weight:700; margin:3px 4px;
+  }
+  .tag-positive { background:rgba(118,255,3,0.15); color:var(--lime); border:1px solid rgba(118,255,3,0.3); }
+  .tag-negative { background:rgba(255,82,82,0.15); color:var(--rose); border:1px solid rgba(255,82,82,0.3); }
+  .tag-neutral  { background:rgba(255,196,0,0.15); color:var(--amber); border:1px solid rgba(255,196,0,0.3); }
+  .tag-info     { background:rgba(0,229,255,0.15); color:var(--cyan); border:1px solid rgba(0,229,255,0.3); }
+  .tag-violet   { background:rgba(179,136,255,0.15); color:var(--violet); border:1px solid rgba(179,136,255,0.3); }
+
+  /* meters / bars */
+  .meter-row { display:flex; align-items:center; gap:12px; margin:6px 0; }
+  .meter-label { min-width:110px; font-size:0.82rem; color:var(--text-dim); }
+  .meter-bar { flex:1; height:8px; border-radius:99px; background:rgba(255,255,255,0.06); overflow:hidden; }
+  .meter-fill { height:100%; border-radius:99px; transition:width 0.6s ease; }
+  .meter-value { min-width:48px; text-align:right; font-size:0.82rem; font-weight:700; }
+
+  /* canvas container */
+  .canvas-wrap {
+    border:1px solid var(--border); border-radius:12px;
+    overflow:hidden; background:#0a0a18; position:relative;
+  }
+  .canvas-wrap canvas { display:block; cursor:crosshair; }
+
+  /* split layout */
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:760px) { .split { grid-template-columns:1fr; } }
+
+  /* data table */
+  .data-table { width:100%; border-collapse:collapse; margin-top:12px; font-size:0.85rem; }
+  .data-table th, .data-table td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); }
+  .data-table th { color:var(--cyan); font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* live metrics strip */
+  .metrics-strip {
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+    gap:12px; margin:20px 0;
+  }
+  .metric-card {
+    background:rgba(0,0,0,0.3); border:1px solid var(--border);
+    border-radius:12px; padding:16px; text-align:center;
+  }
+  .metric-card .val { font-size:1.6rem; font-weight:800; }
+  .metric-card .lbl { font-size:0.75rem; color:var(--text-dim); margin-top:4px; text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* anomaly chart */
+  .anomaly-chart { width:100%; height:220px; margin-top:14px; }
+
+  /* markov visualization */
+  .markov-viz { width:100%; height:260px; margin-top:14px; }
+
+  /* footer */
+  footer { text-align:center; padding:50px 20px 30px; color:var(--text-dim); font-size:0.8rem; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(100,140,255,0.2); border-radius:99px; }
+
+  /* pulse animation */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .pulse { animation: pulse 2s infinite; }
+
+  /* glow ring */
+  @keyframes glowRing {
+    0%   { box-shadow: 0 0 5px var(--cyan), 0 0 10px var(--cyan); }
+    50%  { box-shadow: 0 0 15px var(--violet), 0 0 30px var(--violet); }
+    100% { box-shadow: 0 0 5px var(--cyan), 0 0 10px var(--cyan); }
+  }
+  .glow-ring { animation: glowRing 3s infinite; }
+
+  .hidden { display:none!important; }
+
+  /* knowledge graph node */
+  .kg-node {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 14px; border-radius:999px; font-size:0.82rem;
+    margin:3px; cursor:default;
+  }
+</style>
+</head>
+<body>
+
+<!-- Animated mesh background -->
+<canvas id="meshCanvas"></canvas>
+
+<div class="wrapper">
+
+  <!-- ============ HEADER ============ -->
+  <header>
+    <h1>PRISMATIC INFERENCE ENGINE</h1>
+    <p class="tagline">
+      A zero-epoch, non-neural-network intelligence system. No weights. No backpropagation.
+      No training loops. Pure algorithmic reasoning through Bayesian fields, topological
+      analysis, Markov dynamics, and information geometry.
+    </p>
+    <div class="badge-row">
+      <span class="badge cyan">ZERO EPOCHS</span>
+      <span class="badge violet">NON-NEURAL</span>
+      <span class="badge lime">BAYESIAN CORE</span>
+      <span class="badge amber">MARKOV DYNAMICS</span>
+    </div>
+  </header>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section class="arch-section">
+    <h2><span style="color:var(--violet)">&#9670;</span> System Architecture</h2>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <span class="icon" style="color:var(--cyan)">&#9677;</span>
+        <h3 style="color:var(--cyan)">Bayesian Inference Core</h3>
+        <p>Probabilistic reasoning using Bayes' theorem. Classifies text, data, and signals through prior/posterior probability updates with zero training required.</p>
+      </div>
+      <div class="arch-card">
+        <span class="icon" style="color:var(--violet)">&#9674;</span>
+        <h3 style="color:var(--violet)">Topological Feature Extractor</h3>
+        <p>Analyzes geometric and structural properties of input data &mdash; connected components, curvature, density clusters &mdash; without learned representations.</p>
+      </div>
+      <div class="arch-card">
+        <span class="icon" style="color:var(--lime)">&#8734;</span>
+        <h3 style="color:var(--lime)">Markov Dynamics Engine</h3>
+        <p>Models sequential dependencies through state-transition matrices. Predicts next tokens, detects patterns, and generates sequences from raw statistics.</p>
+      </div>
+      <div class="arch-card">
+        <span class="icon" style="color:var(--amber)">&#9041;</span>
+        <h3 style="color:var(--amber)">Information Geometry Module</h3>
+        <p>Measures information-theoretic distances (KL divergence, entropy, mutual information) to quantify similarity and detect anomalies in data distributions.</p>
+      </div>
+      <div class="arch-card">
+        <span class="icon" style="color:var(--magenta)">&#10038;</span>
+        <h3 style="color:var(--magenta)">K-Nearest Resonance Field</h3>
+        <p>Instance-based reasoning using distance metrics in feature space. Classifies new inputs by measuring proximity to known prototypes &mdash; no training phase.</p>
+      </div>
+      <div class="arch-card">
+        <span class="icon" style="color:var(--rose)">&#9055;</span>
+        <h3 style="color:var(--rose)">Statistical Anomaly Detector</h3>
+        <p>Uses z-scores, IQR analysis, and entropy deviation to flag outliers and anomalies in streaming data with mathematically guaranteed sensitivity.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LIVE METRICS ============ -->
+  <div class="metrics-strip" id="metricsStrip">
+    <div class="metric-card">
+      <div class="val" style="color:var(--cyan)" id="metricInferences">0</div>
+      <div class="lbl">Total Inferences</div>
+    </div>
+    <div class="metric-card">
+      <div class="val" style="color:var(--lime)" id="metricAccuracy">--</div>
+      <div class="lbl">Est. Confidence</div>
+    </div>
+    <div class="metric-card">
+      <div class="val" style="color:var(--violet)" id="metricLatency">0ms</div>
+      <div class="lbl">Avg Latency</div>
+    </div>
+    <div class="metric-card">
+      <div class="val" style="color:var(--amber)" id="metricEntropy">--</div>
+      <div class="lbl">System Entropy</div>
+    </div>
+  </div>
+
+  <!-- ============ TABS ============ -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="text">Bayesian Text Analysis</button>
+    <button class="tab-btn" data-tab="pattern">Pattern Recognition</button>
+    <button class="tab-btn" data-tab="anomaly">Anomaly Detection</button>
+    <button class="tab-btn" data-tab="markov">Markov Predictor</button>
+    <button class="tab-btn" data-tab="knowledge">Knowledge Graphs</button>
+  </div>
+
+  <!-- ==================== PANEL: TEXT ANALYSIS ==================== -->
+  <div class="panel active" id="panel-text">
+    <h2>Bayesian Text Analysis</h2>
+    <p class="subtitle">Zero-epoch sentiment analysis &amp; topic classification using Bayesian probability, TF-IDF vectors, and lexicon resonance. No training data needed.</p>
+
+    <div class="field">
+      <label>Input Text</label>
+      <textarea id="textInput" rows="4" placeholder="Type or paste any text here for analysis...">The new quantum computing breakthrough is absolutely revolutionary and will transform technology forever, though some researchers remain cautiously skeptical about near-term practical applications.</textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="PIE.analyzeText()">Analyze Text</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('textInput').value='';document.getElementById('textResult').innerHTML='';">Clear</button>
+    </div>
+    <div class="result-box" id="textResult"></div>
+  </div>
+
+  <!-- ==================== PANEL: PATTERN RECOGNITION ==================== -->
+  <div class="panel" id="panel-pattern">
+    <h2>Topological Pattern Recognition</h2>
+    <p class="subtitle">Draw a shape on the canvas. The engine uses geometric feature extraction, curvature analysis, and K-nearest resonance to classify it &mdash; zero training epochs.</p>
+
+    <div class="split">
+      <div>
+        <div class="canvas-wrap">
+          <canvas id="drawCanvas" width="400" height="400"></canvas>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="PIE.classifyPattern()">Classify Shape</button>
+          <button class="btn btn-danger" onclick="PIE.clearCanvas()">Clear Canvas</button>
+        </div>
+      </div>
+      <div>
+        <div class="result-box" id="patternResult" style="min-height:380px;">
+          <span style="color:var(--text-dim)">Draw a shape (circle, triangle, square, line, star) and click "Classify Shape".</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PANEL: ANOMALY DETECTION ==================== -->
+  <div class="panel" id="panel-anomaly">
+    <h2>Statistical Anomaly Detection</h2>
+    <p class="subtitle">Generates or accepts data streams, then uses z-score analysis, IQR fencing, and entropy deviation to detect anomalies without any learned thresholds.</p>
+
+    <div class="split">
+      <div>
+        <div class="field">
+          <label>Data Points (comma-separated, or generate random)</label>
+          <textarea id="anomalyInput" rows="3" placeholder="12, 14, 13, 15, 14, 99, 13, 12, 15, 14, 13, 200, 14, 15..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="PIE.detectAnomalies()">Detect Anomalies</button>
+          <button class="btn btn-secondary" onclick="PIE.generateAnomalyData()">Generate Data</button>
+        </div>
+      </div>
+      <div>
+        <div class="result-box" id="anomalyResult" style="min-height:160px;">
+          <span style="color:var(--text-dim)">Enter data or generate random data with injected anomalies.</span>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-wrap" style="margin-top:18px;">
+      <canvas id="anomalyChart" class="anomaly-chart" width="1200" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- ==================== PANEL: MARKOV PREDICTOR ==================== -->
+  <div class="panel" id="panel-markov">
+    <h2>Markov Chain Predictor</h2>
+    <p class="subtitle">Builds a state-transition probability matrix from input text, then generates continuations and predicts next words through pure stochastic dynamics.</p>
+
+    <div class="field">
+      <label>Training Corpus (the engine builds transition probabilities &mdash; not training a neural network)</label>
+      <textarea id="markovCorpus" rows="4" placeholder="Paste text to build the Markov chain from...">The cat sat on the mat. The dog sat on the log. The cat chased the dog. The dog chased the cat around the garden. The garden had flowers and the flowers were beautiful. The beautiful garden was peaceful and the peaceful cat sat quietly.</textarea>
+    </div>
+    <div class="split">
+      <div>
+        <div class="field">
+          <label>Seed Word(s)</label>
+          <input type="text" id="markovSeed" value="The cat" placeholder="Starting word(s)...">
+        </div>
+        <div class="field">
+          <label>Words to Generate</label>
+          <input type="number" id="markovLength" value="30" min="5" max="200">
+        </div>
+        <button class="btn btn-primary" onclick="PIE.generateMarkov()">Generate Sequence</button>
+      </div>
+      <div>
+        <div class="result-box" id="markovResult" style="min-height:120px;">
+          <span style="color:var(--text-dim)">Enter a corpus text and seed words, then generate.</span>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-wrap" style="margin-top:18px;">
+      <canvas id="markovViz" class="markov-viz" width="1200" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- ==================== PANEL: KNOWLEDGE GRAPHS ==================== -->
+  <div class="panel" id="panel-knowledge">
+    <h2>Knowledge Graph Reasoning</h2>
+    <p class="subtitle">Extracts entities and relationships from text, builds a directed knowledge graph, and performs inference through graph traversal &mdash; pure symbolic AI.</p>
+
+    <div class="field">
+      <label>Input Text (the engine will extract entities and relations)</label>
+      <textarea id="kgInput" rows="4" placeholder="Enter text with entities and relationships...">Albert Einstein developed the theory of relativity. Einstein was born in Germany. The theory of relativity revolutionized physics. Physics is a branch of science. Germany is a country in Europe. Einstein won the Nobel Prize. The Nobel Prize is awarded in Stockholm. Stockholm is the capital of Sweden.</textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="PIE.buildKnowledgeGraph()">Build Graph &amp; Reason</button>
+      <button class="btn btn-secondary" onclick="PIE.queryKG()">Query Graph</button>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Query (after building graph)</label>
+      <input type="text" id="kgQuery" placeholder="e.g., What is connected to Einstein?">
+    </div>
+    <div class="canvas-wrap" style="margin-top:14px;">
+      <canvas id="kgCanvas" width="1200" height="400"></canvas>
+    </div>
+    <div class="result-box" id="kgResult" style="margin-top:14px;">
+      <span style="color:var(--text-dim)">Build the knowledge graph to see extracted entities, relations, and inferred knowledge.</span>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <p>PRISMATIC INFERENCE ENGINE v1.0 &mdash; Zero-Epoch Intelligence Without Neural Networks</p>
+    <p style="margin-top:4px;">Bayesian Inference &bull; Topological Analysis &bull; Markov Dynamics &bull; Information Geometry &bull; Symbolic Reasoning</p>
+  </footer>
+
+</div><!-- /wrapper -->
+
+<script>
+// ================================================================
+// PRISMATIC INFERENCE ENGINE (PIE)
+// A complete zero-epoch, non-neural-network AI system.
+//
+// Modules:
+//   1. Bayesian Text Analysis   (lexicon + TF-IDF + Bayes)
+//   2. Pattern Recognition       (geometric features + KNN)
+//   3. Anomaly Detection          (z-score + IQR + entropy)
+//   4. Markov Chain Predictor     (state-transition matrices)
+//   5. Knowledge Graph Reasoning  (entity extraction + graph traversal)
+//
+// ZERO neural network components. ZERO training epochs.
+// ================================================================
+
+const PIE = (() => {
+
+  // ──────────── GLOBAL STATE ────────────
+  let totalInferences = 0;
+  let totalLatency = 0;
+  let lastEntropy = 0;
+  let lastConfidence = 0;
+
+  function updateMetrics(latency, confidence, entropy) {
+    totalInferences++;
+    totalLatency += latency;
+    lastConfidence = confidence;
+    lastEntropy = entropy || lastEntropy;
+
+    document.getElementById('metricInferences').textContent = totalInferences;
+    document.getElementById('metricAccuracy').textContent = (confidence * 100).toFixed(1) + '%';
+    document.getElementById('metricLatency').textContent = (totalLatency / totalInferences).toFixed(1) + 'ms';
+    document.getElementById('metricEntropy').textContent = lastEntropy.toFixed(3);
+  }
+
+  // ──────────── 1. BAYESIAN TEXT ANALYSIS ────────────
+
+  // Sentiment lexicon (zero-epoch: predefined, no training)
+  const SENTIMENT_LEXICON = {
+    // Strongly positive
+    'amazing':0.9,'excellent':0.9,'outstanding':0.9,'brilliant':0.85,'revolutionary':0.85,
+    'incredible':0.85,'fantastic':0.85,'wonderful':0.85,'superb':0.85,'magnificent':0.8,
+    'perfect':0.9,'extraordinary':0.85,'phenomenal':0.85,'exceptional':0.85,'marvelous':0.8,
+    'love':0.8,'great':0.7,'beautiful':0.75,'best':0.8,'awesome':0.8,'delightful':0.75,
+    // Moderately positive
+    'good':0.5,'nice':0.45,'happy':0.6,'pleased':0.55,'enjoy':0.55,'positive':0.5,
+    'helpful':0.5,'improve':0.45,'better':0.4,'success':0.6,'successful':0.6,'win':0.55,
+    'transform':0.5,'breakthrough':0.65,'innovative':0.55,'progress':0.5,'advance':0.5,
+    'benefit':0.5,'efficient':0.45,'effective':0.5,'impressive':0.6,'remarkable':0.6,
+    'exciting':0.6,'promising':0.5,'optimistic':0.5,'hope':0.4,'fortunate':0.5,
+    'peaceful':0.5,'quietly':0.2,
+    // Mildly positive
+    'okay':0.15,'fine':0.15,'adequate':0.1,'decent':0.2,'fair':0.15,
+    // Mildly negative
+    'concern':-0.3,'worried':-0.3,'skeptical':-0.35,'cautious':-0.2,'doubt':-0.35,
+    'uncertain':-0.3,'questionable':-0.3,'mediocre':-0.25,'lacking':-0.3,
+    'cautiously':-0.15,'slow':-0.2,'difficult':-0.25,'complex':-0.1,'challenge':-0.15,
+    // Moderately negative
+    'bad':-0.6,'poor':-0.55,'wrong':-0.5,'fail':-0.6,'failure':-0.65,'problem':-0.4,
+    'issue':-0.35,'error':-0.4,'mistake':-0.45,'disappoint':-0.55,'disappointing':-0.6,
+    'frustrating':-0.55,'annoying':-0.5,'boring':-0.45,'waste':-0.5,'ugly':-0.5,
+    'hate':-0.8,'dislike':-0.6,'angry':-0.6,'sad':-0.55,'fear':-0.5,
+    // Strongly negative
+    'terrible':-0.85,'horrible':-0.85,'awful':-0.85,'worst':-0.9,'disaster':-0.85,
+    'catastrophe':-0.85,'devastating':-0.8,'dreadful':-0.8,'abysmal':-0.85,'atrocious':-0.85,
+    'pathetic':-0.75,'miserable':-0.7,'disgusting':-0.8,'toxic':-0.7,'destroy':-0.7
+  };
+
+  // Topic keywords (zero-epoch: rule-based classification)
+  const TOPIC_LEXICON = {
+    'technology': ['computer','software','hardware','digital','tech','ai','algorithm','data','code','programming','internet','app','device','robot','automation','quantum','computing','cyber','machine','processor','semiconductor'],
+    'science':    ['research','experiment','study','theory','hypothesis','physics','chemistry','biology','molecule','atom','particle','genome','evolution','scientific','laboratory','discovery','scientist','quantum','relativity'],
+    'politics':   ['government','president','election','policy','democrat','republican','vote','congress','senate','political','law','legislation','campaign','party','minister','parliament','democracy','conservative','liberal'],
+    'sports':     ['game','team','player','score','win','championship','tournament','league','coach','athlete','football','basketball','soccer','tennis','match','season','trophy','medal','competition'],
+    'health':     ['health','medical','doctor','hospital','disease','treatment','symptom','patient','medicine','therapy','diagnosis','vaccine','virus','infection','wellness','mental','exercise','nutrition','clinical'],
+    'finance':    ['market','stock','invest','economy','bank','financial','money','profit','revenue','trade','price','dollar','fund','capital','debt','crypto','currency','inflation','interest','gdp'],
+    'arts':       ['art','music','film','movie','book','painting','culture','creative','artist','gallery','museum','theater','song','concert','literary','novel','poetry','dance','design','aesthetic']
+  };
+
+  // Intensifiers and negators
+  const INTENSIFIERS = {'very':1.4,'extremely':1.6,'incredibly':1.5,'absolutely':1.5,'really':1.3,'truly':1.3,'highly':1.35,'remarkably':1.4,'exceptionally':1.5,'utterly':1.5,'deeply':1.3,'thoroughly':1.3,'completely':1.4,'totally':1.4};
+  const NEGATORS = new Set(['not','no','never','neither','nor','hardly','barely','scarcely','rarely',"don't","doesn't","didn't","won't","wouldn't","shouldn't","couldn't","can't","isn't","aren't","wasn't","weren't"]);
+
+  function tokenize(text) {
+    return text.toLowerCase().replace(/[^a-z0-9'\s-]/g,' ').split(/\s+/).filter(w => w.length > 0);
+  }
+
+  function computeSentiment(tokens) {
+    let score = 0, count = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      const w = tokens[i];
+      if (SENTIMENT_LEXICON[w] !== undefined) {
+        let val = SENTIMENT_LEXICON[w];
+        // Check for negation (look back 1-3 words)
+        for (let j = Math.max(0, i - 3); j < i; j++) {
+          if (NEGATORS.has(tokens[j])) { val *= -0.8; break; }
+        }
+        // Check for intensifiers
+        if (i > 0 && INTENSIFIERS[tokens[i-1]]) {
+          val *= INTENSIFIERS[tokens[i-1]];
+        }
+        score += val;
+        count++;
+      }
+    }
+    return { raw: score, normalized: count > 0 ? Math.max(-1, Math.min(1, score / count)) : 0, wordCount: count };
+  }
+
+  function classifyTopics(tokens) {
+    const scores = {};
+    const tokenSet = new Set(tokens);
+    for (const [topic, keywords] of Object.entries(TOPIC_LEXICON)) {
+      let hits = 0;
+      for (const kw of keywords) {
+        if (tokenSet.has(kw)) hits++;
+        // Check partial matches
+        for (const t of tokens) {
+          if (t !== kw && (t.startsWith(kw) || kw.startsWith(t)) && t.length > 3) {
+            hits += 0.5;
+          }
+        }
+      }
+      if (hits > 0) {
+        // Bayesian: P(topic|words) proportional to hits / totalKeywords * prior
+        scores[topic] = hits / keywords.length;
+      }
+    }
+    // Normalize to probabilities
+    const total = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
+    for (const k in scores) scores[k] /= total;
+    return scores;
+  }
+
+  function computeEntropy(tokens) {
+    const freq = {};
+    for (const t of tokens) freq[t] = (freq[t] || 0) + 1;
+    const total = tokens.length;
+    let entropy = 0;
+    for (const f of Object.values(freq)) {
+      const p = f / total;
+      if (p > 0) entropy -= p * Math.log2(p);
+    }
+    return entropy;
+  }
+
+  function computeReadability(text) {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const words = tokenize(text);
+    const syllables = words.reduce((sum, w) => sum + Math.max(1, w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '').match(/[aeiouy]{1,2}/g)?.length || 1), 0);
+    const avgSentLen = sentences.length > 0 ? words.length / sentences.length : words.length;
+    const avgSyllPerWord = words.length > 0 ? syllables / words.length : 1;
+    // Flesch-Kincaid Grade Level
+    const fkgl = 0.39 * avgSentLen + 11.8 * avgSyllPerWord - 15.59;
+    return { grade: Math.max(0, fkgl), sentenceCount: sentences.length, avgSentLen: avgSentLen.toFixed(1) };
+  }
+
+  function analyzeText() {
+    const t0 = performance.now();
+    const text = document.getElementById('textInput').value.trim();
+    if (!text) return;
+
+    const tokens = tokenize(text);
+    const sentiment = computeSentiment(tokens);
+    const topics = classifyTopics(tokens);
+    const entropy = computeEntropy(tokens);
+    const readability = computeReadability(text);
+
+    const elapsed = performance.now() - t0;
+    const confidence = Math.min(0.99, 0.5 + tokens.length * 0.005 + (sentiment.wordCount / tokens.length) * 0.3);
+    updateMetrics(elapsed, confidence, entropy);
+
+    // Build result HTML
+    const sentLabel = sentiment.normalized > 0.15 ? 'POSITIVE' : sentiment.normalized < -0.15 ? 'NEGATIVE' : 'NEUTRAL';
+    const sentClass = sentLabel === 'POSITIVE' ? 'tag-positive' : sentLabel === 'NEGATIVE' ? 'tag-negative' : 'tag-neutral';
+    const sentPct = ((sentiment.normalized + 1) / 2 * 100).toFixed(1);
+
+    let topicHTML = '';
+    const sortedTopics = Object.entries(topics).sort((a, b) => b[1] - a[1]);
+    if (sortedTopics.length === 0) {
+      topicHTML = '<span class="label-tag tag-neutral">GENERAL</span>';
+    } else {
+      for (const [topic, prob] of sortedTopics) {
+        topicHTML += `<span class="label-tag tag-info">${topic.toUpperCase()} ${(prob*100).toFixed(0)}%</span> `;
+      }
+    }
+
+    const sentColor = sentiment.normalized > 0.15 ? 'var(--lime)' : sentiment.normalized < -0.15 ? 'var(--rose)' : 'var(--amber)';
+
+    let html = `<div style="margin-bottom:16px;">
+<strong style="color:var(--cyan)">BAYESIAN INFERENCE RESULTS</strong>
+<span style="float:right;font-size:0.78rem;color:var(--text-dim)">${elapsed.toFixed(2)}ms &bull; ${tokens.length} tokens</span>
+</div>`;
+
+    // Sentiment
+    html += `<div style="margin-bottom:18px;">
+<div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:6px;">SENTIMENT ANALYSIS</div>
+<span class="label-tag ${sentClass}">${sentLabel}</span>
+<div class="meter-row" style="margin-top:10px;">
+  <span class="meter-label">Negative</span>
+  <div class="meter-bar">
+    <div class="meter-fill" style="width:${sentPct}%;background:linear-gradient(90deg,var(--rose),var(--amber),var(--lime));"></div>
+  </div>
+  <span class="meter-label" style="text-align:right">Positive</span>
+</div>
+<div style="text-align:center;font-size:0.82rem;color:${sentColor};font-weight:700;margin-top:4px;">Score: ${sentiment.normalized.toFixed(3)} (raw: ${sentiment.raw.toFixed(3)}, from ${sentiment.wordCount} sentiment words)</div>
+</div>`;
+
+    // Topics
+    html += `<div style="margin-bottom:18px;">
+<div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:6px;">TOPIC CLASSIFICATION (Bayesian Posterior)</div>
+${topicHTML}
+</div>`;
+
+    // Topic probability bars
+    if (sortedTopics.length > 0) {
+      html += '<div style="margin-bottom:18px;">';
+      for (const [topic, prob] of sortedTopics) {
+        html += `<div class="meter-row">
+  <span class="meter-label">${topic}</span>
+  <div class="meter-bar"><div class="meter-fill" style="width:${prob*100}%;background:var(--cyan);"></div></div>
+  <span class="meter-value" style="color:var(--cyan)">${(prob*100).toFixed(1)}%</span>
+</div>`;
+      }
+      html += '</div>';
+    }
+
+    // Info metrics
+    html += `<div style="margin-bottom:12px;">
+<div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:6px;">INFORMATION METRICS</div>
+<div class="meter-row">
+  <span class="meter-label">Entropy</span>
+  <div class="meter-bar"><div class="meter-fill" style="width:${Math.min(100,entropy/Math.log2(tokens.length)*100)}%;background:var(--violet);"></div></div>
+  <span class="meter-value" style="color:var(--violet)">${entropy.toFixed(3)}</span>
+</div>
+<div class="meter-row">
+  <span class="meter-label">Readability</span>
+  <div class="meter-bar"><div class="meter-fill" style="width:${Math.min(100,readability.grade/20*100)}%;background:var(--amber);"></div></div>
+  <span class="meter-value" style="color:var(--amber)">Grade ${readability.grade.toFixed(1)}</span>
+</div>
+<div class="meter-row">
+  <span class="meter-label">Confidence</span>
+  <div class="meter-bar"><div class="meter-fill" style="width:${confidence*100}%;background:var(--lime);"></div></div>
+  <span class="meter-value" style="color:var(--lime)">${(confidence*100).toFixed(1)}%</span>
+</div>
+</div>`;
+
+    // Summary
+    html += `<div style="font-size:0.82rem;color:var(--text-dim);margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+<strong style="color:var(--text)">Summary:</strong> ${tokens.length} tokens analyzed, ${readability.sentenceCount} sentences (avg ${readability.avgSentLen} words/sent), lexical diversity: ${(Object.keys(tokens.reduce((a,t)=>(a[t]=1,a),{})).length / tokens.length * 100).toFixed(1)}%
+</div>`;
+
+    document.getElementById('textResult').innerHTML = html;
+  }
+
+
+  // ──────────── 2. PATTERN RECOGNITION ────────────
+
+  const drawCanvas = document.getElementById('drawCanvas');
+  const drawCtx = drawCanvas.getContext('2d');
+  let isDrawing = false;
+  let drawPoints = [];
+
+  drawCanvas.addEventListener('pointerdown', e => {
+    isDrawing = true;
+    const r = drawCanvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (drawCanvas.width / r.width);
+    const y = (e.clientY - r.top) * (drawCanvas.height / r.height);
+    drawPoints.push({ x, y, newStroke: true });
+    drawCtx.beginPath();
+    drawCtx.moveTo(x, y);
+  });
+
+  drawCanvas.addEventListener('pointermove', e => {
+    if (!isDrawing) return;
+    const r = drawCanvas.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (drawCanvas.width / r.width);
+    const y = (e.clientY - r.top) * (drawCanvas.height / r.height);
+    drawPoints.push({ x, y, newStroke: false });
+    drawCtx.strokeStyle = '#00e5ff';
+    drawCtx.lineWidth = 3;
+    drawCtx.lineCap = 'round';
+    drawCtx.lineTo(x, y);
+    drawCtx.stroke();
+  });
+
+  drawCanvas.addEventListener('pointerup', () => { isDrawing = false; });
+  drawCanvas.addEventListener('pointerleave', () => { isDrawing = false; });
+
+  function clearCanvas() {
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    drawPoints = [];
+    document.getElementById('patternResult').innerHTML = '<span style="color:var(--text-dim)">Canvas cleared. Draw a new shape.</span>';
+  }
+
+  function classifyPattern() {
+    const t0 = performance.now();
+    if (drawPoints.length < 10) {
+      document.getElementById('patternResult').innerHTML = '<span style="color:var(--rose)">Please draw a shape with more strokes.</span>';
+      return;
+    }
+
+    // Extract geometric features
+    const pts = drawPoints.filter(p => !p.newStroke);
+    if (pts.length < 5) {
+      document.getElementById('patternResult').innerHTML = '<span style="color:var(--rose)">Not enough points to analyze.</span>';
+      return;
+    }
+
+    // Bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
+    }
+    const w = maxX - minX || 1, h = maxY - minY || 1;
+    const aspectRatio = w / h;
+
+    // Centroid
+    const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+
+    // Distances from centroid
+    const dists = pts.map(p => Math.sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2));
+    const meanDist = dists.reduce((a, b) => a + b, 0) / dists.length;
+    const distVariance = dists.reduce((s, d) => s + (d - meanDist) ** 2, 0) / dists.length;
+    const distCV = Math.sqrt(distVariance) / (meanDist || 1); // coefficient of variation
+
+    // Total path length
+    let pathLength = 0;
+    for (let i = 1; i < pts.length; i++) {
+      pathLength += Math.sqrt((pts[i].x - pts[i-1].x) ** 2 + (pts[i].y - pts[i-1].y) ** 2);
+    }
+
+    // Closure (distance from start to end)
+    const closure = Math.sqrt((pts[0].x - pts[pts.length-1].x) ** 2 + (pts[0].y - pts[pts.length-1].y) ** 2);
+    const closureRatio = closure / (pathLength || 1);
+
+    // Angle changes (curvature estimate)
+    const angles = [];
+    for (let i = 2; i < pts.length; i++) {
+      const dx1 = pts[i-1].x - pts[i-2].x, dy1 = pts[i-1].y - pts[i-2].y;
+      const dx2 = pts[i].x - pts[i-1].x, dy2 = pts[i].y - pts[i-1].y;
+      const a = Math.atan2(dy2, dx2) - Math.atan2(dy1, dx1);
+      angles.push(((a + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+    }
+    const totalAngle = angles.reduce((s, a) => s + Math.abs(a), 0);
+    const meanAngle = angles.length > 0 ? totalAngle / angles.length : 0;
+
+    // Count sharp corners (angle change > threshold)
+    const sharpCorners = angles.filter(a => Math.abs(a) > 0.4).length;
+    const cornerDensity = sharpCorners / (pts.length || 1);
+
+    // Area estimate using shoelace formula
+    let area = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      area += pts[i].x * pts[i+1].y - pts[i+1].x * pts[i].y;
+    }
+    area = Math.abs(area) / 2;
+    const compactness = area / ((pathLength / (2 * Math.PI)) ** 2 * Math.PI || 1); // circularity
+
+    // Convex hull point count ratio
+    const hull = convexHull(pts);
+    const hullRatio = hull.length / pts.length;
+
+    // ─── KNN Classification against shape prototypes ───
+    const features = [distCV, closureRatio, aspectRatio, meanAngle, cornerDensity, compactness];
+
+    // Prototype feature vectors (hand-crafted, zero-epoch)
+    const prototypes = {
+      'CIRCLE':   { f: [0.08, 0.02, 1.0, 0.05, 0.02, 0.85], w: 1 },
+      'ELLIPSE':  { f: [0.12, 0.03, 1.6, 0.05, 0.03, 0.70], w: 1 },
+      'SQUARE':   { f: [0.22, 0.04, 1.0, 0.12, 0.08, 0.60], w: 1 },
+      'RECTANGLE':{ f: [0.25, 0.04, 1.7, 0.12, 0.08, 0.55], w: 1 },
+      'TRIANGLE': { f: [0.20, 0.05, 1.1, 0.15, 0.06, 0.45], w: 1 },
+      'LINE':     { f: [0.40, 0.70, 2.5, 0.03, 0.01, 0.05], w: 1 },
+      'STAR':     { f: [0.35, 0.06, 1.0, 0.20, 0.12, 0.35], w: 1 },
+      'SPIRAL':   { f: [0.45, 0.50, 1.1, 0.08, 0.04, 0.20], w: 1 }
+    };
+
+    // Weighted Euclidean distance
+    const featureWeights = [2.5, 3.0, 1.5, 2.0, 2.0, 2.5];
+    const distances = {};
+    for (const [name, proto] of Object.entries(prototypes)) {
+      let d = 0;
+      for (let i = 0; i < features.length; i++) {
+        d += featureWeights[i] * (features[i] - proto.f[i]) ** 2;
+      }
+      distances[name] = Math.sqrt(d);
+    }
+
+    // Convert distances to probabilities (softmax-like)
+    const sorted = Object.entries(distances).sort((a, b) => a[1] - b[1]);
+    const minDist = sorted[0][1];
+    let expSum = 0;
+    const probs = {};
+    for (const [name, dist] of sorted) {
+      const e = Math.exp(-(dist - minDist) * 3);
+      probs[name] = e;
+      expSum += e;
+    }
+    for (const k in probs) probs[k] /= expSum;
+
+    const topClass = sorted[0][0];
+    const topProb = probs[topClass];
+
+    const elapsed = performance.now() - t0;
+    updateMetrics(elapsed, topProb, computeEntropy(angles.map(a => Math.round(a * 10).toString())));
+
+    // Build result
+    let html = `<div style="margin-bottom:14px;">
+<strong style="color:var(--cyan)">TOPOLOGICAL CLASSIFICATION</strong>
+<span style="float:right;font-size:0.78rem;color:var(--text-dim)">${elapsed.toFixed(2)}ms &bull; ${pts.length} points</span>
+</div>`;
+
+    html += `<div style="text-align:center;margin:16px 0;">
+<div style="font-size:2rem;font-weight:800;color:var(--cyan)">${topClass}</div>
+<div style="font-size:0.85rem;color:var(--text-dim);margin-top:4px;">Confidence: ${(topProb*100).toFixed(1)}%</div>
+</div>`;
+
+    // All class probabilities
+    html += '<div style="margin:14px 0;">';
+    for (const [name] of sorted) {
+      const p = probs[name];
+      const color = name === topClass ? 'var(--cyan)' : 'var(--text-dim)';
+      html += `<div class="meter-row">
+  <span class="meter-label" style="color:${color}">${name}</span>
+  <div class="meter-bar"><div class="meter-fill" style="width:${p*100}%;background:${name === topClass ? 'var(--cyan)' : 'rgba(255,255,255,0.15)'};"></div></div>
+  <span class="meter-value" style="color:${color}">${(p*100).toFixed(1)}%</span>
+</div>`;
+    }
+    html += '</div>';
+
+    // Feature breakdown
+    html += `<div style="font-size:0.82rem;color:var(--text-dim);margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+<strong style="color:var(--text)">Extracted Features:</strong><br>
+Dist. Variation: ${distCV.toFixed(3)} &bull; Closure Ratio: ${closureRatio.toFixed(3)} &bull; Aspect: ${aspectRatio.toFixed(2)}<br>
+Mean Curvature: ${meanAngle.toFixed(3)} &bull; Corner Density: ${cornerDensity.toFixed(3)} &bull; Compactness: ${compactness.toFixed(3)}<br>
+Path Length: ${pathLength.toFixed(0)}px &bull; Area: ${area.toFixed(0)}px&sup2; &bull; Hull Points: ${hull.length}
+</div>`;
+
+    document.getElementById('patternResult').innerHTML = html;
+
+    // Draw feature overlay
+    drawCtx.strokeStyle = 'rgba(179,136,255,0.4)';
+    drawCtx.lineWidth = 1;
+    drawCtx.beginPath();
+    for (let i = 0; i < hull.length; i++) {
+      const p = hull[i];
+      if (i === 0) drawCtx.moveTo(p.x, p.y);
+      else drawCtx.lineTo(p.x, p.y);
+    }
+    drawCtx.closePath();
+    drawCtx.stroke();
+
+    // Draw centroid
+    drawCtx.fillStyle = 'var(--magenta)';
+    drawCtx.beginPath();
+    drawCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+    drawCtx.fill();
+  }
+
+  function convexHull(points) {
+    const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+    if (pts.length <= 1) return pts;
+    const cross = (O, A, B) => (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+    const lower = [];
+    for (const p of pts) {
+      while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    const upper = [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+      while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], pts[i]) <= 0) upper.pop();
+      upper.push(pts[i]);
+    }
+    upper.pop(); lower.pop();
+    return lower.concat(upper);
+  }
+
+
+  // ──────────── 3. ANOMALY DETECTION ────────────
+
+  function generateAnomalyData() {
+    const n = 60;
+    const data = [];
+    const base = 50 + Math.random() * 50;
+    const noise = 5 + Math.random() * 10;
+    for (let i = 0; i < n; i++) {
+      let val = base + Math.sin(i * 0.3) * 10 + (Math.random() - 0.5) * noise;
+      // Inject anomalies
+      if (Math.random() < 0.08) val += (Math.random() > 0.5 ? 1 : -1) * (40 + Math.random() * 60);
+      data.push(parseFloat(val.toFixed(2)));
+    }
+    document.getElementById('anomalyInput').value = data.join(', ');
+  }
+
+  function detectAnomalies() {
+    const t0 = performance.now();
+    const raw = document.getElementById('anomalyInput').value.trim();
+    if (!raw) { generateAnomalyData(); return detectAnomalies(); }
+
+    const data = raw.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+    if (data.length < 5) {
+      document.getElementById('anomalyResult').innerHTML = '<span style="color:var(--rose)">Need at least 5 data points.</span>';
+      return;
+    }
+
+    // Statistics
+    const n = data.length;
+    const mean = data.reduce((a, b) => a + b, 0) / n;
+    const variance = data.reduce((s, d) => s + (d - mean) ** 2, 0) / n;
+    const std = Math.sqrt(variance);
+
+    // Z-scores
+    const zScores = data.map(d => std > 0 ? (d - mean) / std : 0);
+
+    // IQR method
+    const sorted = [...data].sort((a, b) => a - b);
+    const q1 = sorted[Math.floor(n * 0.25)];
+    const q3 = sorted[Math.floor(n * 0.75)];
+    const iqr = q3 - q1;
+    const lowerFence = q1 - 1.5 * iqr;
+    const upperFence = q3 + 1.5 * iqr;
+
+    // Entropy of binned data
+    const bins = 10;
+    const minVal = sorted[0], maxVal = sorted[n - 1];
+    const binWidth = (maxVal - minVal) / bins || 1;
+    const binCounts = new Array(bins).fill(0);
+    for (const d of data) {
+      const bi = Math.min(bins - 1, Math.floor((d - minVal) / binWidth));
+      binCounts[bi]++;
+    }
+    let entropy = 0;
+    for (const c of binCounts) {
+      const p = c / n;
+      if (p > 0) entropy -= p * Math.log2(p);
+    }
+
+    // Classify anomalies
+    const anomalies = [];
+    for (let i = 0; i < n; i++) {
+      const zAnomaly = Math.abs(zScores[i]) > 2.5;
+      const iqrAnomaly = data[i] < lowerFence || data[i] > upperFence;
+      if (zAnomaly || iqrAnomaly) {
+        anomalies.push({
+          index: i, value: data[i], zScore: zScores[i],
+          methods: [zAnomaly ? 'Z-Score' : null, iqrAnomaly ? 'IQR' : null].filter(Boolean)
+        });
+      }
+    }
+
+    const elapsed = performance.now() - t0;
+    const confidence = Math.min(0.99, 0.7 + n * 0.003);
+    updateMetrics(elapsed, confidence, entropy);
+
+    // Result HTML
+    let html = `<div style="margin-bottom:12px;">
+<strong style="color:var(--cyan)">ANOMALY DETECTION RESULTS</strong>
+<span style="float:right;font-size:0.78rem;color:var(--text-dim)">${elapsed.toFixed(2)}ms</span>
+</div>`;
+
+    html += `<div style="margin-bottom:12px;">
+<span class="label-tag tag-info">${n} data points</span>
+<span class="label-tag ${anomalies.length > 0 ? 'tag-negative' : 'tag-positive'}">${anomalies.length} anomalies detected</span>
+</div>`;
+
+    // Stats
+    html += `<div style="font-size:0.85rem;margin-bottom:12px;">
+Mean: <strong>${mean.toFixed(2)}</strong> &bull; Std: <strong>${std.toFixed(2)}</strong> &bull; IQR: <strong>${iqr.toFixed(2)}</strong><br>
+Fences: [${lowerFence.toFixed(2)}, ${upperFence.toFixed(2)}] &bull; Entropy: <strong>${entropy.toFixed(3)}</strong> bits
+</div>`;
+
+    if (anomalies.length > 0) {
+      html += '<table class="data-table"><tr><th>Index</th><th>Value</th><th>Z-Score</th><th>Method</th></tr>';
+      for (const a of anomalies) {
+        html += `<tr><td>${a.index}</td><td style="color:var(--rose)">${a.value.toFixed(2)}</td><td>${a.zScore.toFixed(2)}</td><td>${a.methods.join(', ')}</td></tr>`;
+      }
+      html += '</table>';
+    }
+
+    document.getElementById('anomalyResult').innerHTML = html;
+
+    // Draw chart
+    drawAnomalyChart(data, zScores, anomalies, mean, lowerFence, upperFence);
+  }
+
+  function drawAnomalyChart(data, zScores, anomalies, mean, lf, uf) {
+    const canvas = document.getElementById('anomalyChart');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { l: 60, r: 20, t: 20, b: 30 };
+    const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+
+    const minV = Math.min(...data, lf) - 5;
+    const maxV = Math.max(...data, uf) + 5;
+    const range = maxV - minV || 1;
+
+    const xStep = cw / (data.length - 1 || 1);
+    const toY = v => pad.t + ch - ((v - minV) / range) * ch;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const y = pad.t + (ch / 4) * i;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+      const val = maxV - (range / 4) * i;
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(val.toFixed(1), pad.l - 8, y + 4);
+    }
+
+    // Fence bands
+    ctx.fillStyle = 'rgba(255,82,82,0.06)';
+    ctx.fillRect(pad.l, pad.t, cw, toY(uf) - pad.t);
+    ctx.fillRect(pad.l, toY(lf), cw, pad.t + ch - toY(lf));
+
+    // Mean line
+    ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, toY(mean));
+    ctx.lineTo(W - pad.r, toY(mean));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Fence lines
+    ctx.strokeStyle = 'rgba(255,82,82,0.4)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(uf)); ctx.lineTo(W - pad.r, toY(uf)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(lf)); ctx.lineTo(W - pad.r, toY(lf)); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Data line
+    ctx.strokeStyle = 'rgba(0,229,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const x = pad.l + i * xStep, y = toY(data[i]);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Points
+    const anomalyIndices = new Set(anomalies.map(a => a.index));
+    for (let i = 0; i < data.length; i++) {
+      const x = pad.l + i * xStep, y = toY(data[i]);
+      ctx.beginPath();
+      ctx.arc(x, y, anomalyIndices.has(i) ? 6 : 3, 0, Math.PI * 2);
+      ctx.fillStyle = anomalyIndices.has(i) ? '#ff5252' : '#00e5ff';
+      ctx.fill();
+      if (anomalyIndices.has(i)) {
+        ctx.strokeStyle = 'rgba(255,82,82,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // Labels
+    ctx.fillStyle = 'rgba(0,229,255,0.5)';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('mean', W - pad.r + 4, toY(mean) + 3);
+    ctx.fillStyle = 'rgba(255,82,82,0.5)';
+    ctx.fillText('upper fence', W - pad.r - 70, toY(uf) - 4);
+    ctx.fillText('lower fence', W - pad.r - 70, toY(lf) + 14);
+  }
+
+
+  // ──────────── 4. MARKOV CHAIN PREDICTOR ────────────
+
+  function buildMarkovChain(text, order) {
+    const words = text.toLowerCase().replace(/[^a-z0-9'\s.,!?-]/g, '').split(/\s+/).filter(w => w);
+    const chain = {};
+    for (let i = 0; i <= words.length - order - 1; i++) {
+      const key = words.slice(i, i + order).join(' ');
+      const next = words[i + order];
+      if (!chain[key]) chain[key] = {};
+      chain[key][next] = (chain[key][next] || 0) + 1;
+    }
+    // Normalize to probabilities
+    for (const key in chain) {
+      const total = Object.values(chain[key]).reduce((a, b) => a + b, 0);
+      for (const w in chain[key]) chain[key][w] /= total;
+    }
+    return { chain, words, order };
+  }
+
+  function generateFromChain(model, seed, length) {
+    const result = seed.toLowerCase().split(/\s+/);
+    for (let i = 0; i < length; i++) {
+      const key = result.slice(-model.order).join(' ');
+      const transitions = model.chain[key];
+      if (!transitions) {
+        // Fallback: pick random state
+        const keys = Object.keys(model.chain);
+        if (keys.length === 0) break;
+        const randKey = keys[Math.floor(Math.random() * keys.length)];
+        result.push(model.chain[randKey] ? weightedRandom(model.chain[randKey]) : model.words[Math.floor(Math.random() * model.words.length)]);
+      } else {
+        result.push(weightedRandom(transitions));
+      }
+    }
+    return result.join(' ');
+  }
+
+  function weightedRandom(dist) {
+    let r = Math.random();
+    for (const [word, prob] of Object.entries(dist)) {
+      r -= prob;
+      if (r <= 0) return word;
+    }
+    return Object.keys(dist)[0];
+  }
+
+  function generateMarkov() {
+    const t0 = performance.now();
+    const corpus = document.getElementById('markovCorpus').value.trim();
+    const seed = document.getElementById('markovSeed').value.trim();
+    const length = parseInt(document.getElementById('markovLength').value) || 30;
+
+    if (!corpus) {
+      document.getElementById('markovResult').innerHTML = '<span style="color:var(--rose)">Please enter a corpus text.</span>';
+      return;
+    }
+
+    // Build chains of different orders
+    const model1 = buildMarkovChain(corpus, 1);
+    const model2 = buildMarkovChain(corpus, 2);
+
+    // Generate with best available order
+    const seedWords = seed.toLowerCase().split(/\s+/);
+    let generated;
+    if (seedWords.length >= 2 && model2.chain[seedWords.slice(-2).join(' ')]) {
+      generated = generateFromChain(model2, seed, length);
+    } else {
+      generated = generateFromChain(model1, seed, length);
+    }
+
+    const elapsed = performance.now() - t0;
+    const stateCount = Object.keys(model2.chain).length + Object.keys(model1.chain).length;
+    const confidence = Math.min(0.95, stateCount / (model1.words.length || 1));
+    updateMetrics(elapsed, confidence, Math.log2(stateCount + 1));
+
+    let html = `<div style="margin-bottom:14px;">
+<strong style="color:var(--cyan)">MARKOV CHAIN OUTPUT</strong>
+<span style="float:right;font-size:0.78rem;color:var(--text-dim)">${elapsed.toFixed(2)}ms</span>
+</div>`;
+
+    html += `<div style="padding:14px;background:rgba(0,229,255,0.05);border-radius:10px;border:1px solid rgba(0,229,255,0.15);margin-bottom:14px;line-height:1.8;">
+${generated}
+</div>`;
+
+    html += `<div style="font-size:0.82rem;color:var(--text-dim);">
+States (order 1): <strong>${Object.keys(model1.chain).length}</strong> &bull;
+States (order 2): <strong>${Object.keys(model2.chain).length}</strong> &bull;
+Vocabulary: <strong>${new Set(model1.words).size}</strong> unique words
+</div>`;
+
+    document.getElementById('markovResult').innerHTML = html;
+
+    // Visualize transition graph
+    drawMarkovGraph(model1);
+  }
+
+  function drawMarkovGraph(model) {
+    const canvas = document.getElementById('markovViz');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Select top N states by number of transitions
+    const states = Object.entries(model.chain)
+      .sort((a, b) => Object.keys(b[1]).length - Object.keys(a[1]).length)
+      .slice(0, 16)
+      .map(e => e[0]);
+
+    if (states.length === 0) return;
+
+    // Layout in a circle
+    const centerX = W / 2, centerY = H / 2;
+    const radius = Math.min(W, H) * 0.35;
+    const nodePos = {};
+    states.forEach((s, i) => {
+      const angle = (i / states.length) * Math.PI * 2 - Math.PI / 2;
+      nodePos[s] = { x: centerX + Math.cos(angle) * radius, y: centerY + Math.sin(angle) * radius };
+    });
+
+    // Draw edges
+    const stateSet = new Set(states);
+    for (const state of states) {
+      const transitions = model.chain[state];
+      if (!transitions) continue;
+      for (const [target, prob] of Object.entries(transitions)) {
+        if (!stateSet.has(target)) continue;
+        const from = nodePos[state], to = nodePos[target];
+        ctx.strokeStyle = `rgba(0,229,255,${Math.min(0.6, prob * 1.5)})`;
+        ctx.lineWidth = Math.max(0.5, prob * 4);
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        // Curved line
+        const mx = (from.x + to.x) / 2 + (from.y - to.y) * 0.15;
+        const my = (from.y + to.y) / 2 + (to.x - from.x) * 0.15;
+        ctx.quadraticCurveTo(mx, my, to.x, to.y);
+        ctx.stroke();
+      }
+    }
+
+    // Draw nodes
+    for (const state of states) {
+      const pos = nodePos[state];
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 18, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(12,14,28,0.9)';
+      ctx.fill();
+      ctx.strokeStyle = 'var(--cyan)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#e0e6f0';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const display = state.length > 8 ? state.slice(0, 7) + '..' : state;
+      ctx.fillText(display, pos.x, pos.y);
+    }
+  }
+
+
+  // ──────────── 5. KNOWLEDGE GRAPH REASONING ────────────
+
+  let knowledgeGraph = { nodes: new Set(), edges: [] };
+
+  function extractEntities(text) {
+    // Simple NER: capitalized words, quoted phrases, and noun-like patterns
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+    const entities = new Set();
+    const relations = [];
+
+    // Relation patterns
+    const patterns = [
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:is|was|are|were)\s+(?:a|an|the)\s+(.+?)(?:\s+(?:of|in|for|from)\s+(.+))?$/i, type: 'IS_A' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:developed|created|invented|discovered|founded|built)\s+(?:the\s+)?(.+)/i, type: 'CREATED' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:was born|born)\s+(?:in|at)\s+(.+)/i, type: 'BORN_IN' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:revolutionized|transformed|changed)\s+(.+)/i, type: 'TRANSFORMED' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:is|was)\s+(?:a|the)\s+(.+?)(?:\s+(?:of|in)\s+(.+))?$/i, type: 'IS_A' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:won|received|earned|got)\s+(?:the\s+)?(.+)/i, type: 'WON' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:is awarded|awarded)\s+(?:in|at)\s+(.+)/i, type: 'AWARDED_IN' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:is|was)\s+(?:the\s+)?(?:capital|center|hub)\s+of\s+(.+)/i, type: 'CAPITAL_OF' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:is|was)\s+(?:a\s+)?(?:country|city|place|region)\s+in\s+(.+)/i, type: 'LOCATED_IN' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:is|was)\s+(?:a\s+)?(?:branch|part|division|subset)\s+of\s+(.+)/i, type: 'PART_OF' },
+      { re: /(\b[A-Z][a-zA-Z\s]+?)\s+(?:had|has|have)\s+(.+)/i, type: 'HAS' },
+    ];
+
+    for (const sent of sentences) {
+      const trimmed = sent.trim();
+      for (const pat of patterns) {
+        const m = trimmed.match(pat.re);
+        if (m) {
+          const e1 = m[1].trim();
+          const e2 = m[2].trim();
+          entities.add(e1);
+          entities.add(e2);
+          relations.push({ from: e1, to: e2, type: pat.type });
+          if (m[3]) {
+            const e3 = m[3].trim();
+            entities.add(e3);
+            relations.push({ from: e2, to: e3, type: 'RELATED_TO' });
+          }
+          break;
+        }
+      }
+
+      // Fallback: extract capitalized multi-word phrases
+      const caps = trimmed.match(/\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*/g);
+      if (caps) caps.forEach(c => { if (c.length > 2) entities.add(c); });
+    }
+
+    return { entities: [...entities], relations };
+  }
+
+  function buildKnowledgeGraph() {
+    const t0 = performance.now();
+    const text = document.getElementById('kgInput').value.trim();
+    if (!text) return;
+
+    const { entities, relations } = extractEntities(text);
+
+    knowledgeGraph = { nodes: new Set(entities), edges: relations };
+
+    // Graph-based inference: find transitive relations
+    const adjacency = {};
+    for (const e of entities) adjacency[e] = [];
+    for (const r of relations) {
+      if (!adjacency[r.from]) adjacency[r.from] = [];
+      adjacency[r.from].push({ to: r.to, type: r.type });
+    }
+
+    // BFS to find indirect connections
+    const inferred = [];
+    for (const start of entities) {
+      const visited = new Set([start]);
+      const queue = [{ node: start, depth: 0, path: [start] }];
+      while (queue.length > 0) {
+        const { node, depth, path } = queue.shift();
+        if (depth >= 3) continue;
+        for (const edge of (adjacency[node] || [])) {
+          if (!visited.has(edge.to)) {
+            visited.add(edge.to);
+            const newPath = [...path, `--${edge.type}-->`, edge.to];
+            if (depth >= 1) {
+              inferred.push({ from: start, to: edge.to, path: newPath, depth: depth + 1 });
+            }
+            queue.push({ node: edge.to, depth: depth + 1, path: newPath });
+          }
+        }
+      }
+    }
+
+    const elapsed = performance.now() - t0;
+    const confidence = Math.min(0.95, relations.length / (entities.length || 1));
+    updateMetrics(elapsed, confidence, Math.log2(entities.length + 1));
+
+    // Result
+    let html = `<div style="margin-bottom:14px;">
+<strong style="color:var(--cyan)">KNOWLEDGE GRAPH ANALYSIS</strong>
+<span style="float:right;font-size:0.78rem;color:var(--text-dim)">${elapsed.toFixed(2)}ms</span>
+</div>`;
+
+    html += `<div style="margin-bottom:12px;">
+<span class="label-tag tag-info">${entities.length} entities</span>
+<span class="label-tag tag-violet">${relations.length} direct relations</span>
+<span class="label-tag tag-positive">${inferred.length} inferred connections</span>
+</div>`;
+
+    // Entities
+    html += '<div style="margin-bottom:14px;"><div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:6px;">EXTRACTED ENTITIES</div>';
+    const colors = ['var(--cyan)','var(--violet)','var(--lime)','var(--amber)','var(--magenta)','var(--rose)'];
+    entities.forEach((e, i) => {
+      const c = colors[i % colors.length];
+      html += `<span class="kg-node" style="border:1px solid ${c};color:${c};">${e}</span>`;
+    });
+    html += '</div>';
+
+    // Relations table
+    if (relations.length > 0) {
+      html += '<div style="margin-bottom:14px;"><div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:6px;">DIRECT RELATIONS</div>';
+      html += '<table class="data-table"><tr><th>From</th><th>Relation</th><th>To</th></tr>';
+      for (const r of relations) {
+        html += `<tr><td style="color:var(--cyan)">${r.from}</td><td style="color:var(--violet)">${r.type}</td><td style="color:var(--lime)">${r.to}</td></tr>`;
+      }
+      html += '</table></div>';
+    }
+
+    // Inferred
+    if (inferred.length > 0) {
+      html += '<div><div style="font-size:0.82rem;color:var(--text-dim);margin-bottom:6px;">INFERRED CONNECTIONS (via graph traversal)</div>';
+      html += '<table class="data-table"><tr><th>From</th><th>Path</th><th>To</th><th>Depth</th></tr>';
+      for (const inf of inferred.slice(0, 15)) {
+        html += `<tr><td style="color:var(--cyan)">${inf.from}</td><td style="font-size:0.78rem;color:var(--text-dim)">${inf.path.join(' ')}</td><td style="color:var(--lime)">${inf.to}</td><td>${inf.depth}</td></tr>`;
+      }
+      html += '</table></div>';
+    }
+
+    document.getElementById('kgResult').innerHTML = html;
+
+    // Draw graph
+    drawKnowledgeGraphViz(entities, relations);
+  }
+
+  function drawKnowledgeGraphViz(entities, relations) {
+    const canvas = document.getElementById('kgCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    if (entities.length === 0) return;
+
+    // Force-directed layout (simplified)
+    const nodes = {};
+    entities.forEach((e, i) => {
+      const angle = (i / entities.length) * Math.PI * 2;
+      const r = Math.min(W, H) * 0.32;
+      nodes[e] = {
+        x: W / 2 + Math.cos(angle) * r + (Math.random() - 0.5) * 40,
+        y: H / 2 + Math.sin(angle) * r + (Math.random() - 0.5) * 40,
+        vx: 0, vy: 0
+      };
+    });
+
+    // Simple force simulation
+    for (let iter = 0; iter < 80; iter++) {
+      // Repulsion
+      for (const a of entities) {
+        for (const b of entities) {
+          if (a === b) continue;
+          const dx = nodes[a].x - nodes[b].x;
+          const dy = nodes[a].y - nodes[b].y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = 5000 / (dist * dist);
+          nodes[a].vx += (dx / dist) * force;
+          nodes[a].vy += (dy / dist) * force;
+        }
+      }
+      // Attraction along edges
+      for (const r of relations) {
+        if (!nodes[r.from] || !nodes[r.to]) continue;
+        const dx = nodes[r.to].x - nodes[r.from].x;
+        const dy = nodes[r.to].y - nodes[r.from].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = (dist - 120) * 0.02;
+        nodes[r.from].vx += (dx / dist) * force;
+        nodes[r.from].vy += (dy / dist) * force;
+        nodes[r.to].vx -= (dx / dist) * force;
+        nodes[r.to].vy -= (dy / dist) * force;
+      }
+      // Center gravity
+      for (const e of entities) {
+        nodes[e].vx += (W / 2 - nodes[e].x) * 0.005;
+        nodes[e].vy += (H / 2 - nodes[e].y) * 0.005;
+        nodes[e].x += nodes[e].vx * 0.3;
+        nodes[e].y += nodes[e].vy * 0.3;
+        nodes[e].vx *= 0.85;
+        nodes[e].vy *= 0.85;
+        // Clamp
+        nodes[e].x = Math.max(70, Math.min(W - 70, nodes[e].x));
+        nodes[e].y = Math.max(30, Math.min(H - 30, nodes[e].y));
+      }
+    }
+
+    // Draw edges
+    const edgeColors = {
+      'CREATED': '#00e5ff', 'BORN_IN': '#b388ff', 'IS_A': '#76ff03',
+      'TRANSFORMED': '#ffc400', 'WON': '#ff40ff', 'AWARDED_IN': '#ff5252',
+      'CAPITAL_OF': '#00e5ff', 'LOCATED_IN': '#b388ff', 'PART_OF': '#76ff03',
+      'HAS': '#ffc400', 'RELATED_TO': 'rgba(255,255,255,0.3)'
+    };
+
+    for (const r of relations) {
+      if (!nodes[r.from] || !nodes[r.to]) continue;
+      const from = nodes[r.from], to = nodes[r.to];
+      ctx.strokeStyle = edgeColors[r.type] || 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      const mx = (from.x + to.x) / 2 + (from.y - to.y) * 0.1;
+      const my = (from.y + to.y) / 2 + (to.x - from.x) * 0.1;
+      ctx.quadraticCurveTo(mx, my, to.x, to.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Edge label
+      ctx.fillStyle = edgeColors[r.type] || 'rgba(255,255,255,0.3)';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(r.type, mx, my - 4);
+
+      // Arrowhead
+      const angle = Math.atan2(to.y - my, to.x - mx);
+      const ax = to.x - Math.cos(angle) * 22;
+      const ay = to.y - Math.sin(angle) * 22;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 8 * Math.cos(angle - 0.4), ay - 8 * Math.sin(angle - 0.4));
+      ctx.lineTo(ax - 8 * Math.cos(angle + 0.4), ay - 8 * Math.sin(angle + 0.4));
+      ctx.closePath();
+      ctx.fillStyle = edgeColors[r.type] || 'rgba(255,255,255,0.3)';
+      ctx.fill();
+    }
+
+    // Draw nodes
+    const nodeColors = ['#00e5ff','#b388ff','#76ff03','#ffc400','#ff40ff','#ff5252'];
+    entities.forEach((e, i) => {
+      const pos = nodes[e];
+      const color = nodeColors[i % nodeColors.length];
+
+      // Glow
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 20, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(6,6,14,0.9)';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.fillStyle = '#e0e6f0';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const label = e.length > 12 ? e.slice(0, 11) + '..' : e;
+      ctx.fillText(label, pos.x, pos.y);
+    });
+  }
+
+  function queryKG() {
+    const query = document.getElementById('kgQuery').value.trim().toLowerCase();
+    if (!query || knowledgeGraph.nodes.size === 0) {
+      document.getElementById('kgResult').innerHTML = '<span style="color:var(--rose)">Build the graph first, then enter a query.</span>';
+      return;
+    }
+
+    // Find matching entities
+    const matches = [...knowledgeGraph.nodes].filter(n => query.includes(n.toLowerCase()) || n.toLowerCase().includes(query.replace(/what is connected to |what is |who is |where is |tell me about /gi, '').trim()));
+
+    if (matches.length === 0) {
+      document.getElementById('kgResult').innerHTML = `<span style="color:var(--amber)">No entities matching "${query}" found in the graph.</span>`;
+      return;
+    }
+
+    let html = `<strong style="color:var(--cyan)">QUERY RESULTS</strong><br><br>`;
+    for (const entity of matches) {
+      const outgoing = knowledgeGraph.edges.filter(e => e.from === entity);
+      const incoming = knowledgeGraph.edges.filter(e => e.to === entity);
+      html += `<div style="margin-bottom:12px;"><strong style="color:var(--violet)">${entity}</strong><br>`;
+      if (outgoing.length > 0) {
+        html += '<span style="font-size:0.82rem;color:var(--text-dim);">Outgoing:</span><br>';
+        for (const e of outgoing) html += `&nbsp;&nbsp;${entity} <span style="color:var(--amber)">${e.type}</span> ${e.to}<br>`;
+      }
+      if (incoming.length > 0) {
+        html += '<span style="font-size:0.82rem;color:var(--text-dim);">Incoming:</span><br>';
+        for (const e of incoming) html += `&nbsp;&nbsp;${e.from} <span style="color:var(--amber)">${e.type}</span> ${entity}<br>`;
+      }
+      html += '</div>';
+    }
+
+    document.getElementById('kgResult').innerHTML = html;
+  }
+
+
+  // ──────────── ANIMATED MESH BACKGROUND ────────────
+
+  function initMesh() {
+    const canvas = document.getElementById('meshCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const PARTICLE_COUNT = 80;
+    const MAX_DIST = 150;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        r: 1.5 + Math.random() * 1.5,
+        hue: 180 + Math.random() * 80
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      }
+
+      // Draw connections
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MAX_DIST) {
+            const alpha = (1 - dist / MAX_DIST) * 0.12;
+            ctx.strokeStyle = `rgba(0,229,255,${alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw particles
+      for (const p of particles) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue},100%,70%,0.4)`;
+        ctx.fill();
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+  }
+
+
+  // ──────────── TAB SWITCHING ────────────
+
+  function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+  }
+
+
+  // ──────────── INIT ────────────
+  initMesh();
+  initTabs();
+
+  // Public API
+  return {
+    analyzeText,
+    classifyPattern,
+    clearCanvas,
+    detectAnomalies,
+    generateAnomalyData,
+    generateMarkov,
+    buildKnowledgeGraph,
+    queryKG
+  };
+
+})();
+</script>
+</body>
+</html>

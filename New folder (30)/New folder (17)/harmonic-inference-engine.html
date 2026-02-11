@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harmonic Inference Engine — Zero-Epoch AI</title>
+<style>
+  /* ═══════════════════ RESET & BASE ═══════════════════ */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a12;--surface:#12121f;--surface2:#1a1a2e;--surface3:#22223a;
+    --accent:#6c63ff;--accent2:#00d4aa;--accent3:#ff6b8a;--accent4:#ffd166;
+    --text:#e0e0f0;--text2:#9090b0;--border:#2a2a44;
+    --glow:rgba(108,99,255,.25);--glow2:rgba(0,212,170,.2);
+    --radius:12px;--transition:.3s cubic-bezier(.4,0,.2,1);
+  }
+  html{font-size:15px}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);color:var(--text);min-height:100vh;
+    display:flex;flex-direction:column;overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:#fff}
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:var(--surface)}
+  ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
+
+  /* ═══════════════════ HEADER ═══════════════════ */
+  header{
+    background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);
+    border-bottom:1px solid var(--border);padding:1.2rem 2rem;
+    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:100;backdrop-filter:blur(20px);
+  }
+  .logo{display:flex;align-items:center;gap:.8rem}
+  .logo-icon{
+    width:42px;height:42px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.3rem;font-weight:800;color:#fff;
+    box-shadow:0 0 20px var(--glow);animation:logoPulse 3s ease-in-out infinite;
+  }
+  @keyframes logoPulse{0%,100%{box-shadow:0 0 20px var(--glow)}50%{box-shadow:0 0 35px var(--glow),0 0 60px var(--glow2)}}
+  .logo h1{font-size:1.15rem;font-weight:700;letter-spacing:-.5px}
+  .logo h1 span{color:var(--accent2);font-weight:400;font-size:.8rem;display:block;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+  .header-stats{display:flex;gap:1.5rem}
+  .stat{text-align:center}
+  .stat-val{font-size:1.1rem;font-weight:700;color:var(--accent2)}
+  .stat-label{font-size:.65rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+
+  /* ═══════════════════ LAYOUT ═══════════════════ */
+  .app{display:grid;grid-template-columns:320px 1fr 340px;gap:0;flex:1;overflow:hidden}
+  @media(max-width:1100px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}}
+
+  /* ═══════════════════ PANELS ═══════════════════ */
+  .panel{
+    background:var(--surface);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .panel:last-child{border-right:none;border-left:1px solid var(--border)}
+  .panel-title{
+    padding:1rem 1.2rem;font-size:.75rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:2px;color:var(--accent);
+    border-bottom:1px solid var(--border);display:flex;
+    align-items:center;gap:.6rem;background:var(--surface2);
+  }
+  .panel-title::before{
+    content:'';width:8px;height:8px;border-radius:50%;
+    background:var(--accent2);box-shadow:0 0 8px var(--accent2);
+    animation:blink 2s ease-in-out infinite;
+  }
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .panel-body{flex:1;overflow-y:auto;padding:1rem}
+
+  /* ═══════════════════ KNOWLEDGE GRAPH PANEL ═══════════════════ */
+  .knowledge-section{margin-bottom:1.2rem}
+  .knowledge-section h3{
+    font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;
+    color:var(--text2);margin-bottom:.6rem;
+  }
+  .domain-tag{
+    display:inline-block;padding:.3rem .7rem;margin:.2rem;
+    border-radius:20px;font-size:.7rem;font-weight:600;
+    background:var(--surface3);border:1px solid var(--border);
+    cursor:pointer;transition:var(--transition);
+  }
+  .domain-tag:hover,.domain-tag.active{
+    background:var(--accent);color:#fff;border-color:var(--accent);
+    box-shadow:0 0 12px var(--glow);
+  }
+  .domain-tag.active-alt{background:var(--accent2);border-color:var(--accent2);color:#000}
+  .lattice-node{
+    padding:.6rem .8rem;margin-bottom:.4rem;border-radius:var(--radius);
+    background:var(--surface2);border:1px solid var(--border);
+    font-size:.78rem;cursor:pointer;transition:var(--transition);
+    display:flex;align-items:center;gap:.5rem;
+  }
+  .lattice-node:hover{border-color:var(--accent);transform:translateX(3px)}
+  .lattice-node .dot{
+    width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  }
+  .lattice-node .strength{
+    margin-left:auto;font-size:.65rem;color:var(--text2);font-weight:600;
+  }
+
+  /* ═══════════════════ CANVAS VISUALIZATION ═══════════════════ */
+  .viz-container{position:relative;flex:1;display:flex;flex-direction:column}
+  #vizCanvas{width:100%;flex:1;display:block;background:var(--bg)}
+
+  /* ═══════════════════ MAIN CENTER PANEL ═══════════════════ */
+  .center{display:flex;flex-direction:column;background:var(--bg)}
+  .viz-wrapper{height:280px;position:relative;border-bottom:1px solid var(--border);overflow:hidden}
+  #mainCanvas{width:100%;height:100%;display:block}
+  .viz-overlay{
+    position:absolute;bottom:12px;left:12px;display:flex;gap:.5rem;
+  }
+  .viz-btn{
+    padding:.35rem .75rem;border-radius:20px;border:1px solid var(--border);
+    background:rgba(18,18,31,.85);color:var(--text2);font-size:.68rem;
+    cursor:pointer;transition:var(--transition);backdrop-filter:blur(10px);
+  }
+  .viz-btn:hover,.viz-btn.active{
+    background:var(--accent);color:#fff;border-color:var(--accent);
+  }
+
+  /* ═══════════════════ CHAT AREA ═══════════════════ */
+  .chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .chat-messages{flex:1;overflow-y:auto;padding:1.2rem}
+  .msg{
+    margin-bottom:1rem;display:flex;gap:.8rem;
+    animation:msgIn .4s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .msg-avatar{
+    width:32px;height:32px;border-radius:8px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.7rem;font-weight:800;
+  }
+  .msg-user .msg-avatar{background:linear-gradient(135deg,var(--accent3),var(--accent4));color:#fff}
+  .msg-ai .msg-avatar{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .msg-content{
+    padding:.8rem 1rem;border-radius:var(--radius);max-width:85%;
+    line-height:1.55;font-size:.85rem;
+  }
+  .msg-user .msg-content{background:var(--surface2);border:1px solid var(--border)}
+  .msg-ai .msg-content{
+    background:linear-gradient(135deg,rgba(108,99,255,.08),rgba(0,212,170,.06));
+    border:1px solid rgba(108,99,255,.2);
+  }
+  .msg-meta{font-size:.6rem;color:var(--text2);margin-top:.4rem;display:flex;gap:.8rem}
+  .msg-meta span{display:flex;align-items:center;gap:.25rem}
+
+  /* ═══════════════════ INPUT BAR ═══════════════════ */
+  .input-bar{
+    padding:1rem 1.2rem;border-top:1px solid var(--border);
+    background:var(--surface);display:flex;gap:.6rem;align-items:flex-end;
+  }
+  .input-bar textarea{
+    flex:1;background:var(--surface2);border:1px solid var(--border);
+    color:var(--text);border-radius:var(--radius);padding:.7rem 1rem;
+    font-size:.85rem;font-family:inherit;resize:none;
+    min-height:42px;max-height:120px;outline:none;transition:var(--transition);
+  }
+  .input-bar textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+  .input-bar textarea::placeholder{color:var(--text2)}
+  .send-btn{
+    width:42px;height:42px;border-radius:var(--radius);border:none;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;font-size:1.1rem;cursor:pointer;transition:var(--transition);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .send-btn:hover{transform:scale(1.05);box-shadow:0 0 20px var(--glow)}
+  .send-btn:active{transform:scale(.95)}
+
+  /* ═══════════════════ RIGHT PANEL — INFERENCE TRACE ═══════════════════ */
+  .trace-step{
+    padding:.7rem .8rem;margin-bottom:.5rem;border-radius:var(--radius);
+    background:var(--surface2);border-left:3px solid var(--accent);
+    font-size:.75rem;line-height:1.5;animation:msgIn .3s ease;
+  }
+  .trace-step.bayesian{border-left-color:var(--accent2)}
+  .trace-step.fuzzy{border-left-color:var(--accent4)}
+  .trace-step.markov{border-left-color:var(--accent3)}
+  .trace-step.tfidf{border-left-color:#7b68ee}
+  .trace-step .step-title{
+    font-weight:700;text-transform:uppercase;letter-spacing:1px;
+    font-size:.63rem;margin-bottom:.3rem;display:flex;
+    align-items:center;gap:.4rem;
+  }
+  .trace-step .step-title .indicator{
+    width:6px;height:6px;border-radius:50%;display:inline-block;
+  }
+  .trace-step.bayesian .indicator{background:var(--accent2)}
+  .trace-step.fuzzy .indicator{background:var(--accent4)}
+  .trace-step.markov .indicator{background:var(--accent3)}
+  .trace-step.tfidf .indicator{background:#7b68ee}
+  .trace-step .step-title .indicator.default{background:var(--accent)}
+  .confidence-bar{
+    height:4px;border-radius:2px;background:var(--surface3);margin-top:.4rem;overflow:hidden;
+  }
+  .confidence-bar .fill{height:100%;border-radius:2px;transition:width .6s ease}
+  .engine-toggles{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+  .engine-toggle{
+    padding:.3rem .6rem;border-radius:6px;font-size:.65rem;font-weight:700;
+    border:1px solid var(--border);background:var(--surface3);
+    cursor:pointer;transition:var(--transition);text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .engine-toggle.on{color:#fff}
+  .engine-toggle.bayesian.on{background:var(--accent2);border-color:var(--accent2);color:#000}
+  .engine-toggle.fuzzy.on{background:var(--accent4);border-color:var(--accent4);color:#000}
+  .engine-toggle.markov.on{background:var(--accent3);border-color:var(--accent3)}
+  .engine-toggle.tfidf.on{background:#7b68ee;border-color:#7b68ee}
+  .engine-toggle.graph.on{background:var(--accent);border-color:var(--accent)}
+
+  /* ═══════════════════ LOADING ═══════════════════ */
+  .typing-indicator{display:flex;gap:4px;padding:.5rem 0}
+  .typing-indicator span{
+    width:6px;height:6px;border-radius:50%;background:var(--accent);
+    animation:typing 1.2s ease-in-out infinite;
+  }
+  .typing-indicator span:nth-child(2){animation-delay:.2s}
+  .typing-indicator span:nth-child(3){animation-delay:.4s}
+  @keyframes typing{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-8px);opacity:1}}
+
+  /* ═══════════════════ WELCOME ═══════════════════ */
+  .welcome{text-align:center;padding:2rem 1rem}
+  .welcome h2{font-size:1.3rem;margin-bottom:.6rem;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .welcome p{color:var(--text2);font-size:.82rem;line-height:1.6;max-width:400px;margin:0 auto .8rem}
+  .quick-prompts{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:1rem}
+  .quick-prompt{
+    padding:.5rem .9rem;border-radius:20px;font-size:.73rem;
+    border:1px solid var(--border);background:var(--surface2);
+    color:var(--text2);cursor:pointer;transition:var(--transition);
+  }
+  .quick-prompt:hover{border-color:var(--accent);color:var(--text);background:var(--surface3)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">HI</div>
+    <h1>Harmonic Inference Engine<span>Zero-Epoch Non-Neural AI System</span></h1>
+  </div>
+  <div class="header-stats">
+    <div class="stat"><div class="stat-val" id="statNodes">0</div><div class="stat-label">Lattice Nodes</div></div>
+    <div class="stat"><div class="stat-val" id="statInferences">0</div><div class="stat-label">Inferences</div></div>
+    <div class="stat"><div class="stat-val" id="statConfidence">—</div><div class="stat-label">Last Confidence</div></div>
+    <div class="stat"><div class="stat-val" id="statLatency">0 ms</div><div class="stat-label">Latency</div></div>
+  </div>
+</header>
+
+<!-- ═══════════════════ APP ═══════════════════ -->
+<div class="app">
+
+  <!-- LEFT PANEL: Knowledge Lattice -->
+  <div class="panel" id="leftPanel">
+    <div class="panel-title">Knowledge Lattice</div>
+    <div class="panel-body" id="knowledgePanel">
+      <div class="knowledge-section">
+        <h3>Active Domains</h3>
+        <div id="domainTags"></div>
+      </div>
+      <div class="knowledge-section">
+        <h3>Lattice Nodes (Top Resonance)</h3>
+        <div id="latticeNodes"></div>
+      </div>
+      <div class="knowledge-section">
+        <h3>Harmonic Frequencies</h3>
+        <canvas id="freqCanvas" width="280" height="120" style="width:100%;border-radius:8px;background:var(--surface2)"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Visualization + Chat -->
+  <div class="center">
+    <div class="viz-wrapper">
+      <canvas id="mainCanvas"></canvas>
+      <div class="viz-overlay">
+        <button class="viz-btn active" data-mode="lattice">Lattice</button>
+        <button class="viz-btn" data-mode="harmonic">Harmonics</button>
+        <button class="viz-btn" data-mode="bayesian">Bayes Net</button>
+        <button class="viz-btn" data-mode="phase">Phase Space</button>
+      </div>
+    </div>
+    <div class="chat-area">
+      <div class="chat-messages" id="chatMessages">
+        <div class="welcome">
+          <h2>Harmonic Inference Engine</h2>
+          <p>A zero-epoch AI that uses <strong>no neural networks</strong>. Instead, it reasons through Bayesian inference, TF-IDF harmonic decomposition, fuzzy logic, Markov chain generation, and graph-based knowledge lattices.</p>
+          <p style="font-size:.72rem">Ask me anything — I'll show you every step of my non-neural reasoning process.</p>
+          <div class="quick-prompts">
+            <button class="quick-prompt" onclick="sendQuick(this)">What is artificial intelligence?</button>
+            <button class="quick-prompt" onclick="sendQuick(this)">Classify: The stock market crashed today</button>
+            <button class="quick-prompt" onclick="sendQuick(this)">How does gravity work?</button>
+            <button class="quick-prompt" onclick="sendQuick(this)">Generate a short story</button>
+            <button class="quick-prompt" onclick="sendQuick(this)">What are your reasoning engines?</button>
+            <button class="quick-prompt" onclick="sendQuick(this)">Analyze: I love programming but hate bugs</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-bar">
+        <textarea id="userInput" rows="1" placeholder="Ask the Harmonic Inference Engine..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        <button class="send-btn" onclick="sendMessage()">&#9654;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Inference Trace -->
+  <div class="panel" id="rightPanel">
+    <div class="panel-title">Inference Trace</div>
+    <div class="panel-body">
+      <div class="engine-toggles">
+        <span class="engine-toggle bayesian on" onclick="toggleEngine(this,'bayesian')">Bayesian</span>
+        <span class="engine-toggle tfidf on" onclick="toggleEngine(this,'tfidf')">TF-IDF</span>
+        <span class="engine-toggle fuzzy on" onclick="toggleEngine(this,'fuzzy')">Fuzzy Logic</span>
+        <span class="engine-toggle markov on" onclick="toggleEngine(this,'markov')">Markov</span>
+        <span class="engine-toggle graph on" onclick="toggleEngine(this,'graph')">Graph</span>
+      </div>
+      <div id="traceLog"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// HARMONIC INFERENCE ENGINE — A Zero-Epoch Non-Neural AI System
+// ═══════════════════════════════════════════════════════════════
+// This AI uses ZERO neural networks. No neurons, no layers, no
+// backpropagation, no gradient descent, no training epochs.
+//
+// Instead it combines five classical AI & statistical techniques:
+//   1. TF-IDF Harmonic Decomposition — text as frequency signals
+//   2. Bayesian Inference Network — probabilistic reasoning
+//   3. Fuzzy Logic Engine — handles uncertainty & vagueness
+//   4. Markov Chain Generator — probabilistic text generation
+//   5. Graph Knowledge Lattice — structured knowledge traversal
+// ═══════════════════════════════════════════════════════════════
+
+/* ──────────────── GLOBAL STATE ──────────────── */
+let inferenceCount = 0;
+let activeEngines = { bayesian: true, tfidf: true, fuzzy: true, markov: true, graph: true };
+let vizMode = 'lattice';
+let vizNodes = [];
+let vizEdges = [];
+let animFrame;
+const startTime = Date.now();
+
+/* ──────────────── 1. KNOWLEDGE GRAPH (LATTICE) ──────────────── */
+const KnowledgeGraph = {
+  nodes: {},
+  edges: [],
+  domainIndex: {},
+
+  addNode(id, data) {
+    this.nodes[id] = { id, ...data, connections: [], resonance: 0.5 };
+    if (data.domain) {
+      if (!this.domainIndex[data.domain]) this.domainIndex[data.domain] = [];
+      this.domainIndex[data.domain].push(id);
+    }
+    return this;
+  },
+
+  addEdge(from, to, weight = 1, relation = 'related') {
+    this.edges.push({ from, to, weight, relation });
+    if (this.nodes[from]) this.nodes[from].connections.push({ target: to, weight, relation });
+    if (this.nodes[to]) this.nodes[to].connections.push({ target: from, weight, relation });
+    return this;
+  },
+
+  query(terms, maxDepth = 3) {
+    const scored = {};
+    const visited = new Set();
+    const queue = [];
+
+    // Seed: find nodes matching terms
+    for (const term of terms) {
+      const tLower = term.toLowerCase();
+      for (const [id, node] of Object.entries(this.nodes)) {
+        const text = (node.label + ' ' + (node.description || '') + ' ' + (node.keywords || []).join(' ')).toLowerCase();
+        if (text.includes(tLower)) {
+          scored[id] = (scored[id] || 0) + 2;
+          queue.push({ id, depth: 0 });
+        }
+      }
+    }
+
+    // BFS traversal with decay
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift();
+      if (visited.has(id) || depth >= maxDepth) continue;
+      visited.add(id);
+      const node = this.nodes[id];
+      if (!node) continue;
+      for (const conn of node.connections) {
+        const decay = Math.pow(0.5, depth + 1);
+        scored[conn.target] = (scored[conn.target] || 0) + conn.weight * decay;
+        queue.push({ id: conn.target, depth: depth + 1 });
+      }
+    }
+
+    // Rank
+    return Object.entries(scored)
+      .map(([id, score]) => ({ ...this.nodes[id], score }))
+      .sort((a, b) => b.score - a.score);
+  },
+
+  getActiveDomains() {
+    return Object.keys(this.domainIndex);
+  },
+
+  getNodeCount() {
+    return Object.keys(this.nodes).length;
+  }
+};
+
+// Populate knowledge graph
+(function seedKnowledge() {
+  const entries = [
+    { id:'ai', label:'Artificial Intelligence', domain:'technology', keywords:['ai','machine','learning','intelligence','computer'], description:'The simulation of human intelligence by machines, encompassing reasoning, learning, and problem-solving capabilities.' },
+    { id:'ml', label:'Machine Learning', domain:'technology', keywords:['ml','learning','data','model','training'], description:'A subset of AI where systems learn patterns from data without explicit programming.' },
+    { id:'stats', label:'Statistics', domain:'mathematics', keywords:['statistics','probability','distribution','variance','mean'], description:'Mathematical discipline for collecting, analyzing, and interpreting data.' },
+    { id:'bayes', label:'Bayesian Inference', domain:'mathematics', keywords:['bayes','prior','posterior','likelihood','probability'], description:'A method of statistical inference that updates probability estimates as new evidence arrives.' },
+    { id:'fuzzy', label:'Fuzzy Logic', domain:'mathematics', keywords:['fuzzy','membership','degree','vague','uncertain'], description:'A logic system that handles partial truth, where values range between completely true and completely false.' },
+    { id:'markov', label:'Markov Chains', domain:'mathematics', keywords:['markov','chain','state','transition','probability','stochastic'], description:'A stochastic model where the next state depends only on the current state, not the sequence of prior events.' },
+    { id:'nlp', label:'Natural Language Processing', domain:'technology', keywords:['nlp','language','text','parsing','semantics','words'], description:'The ability of computers to understand, interpret, and generate human language.' },
+    { id:'gravity', label:'Gravity', domain:'physics', keywords:['gravity','force','mass','newton','einstein','attraction','weight'], description:'A fundamental force of attraction between objects with mass. Described by Newton as F=Gm1m2/r² and by Einstein as curvature of spacetime.' },
+    { id:'physics', label:'Physics', domain:'physics', keywords:['physics','energy','force','matter','quantum','relativity'], description:'The natural science studying matter, energy, and fundamental forces of the universe.' },
+    { id:'quantum', label:'Quantum Mechanics', domain:'physics', keywords:['quantum','particle','wave','superposition','entanglement','planck'], description:'Branch of physics describing behavior at atomic and subatomic scales, featuring wave-particle duality and uncertainty.' },
+    { id:'evolution', label:'Evolution', domain:'biology', keywords:['evolution','darwin','natural','selection','species','adaptation','mutation'], description:'The process of change in heritable characteristics of biological populations over successive generations.' },
+    { id:'biology', label:'Biology', domain:'biology', keywords:['biology','life','cell','organism','dna','gene'], description:'The scientific study of life and living organisms.' },
+    { id:'chemistry', label:'Chemistry', domain:'science', keywords:['chemistry','element','molecule','reaction','atom','bond'], description:'The study of matter, its properties, composition, structure, and transformations.' },
+    { id:'math', label:'Mathematics', domain:'mathematics', keywords:['math','number','algebra','calculus','geometry','proof','theorem'], description:'The abstract science of number, quantity, and space.' },
+    { id:'philosophy', label:'Philosophy', domain:'humanities', keywords:['philosophy','existence','knowledge','ethics','logic','mind','consciousness'], description:'The study of fundamental questions about existence, knowledge, values, reason, and mind.' },
+    { id:'economics', label:'Economics', domain:'social_science', keywords:['economics','market','supply','demand','price','trade','gdp','stock','inflation'], description:'The social science studying production, distribution, and consumption of goods and services.' },
+    { id:'history', label:'History', domain:'humanities', keywords:['history','past','civilization','war','revolution','empire'], description:'The study of past events and their significance to human civilization.' },
+    { id:'programming', label:'Programming', domain:'technology', keywords:['programming','code','software','algorithm','function','variable','bug','debug'], description:'The process of designing and building executable computer programs to accomplish specific tasks.' },
+    { id:'music', label:'Music', domain:'arts', keywords:['music','melody','harmony','rhythm','song','instrument','note'], description:'The art of arranging sounds in time through melody, harmony, rhythm, and timbre.' },
+    { id:'psychology', label:'Psychology', domain:'social_science', keywords:['psychology','mind','behavior','cognition','emotion','memory','consciousness'], description:'The scientific study of mind and behavior.' },
+    { id:'climate', label:'Climate Science', domain:'science', keywords:['climate','weather','temperature','carbon','warming','atmosphere','greenhouse'], description:'The study of long-term weather patterns and changes in Earth\'s climate system.' },
+    { id:'astronomy', label:'Astronomy', domain:'physics', keywords:['astronomy','star','planet','galaxy','universe','cosmos','telescope','orbit'], description:'The study of celestial objects, space, and the physical universe as a whole.' },
+    { id:'literature', label:'Literature', domain:'humanities', keywords:['literature','story','novel','poem','fiction','narrative','author','character'], description:'Written works considered to have artistic merit, including novels, poetry, drama, and essays.' },
+    { id:'medicine', label:'Medicine', domain:'biology', keywords:['medicine','health','disease','treatment','doctor','diagnosis','therapy','cure'], description:'The science and practice of diagnosing, treating, and preventing disease.' },
+    { id:'ethics', label:'Ethics', domain:'humanities', keywords:['ethics','moral','right','wrong','justice','duty','virtue'], description:'The branch of philosophy dealing with moral principles governing behavior.' },
+    { id:'cooking', label:'Cooking', domain:'lifestyle', keywords:['cooking','food','recipe','ingredient','taste','chef','kitchen','meal'], description:'The art and practice of preparing food through various methods like baking, frying, and boiling.' },
+    { id:'sports', label:'Sports', domain:'lifestyle', keywords:['sports','game','team','score','athlete','competition','win','fitness'], description:'Physical activities involving skill and competition, either individual or team-based.' },
+    { id:'tfidf', label:'TF-IDF', domain:'technology', keywords:['tfidf','frequency','term','document','inverse','weight','text','retrieval'], description:'A numerical statistic reflecting the importance of a word in a document relative to a collection, computed without any neural network.' },
+    { id:'graph_theory', label:'Graph Theory', domain:'mathematics', keywords:['graph','node','edge','vertex','path','tree','network','traversal'], description:'Mathematical study of graphs — structures of nodes connected by edges — used for modeling relationships.' },
+    { id:'sentiment', label:'Sentiment Analysis', domain:'technology', keywords:['sentiment','positive','negative','neutral','opinion','emotion','polarity'], description:'Determining the emotional tone of text — positive, negative, or neutral — using statistical or rule-based methods.' },
+    { id:'logic', label:'Formal Logic', domain:'mathematics', keywords:['logic','proposition','inference','deduction','premise','conclusion','syllogism'], description:'The systematic study of valid inference using formal systems of reasoning.' },
+  ];
+
+  for (const e of entries) KnowledgeGraph.addNode(e.id, e);
+
+  const links = [
+    ['ai','ml',0.9,'subset'],['ai','nlp',0.8,'application'],['ml','stats',0.7,'foundation'],
+    ['bayes','stats',0.9,'technique'],['bayes','ai',0.6,'method'],['fuzzy','logic',0.8,'extension'],
+    ['fuzzy','ai',0.5,'method'],['markov','stats',0.8,'model'],['markov','nlp',0.6,'application'],
+    ['gravity','physics',0.9,'topic'],['quantum','physics',0.9,'topic'],['astronomy','physics',0.7,'related'],
+    ['evolution','biology',0.9,'topic'],['biology','medicine',0.7,'applied'],['chemistry','biology',0.5,'related'],
+    ['chemistry','physics',0.4,'related'],['math','stats',0.8,'branch'],['math','logic',0.9,'branch'],
+    ['math','physics',0.7,'tool'],['philosophy','ethics',0.8,'branch'],['philosophy','logic',0.8,'branch'],
+    ['economics','math',0.5,'uses'],['psychology','philosophy',0.4,'related'],['psychology','medicine',0.5,'related'],
+    ['programming','ai',0.6,'implements'],['programming','math',0.4,'uses'],['tfidf','nlp',0.8,'technique'],
+    ['tfidf','stats',0.6,'foundation'],['graph_theory','math',0.8,'branch'],['graph_theory','ai',0.5,'used_in'],
+    ['sentiment','nlp',0.8,'task'],['climate','physics',0.5,'applied'],['climate','chemistry',0.4,'related'],
+    ['music','math',0.3,'related'],['literature','philosophy',0.4,'related'],['history','philosophy',0.3,'context'],
+    ['sports','psychology',0.3,'related'],['cooking','chemistry',0.3,'applied'],
+  ];
+  for (const [f,t,w,r] of links) KnowledgeGraph.addEdge(f,t,w,r);
+})();
+
+
+/* ──────────────── 2. TF-IDF ENGINE ──────────────── */
+const TFIDF = {
+  documents: [],
+  vocabulary: new Set(),
+  idf: {},
+
+  addDocument(id, text) {
+    const tokens = this.tokenize(text);
+    const tf = {};
+    for (const t of tokens) {
+      tf[t] = (tf[t] || 0) + 1;
+      this.vocabulary.add(t);
+    }
+    // Normalize TF
+    const maxFreq = Math.max(...Object.values(tf));
+    for (const t in tf) tf[t] /= maxFreq;
+    this.documents.push({ id, tokens, tf, length: tokens.length });
+    this._computeIDF();
+  },
+
+  tokenize(text) {
+    return text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(t => t.length > 1 && !this.stopWords.has(t));
+  },
+
+  stopWords: new Set(['the','a','an','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','to','of','in','for','on','with','at','by','from','as','into','through','during','before','after','above','below','between','out','off','over','under','again','further','then','once','here','there','when','where','why','how','all','both','each','few','more','most','other','some','such','no','nor','not','only','own','same','so','than','too','very','just','because','but','and','or','if','while','that','this','it','its','i','me','my','we','our','you','your','he','him','his','she','her','they','them','their','what','which','who','whom']),
+
+  _computeIDF() {
+    const N = this.documents.length;
+    this.idf = {};
+    for (const term of this.vocabulary) {
+      const df = this.documents.filter(d => d.tf[term]).length;
+      this.idf[term] = Math.log((N + 1) / (df + 1)) + 1;
+    }
+  },
+
+  vectorize(text) {
+    const tokens = this.tokenize(text);
+    const tf = {};
+    for (const t of tokens) tf[t] = (tf[t] || 0) + 1;
+    const maxFreq = Math.max(1, ...Object.values(tf));
+    const vec = {};
+    for (const t in tf) {
+      vec[t] = (tf[t] / maxFreq) * (this.idf[t] || 1);
+    }
+    return vec;
+  },
+
+  cosineSimilarity(v1, v2) {
+    const keys = new Set([...Object.keys(v1), ...Object.keys(v2)]);
+    let dot = 0, mag1 = 0, mag2 = 0;
+    for (const k of keys) {
+      const a = v1[k] || 0, b = v2[k] || 0;
+      dot += a * b; mag1 += a * a; mag2 += b * b;
+    }
+    return mag1 && mag2 ? dot / (Math.sqrt(mag1) * Math.sqrt(mag2)) : 0;
+  },
+
+  findMostSimilar(query, topK = 5) {
+    const qVec = this.vectorize(query);
+    return this.documents
+      .map(d => ({ id: d.id, score: this.cosineSimilarity(qVec, this.vectorize(d.tokens.join(' '))) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
+  },
+
+  getTopTerms(text, n = 8) {
+    const vec = this.vectorize(text);
+    return Object.entries(vec)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([term, weight]) => ({ term, weight: Math.round(weight * 100) / 100 }));
+  }
+};
+
+// Seed TF-IDF corpus from knowledge graph
+(function seedTFIDF() {
+  for (const [id, node] of Object.entries(KnowledgeGraph.nodes)) {
+    TFIDF.addDocument(id, `${node.label} ${node.description || ''} ${(node.keywords || []).join(' ')}`);
+  }
+})();
+
+
+/* ──────────────── 3. BAYESIAN INFERENCE ENGINE ──────────────── */
+const BayesEngine = {
+  categories: {},
+
+  train(category, tokens) {
+    if (!this.categories[category]) {
+      this.categories[category] = { count: 0, wordCounts: {}, totalWords: 0 };
+    }
+    const cat = this.categories[category];
+    cat.count++;
+    for (const t of tokens) {
+      cat.wordCounts[t] = (cat.wordCounts[t] || 0) + 1;
+      cat.totalWords++;
+    }
+  },
+
+  classify(text) {
+    const tokens = TFIDF.tokenize(text);
+    const totalDocs = Object.values(this.categories).reduce((s, c) => s + c.count, 0);
+    const vocabSize = TFIDF.vocabulary.size || 100;
+    const results = {};
+
+    for (const [catName, cat] of Object.entries(this.categories)) {
+      // Log prior
+      let logProb = Math.log(cat.count / totalDocs);
+      // Log likelihoods with Laplace smoothing
+      for (const token of tokens) {
+        const wordCount = cat.wordCounts[token] || 0;
+        logProb += Math.log((wordCount + 1) / (cat.totalWords + vocabSize));
+      }
+      results[catName] = logProb;
+    }
+
+    // Normalize to probabilities
+    const maxLog = Math.max(...Object.values(results));
+    let sumExp = 0;
+    const probs = {};
+    for (const [cat, log] of Object.entries(results)) {
+      probs[cat] = Math.exp(log - maxLog);
+      sumExp += probs[cat];
+    }
+    for (const cat in probs) probs[cat] /= sumExp;
+
+    return Object.entries(probs)
+      .map(([category, probability]) => ({ category, probability }))
+      .sort((a, b) => b.probability - a.probability);
+  }
+};
+
+// Seed Bayesian classifier with topic data
+(function seedBayes() {
+  const trainingData = {
+    science: [
+      'experiment hypothesis theory observation data evidence research laboratory atom molecule energy force',
+      'physics chemistry biology quantum mechanics thermodynamics entropy reaction element compound',
+      'gravity mass acceleration velocity particle wave electromagnetic radiation spectrum',
+      'cell organism dna gene mutation evolution species ecosystem photosynthesis metabolism',
+      'climate temperature atmosphere carbon dioxide greenhouse effect ocean current weather'
+    ],
+    technology: [
+      'computer software hardware programming algorithm code function variable database server',
+      'artificial intelligence machine learning data model training prediction classification',
+      'internet network protocol browser website application mobile cloud computing digital',
+      'robot automation sensor processor chip circuit memory storage device system',
+      'cybersecurity encryption password firewall vulnerability attack defense authentication'
+    ],
+    finance: [
+      'stock market investment portfolio trading shares bonds dividend yield return',
+      'bank loan interest rate mortgage credit debt inflation currency exchange rate',
+      'budget revenue profit loss expense income tax asset liability balance',
+      'cryptocurrency bitcoin blockchain decentralized ledger token mining wallet transaction',
+      'insurance premium claim risk coverage policy deductible retirement pension fund'
+    ],
+    health: [
+      'disease symptom diagnosis treatment therapy medication drug prescription dosage patient',
+      'exercise fitness nutrition diet vitamin protein carbohydrate calorie metabolism weight',
+      'mental health anxiety depression stress therapy counseling wellness mindfulness meditation',
+      'vaccine immunity infection virus bacteria antibiotic resistance pandemic epidemic spread',
+      'surgery operation hospital doctor nurse medical emergency diagnosis prognosis recovery'
+    ],
+    arts: [
+      'painting sculpture gallery museum canvas brush color palette composition perspective',
+      'music melody harmony rhythm instrument song concert orchestra symphony composer',
+      'literature novel poem fiction narrative author character plot theme metaphor',
+      'film cinema director actor scene screenplay editing cinematography documentary animation',
+      'dance theater performance choreography stage costume design expression movement creative'
+    ],
+    emotion_positive: [
+      'happy love joy wonderful amazing beautiful excited great excellent fantastic',
+      'grateful thankful blessed hopeful optimistic cheerful delighted pleased thrilled proud',
+      'passionate enthusiastic inspired motivated energized empowered uplifted peaceful calm content'
+    ],
+    emotion_negative: [
+      'sad angry frustrated disappointed upset terrible horrible awful disgusting hate',
+      'worried anxious stressed depressed lonely miserable heartbroken devastated fearful hopeless',
+      'annoyed irritated bitter resentful jealous insecure exhausted overwhelmed grief sorrow'
+    ],
+    opinion: [
+      'think believe feel opinion perspective view argument consider suggest recommend',
+      'agree disagree support oppose favor against prefer rather choice decide',
+      'important necessary essential crucial significant relevant meaningful valuable worthwhile'
+    ],
+    factual: [
+      'study found research shows according data evidence statistics report survey',
+      'discovered proved demonstrated confirmed established verified documented measured calculated observed',
+      'defined means refers describes consists includes contains involves comprises represents'
+    ]
+  };
+
+  for (const [category, texts] of Object.entries(trainingData)) {
+    for (const text of texts) {
+      BayesEngine.train(category, TFIDF.tokenize(text));
+    }
+  }
+})();
+
+
+/* ──────────────── 4. FUZZY LOGIC ENGINE ──────────────── */
+const FuzzyEngine = {
+  membershipFunctions: {
+    sentiment: {
+      very_negative: (x) => x <= -0.8 ? 1 : x <= -0.5 ? (-0.5 - x) / 0.3 : 0,
+      negative:      (x) => x <= -0.6 ? 0 : x <= -0.3 ? (x + 0.6) / 0.3 : x <= -0.1 ? 1 : x <= 0.1 ? (-0.1 - x) / (-0.2) : 0,
+      neutral:       (x) => Math.max(0, 1 - Math.abs(x) / 0.35),
+      positive:      (x) => x >= 0.6 ? 0 : x >= 0.3 ? (0.6 - x) / 0.3 : x >= 0.1 ? 1 : x >= -0.1 ? (x + 0.1) / 0.2 : 0,
+      very_positive: (x) => x >= 0.8 ? 1 : x >= 0.5 ? (x - 0.5) / 0.3 : 0,
+    },
+    confidence: {
+      low:    (x) => x <= 0.2 ? 1 : x <= 0.4 ? (0.4 - x) / 0.2 : 0,
+      medium: (x) => Math.max(0, x >= 0.3 && x <= 0.7 ? Math.min((x - 0.3) / 0.2, (0.7 - x) / 0.2) : 0),
+      high:   (x) => x >= 0.6 ? Math.min((x - 0.6) / 0.2, 1) : 0,
+    },
+    complexity: {
+      simple:  (x) => x <= 3 ? 1 : x <= 6 ? (6 - x) / 3 : 0,
+      moderate:(x) => Math.max(0, x >= 4 && x <= 12 ? Math.min((x - 4) / 3, (12 - x) / 3) : 0),
+      complex: (x) => x >= 8 ? Math.min((x - 8) / 4, 1) : 0,
+    }
+  },
+
+  evaluate(dimension, value) {
+    const mfs = this.membershipFunctions[dimension];
+    if (!mfs) return {};
+    const result = {};
+    for (const [label, fn] of Object.entries(mfs)) {
+      result[label] = Math.round(fn(value) * 1000) / 1000;
+    }
+    return result;
+  },
+
+  defuzzify(memberships) {
+    let num = 0, den = 0;
+    const centers = {};
+    let i = 0;
+    const keys = Object.keys(memberships);
+    for (const key of keys) {
+      const center = (i + 0.5) / keys.length;
+      centers[key] = center;
+      num += memberships[key] * center;
+      den += memberships[key];
+      i++;
+    }
+    return den > 0 ? num / den : 0.5;
+  },
+
+  analyzeSentiment(text) {
+    const posWords = new Set(['good','great','love','amazing','wonderful','happy','excellent','fantastic','beautiful','awesome','best','enjoy','like','perfect','brilliant','outstanding','superb','magnificent','joy','delight','pleased','glad','cheerful','positive','nice','kind','warm','generous','helpful','friendly']);
+    const negWords = new Set(['bad','terrible','hate','awful','horrible','sad','worst','disgusting','ugly','boring','poor','dislike','annoying','frustrating','angry','depressing','miserable','painful','dreadful','hopeless','negative','mean','cold','cruel','rude','nasty','toxic','broken','bug','crash','error','fail']);
+    const intensifiers = new Set(['very','extremely','incredibly','absolutely','totally','completely','utterly','really','quite','highly','deeply','truly','immensely','enormously']);
+
+    const tokens = text.toLowerCase().split(/\s+/);
+    let score = 0, count = 0;
+    let intensify = false;
+
+    for (const token of tokens) {
+      const clean = token.replace(/[^a-z]/g, '');
+      if (intensifiers.has(clean)) { intensify = true; continue; }
+      const mult = intensify ? 1.5 : 1;
+      if (posWords.has(clean)) { score += 1 * mult; count++; }
+      else if (negWords.has(clean)) { score -= 1 * mult; count++; }
+      intensify = false;
+    }
+
+    const rawScore = count > 0 ? score / count : 0;
+    const normalized = Math.max(-1, Math.min(1, rawScore));
+    const memberships = this.evaluate('sentiment', normalized);
+    return { rawScore: normalized, memberships, label: this._dominantLabel(memberships) };
+  },
+
+  analyzeComplexity(text) {
+    const tokens = TFIDF.tokenize(text);
+    const uniqueRatio = new Set(tokens).size / Math.max(tokens.length, 1);
+    const avgWordLen = tokens.reduce((s, t) => s + t.length, 0) / Math.max(tokens.length, 1);
+    const complexityScore = (uniqueRatio * 10 + avgWordLen) / 2;
+    const memberships = this.evaluate('complexity', complexityScore);
+    return { score: complexityScore, memberships, label: this._dominantLabel(memberships) };
+  },
+
+  _dominantLabel(memberships) {
+    let best = '', bestVal = -1;
+    for (const [k, v] of Object.entries(memberships)) {
+      if (v > bestVal) { bestVal = v; best = k; }
+    }
+    return best;
+  }
+};
+
+
+/* ──────────────── 5. MARKOV CHAIN GENERATOR ──────────────── */
+const MarkovChain = {
+  chains: {},  // order -> { token -> { nextToken -> count } }
+  maxOrder: 2,
+
+  addText(text) {
+    const tokens = text.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    for (let order = 1; order <= this.maxOrder; order++) {
+      if (!this.chains[order]) this.chains[order] = {};
+      for (let i = 0; i <= tokens.length - order - 1; i++) {
+        const key = tokens.slice(i, i + order).join(' ');
+        const next = tokens[i + order];
+        if (!this.chains[order][key]) this.chains[order][key] = {};
+        this.chains[order][key][next] = (this.chains[order][key][next] || 0) + 1;
+      }
+    }
+  },
+
+  generate(seed, maxLength = 40) {
+    const tokens = seed.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const result = [...tokens];
+
+    for (let i = 0; i < maxLength; i++) {
+      let nextToken = null;
+
+      // Try higher order first
+      for (let order = this.maxOrder; order >= 1; order--) {
+        const key = result.slice(-order).join(' ');
+        const transitions = this.chains[order]?.[key];
+        if (transitions) {
+          nextToken = this._weightedRandom(transitions);
+          break;
+        }
+      }
+
+      if (!nextToken) break;
+      result.push(nextToken);
+
+      // Stop at sentence-ending punctuation
+      if (nextToken.match(/[.!?]$/)) break;
+    }
+
+    let text = result.join(' ');
+    // Capitalize first letter
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+    return text;
+  },
+
+  _weightedRandom(transitions) {
+    const total = Object.values(transitions).reduce((s, c) => s + c, 0);
+    let r = Math.random() * total;
+    for (const [token, count] of Object.entries(transitions)) {
+      r -= count;
+      if (r <= 0) return token;
+    }
+    return Object.keys(transitions)[0];
+  }
+};
+
+// Seed Markov chain with text
+(function seedMarkov() {
+  const texts = [
+    "Artificial intelligence is the field of computer science dedicated to creating systems capable of performing tasks that typically require human intelligence. These tasks include reasoning, learning from experience, understanding language, and recognizing patterns.",
+    "Bayesian inference is a powerful statistical method that updates our beliefs about the world as new evidence becomes available. It starts with a prior probability and computes a posterior probability using Bayes theorem.",
+    "Fuzzy logic extends classical boolean logic by allowing truth values between zero and one. This enables reasoning about concepts that are inherently vague or imprecise, such as temperature being warm or speed being fast.",
+    "The knowledge graph represents information as a network of interconnected concepts. Each node holds a concept and edges represent relationships between concepts, enabling traversal-based reasoning.",
+    "Gravity is a fundamental force that attracts objects with mass toward each other. Isaac Newton described it mathematically, and Albert Einstein later reconceptualized it as the curvature of spacetime caused by mass and energy.",
+    "The stock market is a complex system where shares of publicly traded companies are bought and sold. Prices are influenced by supply and demand, company performance, economic indicators, and investor sentiment.",
+    "Programming is the art and science of writing instructions for computers. Good programmers write clean, readable code and think carefully about algorithms and data structures.",
+    "Evolution by natural selection is the process through which species adapt over time. Organisms with traits better suited to their environment tend to survive and reproduce more successfully.",
+    "Music is an art form that combines sounds and silence in patterns that create melody, harmony, and rhythm. It exists in every human culture and has the power to evoke deep emotions.",
+    "Climate change refers to long-term shifts in global temperatures and weather patterns. Human activities, primarily burning fossil fuels, have been the main driver of climate change since the industrial revolution.",
+    "The universe is vast and mysterious, containing billions of galaxies each with billions of stars. Our understanding of the cosmos continues to expand through observation and theoretical physics.",
+    "Mathematics is the language of the universe, providing tools to describe patterns, prove theorems, and solve problems across every scientific discipline.",
+    "Quantum mechanics describes the behavior of particles at the atomic and subatomic level. Particles can exist in superposition and become entangled, defying our everyday intuitions about reality.",
+    "Language is a remarkable cognitive ability that allows humans to communicate complex ideas, share knowledge, tell stories, and build civilizations through symbolic representation.",
+    "Ethics is the philosophical study of moral principles, asking fundamental questions about what is right and wrong, just and unjust, virtuous and vicious in human conduct.",
+    "The human brain is the most complex known structure in the universe. It contains approximately one hundred billion neurons connected by trillions of synapses, giving rise to consciousness and thought.",
+    "The scientific method involves forming hypotheses, designing experiments, collecting data, analyzing results, and drawing conclusions. It is the foundation of modern scientific inquiry and discovery.",
+    "A healthy lifestyle includes regular exercise, balanced nutrition, adequate sleep, stress management, and meaningful social connections. Prevention is often more effective than treatment.",
+    "Technology continues to transform human society at an accelerating pace. From the printing press to the internet, each major innovation has reshaped how we live, work, and communicate.",
+    "Creative writing tells stories that illuminate the human condition. Good narratives create empathy, challenge assumptions, and help us understand perspectives different from our own."
+  ];
+  for (const t of texts) MarkovChain.addText(t);
+})();
+
+
+/* ──────────────── MASTER INFERENCE ORCHESTRATOR ──────────────── */
+const InferenceEngine = {
+  process(input) {
+    const t0 = performance.now();
+    const trace = [];
+    let response = '';
+
+    // ── Step 1: TF-IDF Harmonic Decomposition ──
+    const topTerms = TFIDF.getTopTerms(input, 8);
+    const similarDocs = TFIDF.findMostSimilar(input, 5);
+    trace.push({
+      engine: 'tfidf',
+      title: 'TF-IDF Harmonic Decomposition',
+      detail: `Top harmonics: ${topTerms.map(t => `${t.term}(${t.weight})`).join(', ')}`,
+      data: { topTerms, similarDocs }
+    });
+
+    // ── Step 2: Bayesian Classification ──
+    const classification = BayesEngine.classify(input);
+    const topClass = classification[0];
+    trace.push({
+      engine: 'bayesian',
+      title: 'Bayesian Posterior Classification',
+      detail: `P(${topClass.category}|input) = ${(topClass.probability * 100).toFixed(1)}% | ` +
+              classification.slice(0, 3).map(c => `${c.category}: ${(c.probability*100).toFixed(1)}%`).join(', '),
+      data: { classification }
+    });
+
+    // ── Step 3: Fuzzy Logic Analysis ──
+    const sentiment = FuzzyEngine.analyzeSentiment(input);
+    const complexity = FuzzyEngine.analyzeComplexity(input);
+    trace.push({
+      engine: 'fuzzy',
+      title: 'Fuzzy Logic Evaluation',
+      detail: `Sentiment: ${sentiment.label} (${sentiment.rawScore.toFixed(2)}) | Complexity: ${complexity.label} (${complexity.score.toFixed(1)})`,
+      data: { sentiment, complexity }
+    });
+
+    // ── Step 4: Knowledge Lattice Traversal ──
+    const queryTerms = TFIDF.tokenize(input);
+    const graphResults = KnowledgeGraph.query(queryTerms, 3);
+    const topGraphNodes = graphResults.slice(0, 6);
+    trace.push({
+      engine: 'graph',
+      title: 'Knowledge Lattice Traversal',
+      detail: `Activated ${graphResults.length} nodes. Top resonance: ${topGraphNodes.map(n => `${n.label}(${n.score.toFixed(2)})`).join(', ')}`,
+      data: { results: topGraphNodes }
+    });
+
+    // ── Step 5: Response Synthesis ──
+    response = this._synthesizeResponse(input, {
+      topTerms, similarDocs, classification, sentiment, complexity, graphResults: topGraphNodes, queryTerms
+    });
+
+    // ── Step 6: Markov Chain Augmentation ──
+    const seedPhrase = topTerms.length > 1 ? topTerms.slice(0, 2).map(t => t.term).join(' ') : (queryTerms[0] || 'the');
+    const markovText = MarkovChain.generate(seedPhrase, 25);
+    trace.push({
+      engine: 'markov',
+      title: 'Markov Chain Augmentation',
+      detail: `Generated continuation from seed "${seedPhrase}": "${markovText.substring(0, 80)}..."`,
+      data: { seed: seedPhrase, text: markovText }
+    });
+
+    // Feed the input back into Markov for learning
+    MarkovChain.addText(input);
+
+    const latency = Math.round(performance.now() - t0);
+    const confidence = this._computeConfidence(similarDocs, classification, graphResults);
+
+    return { response, trace, latency, confidence, topGraphNodes, classification, sentiment };
+  },
+
+  _synthesizeResponse(input, data) {
+    const inputLower = input.toLowerCase().trim();
+
+    // ── Meta queries about the engine itself ──
+    if (inputLower.match(/\b(what are you|who are you|how do you work|your.*engines?|reasoning|how.*you.*think)\b/)) {
+      return `I am the **Harmonic Inference Engine**, a zero-epoch AI system that uses absolutely no neural networks.\n\nMy reasoning flows through five engines:\n\n` +
+        `**1. TF-IDF Harmonic Decomposition** — I decompose your input into weighted term frequencies, treating language as a signal with harmonic components.\n\n` +
+        `**2. Bayesian Inference Network** — I classify your input probabilistically using Bayes' theorem with Laplace smoothing across ${Object.keys(BayesEngine.categories).length} learned categories.\n\n` +
+        `**3. Fuzzy Logic Engine** — I evaluate sentiment, complexity, and confidence using membership functions that handle the inherent vagueness of language.\n\n` +
+        `**4. Markov Chain Generator** — I generate text probabilistically by modeling transition probabilities between word sequences.\n\n` +
+        `**5. Knowledge Graph Lattice** — I traverse a graph of ${KnowledgeGraph.getNodeCount()} concept nodes connected by weighted edges, finding relevant knowledge through graph traversal.\n\n` +
+        `Every response you see is the product of all five engines working in concert — no gradient descent, no backpropagation, no epochs.`;
+    }
+
+    // ── Classification request ──
+    if (inputLower.startsWith('classify:') || inputLower.startsWith('classify ')) {
+      const textToClassify = input.replace(/^classify[:\s]*/i, '').trim();
+      const cls = BayesEngine.classify(textToClassify);
+      const sent = FuzzyEngine.analyzeSentiment(textToClassify);
+      let result = `**Classification Results for:** "${textToClassify}"\n\n`;
+      result += `**Bayesian Categories:**\n`;
+      for (const c of cls.slice(0, 5)) {
+        const bar = '█'.repeat(Math.round(c.probability * 20));
+        result += `  ${c.category}: ${(c.probability * 100).toFixed(1)}% ${bar}\n`;
+      }
+      result += `\n**Fuzzy Sentiment:** ${sent.label} (score: ${sent.rawScore.toFixed(3)})\n`;
+      result += `Membership values: ${Object.entries(sent.memberships).map(([k,v]) => `${k}=${v.toFixed(3)}`).join(', ')}\n\n`;
+      result += `**Dominant domain:** ${cls[0].category} with ${(cls[0].probability * 100).toFixed(1)}% posterior probability.`;
+      return result;
+    }
+
+    // ── Analyze request ──
+    if (inputLower.startsWith('analyze:') || inputLower.startsWith('analyze ') || inputLower.startsWith('analyse')) {
+      const textToAnalyze = input.replace(/^analy[sz]e[:\s]*/i, '').trim();
+      const sent = FuzzyEngine.analyzeSentiment(textToAnalyze);
+      const comp = FuzzyEngine.analyzeComplexity(textToAnalyze);
+      const cls = BayesEngine.classify(textToAnalyze);
+      const terms = TFIDF.getTopTerms(textToAnalyze, 6);
+      let result = `**Deep Analysis of:** "${textToAnalyze}"\n\n`;
+      result += `**Sentiment (Fuzzy Logic):** ${sent.label} (raw: ${sent.rawScore.toFixed(3)})\n`;
+      for (const [k, v] of Object.entries(sent.memberships)) {
+        if (v > 0) result += `  μ(${k}) = ${v.toFixed(3)}\n`;
+      }
+      result += `\n**Complexity:** ${comp.label} (score: ${comp.score.toFixed(2)})\n`;
+      result += `\n**TF-IDF Key Terms:** ${terms.map(t => `${t.term} [${t.weight}]`).join(', ')}\n`;
+      result += `\n**Topic Classification:** ${cls.slice(0, 3).map(c => `${c.category} (${(c.probability*100).toFixed(1)}%)`).join(' > ')}\n`;
+      return result;
+    }
+
+    // ── Generate / story request ──
+    if (inputLower.match(/\b(generate|write|create|compose|story|poem|tell me a)\b/)) {
+      const keywords = data.queryTerms.filter(t => !['generate','write','create','compose','short','me','tell','story','poem','please','about','make'].includes(t));
+      const seed = keywords.length > 0 ? keywords.slice(0, 2).join(' ') : 'the';
+      let generated = '';
+      const sentences = [];
+      for (let i = 0; i < 5; i++) {
+        const s = MarkovChain.generate(i === 0 ? seed : (sentences[i-1] || '').split(' ').slice(-2).join(' '), 25);
+        if (s && !sentences.includes(s)) sentences.push(s);
+      }
+      generated = sentences.join(' ');
+      if (!generated.endsWith('.')) generated += '.';
+      return `**Generated Text** (via Markov Chain, seeded with "${seed}"):\n\n${generated}\n\n*This text was generated purely through probabilistic state transitions in a Markov chain — no neural network was involved.*`;
+    }
+
+    // ── Knowledge-based Q&A ──
+    if (data.graphResults.length > 0 && data.graphResults[0].score > 0.5) {
+      const top = data.graphResults[0];
+      const related = data.graphResults.slice(1, 4);
+      let result = '';
+
+      if (top.description) {
+        result += `**${top.label}:** ${top.description}\n\n`;
+      }
+
+      if (related.length > 0) {
+        result += `**Related concepts** (via lattice traversal):\n`;
+        for (const r of related) {
+          if (r.description) {
+            result += `- **${r.label}:** ${r.description}\n`;
+          }
+        }
+      }
+
+      // Add Bayesian context
+      const topCat = data.classification[0];
+      result += `\n*Bayesian classification: ${topCat.category} (${(topCat.probability*100).toFixed(1)}%). `;
+      result += `Sentiment: ${data.sentiment.label}. `;
+      result += `Knowledge traversal activated ${data.graphResults.length} lattice nodes.*`;
+
+      return result;
+    }
+
+    // ── Fallback: Markov generation + context ──
+    const seed = data.queryTerms.length > 0 ? data.queryTerms.slice(0, 2).join(' ') : 'interesting';
+    const markovResponse = MarkovChain.generate(seed, 30);
+    let result = `Based on my analysis, your query relates to **${data.classification[0].category}** (${(data.classification[0].probability*100).toFixed(1)}% confidence).\n\n`;
+    result += `${markovResponse}\n\n`;
+    if (data.graphResults.length > 0) {
+      result += `**Relevant lattice nodes:** ${data.graphResults.slice(0, 3).map(n => n.label).join(', ')}.\n`;
+    }
+    result += `\n*Sentiment: ${data.sentiment.label} | Top TF-IDF terms: ${data.topTerms.slice(0, 4).map(t => t.term).join(', ')}*`;
+    return result;
+  },
+
+  _computeConfidence(similarDocs, classification, graphResults) {
+    const docSim = similarDocs.length > 0 ? similarDocs[0].score : 0;
+    const classConf = classification.length > 0 ? classification[0].probability : 0;
+    const graphStrength = graphResults.length > 0 ? Math.min(graphResults[0].score / 4, 1) : 0;
+    return (docSim * 0.3 + classConf * 0.4 + graphStrength * 0.3);
+  }
+};
+
+
+/* ──────────────── UI RENDERING ──────────────── */
+function updateUI(result) {
+  inferenceCount++;
+  document.getElementById('statInferences').textContent = inferenceCount;
+  document.getElementById('statConfidence').textContent = (result.confidence * 100).toFixed(0) + '%';
+  document.getElementById('statLatency').textContent = result.latency + ' ms';
+  document.getElementById('statNodes').textContent = KnowledgeGraph.getNodeCount();
+
+  // Update trace panel
+  const traceEl = document.getElementById('traceLog');
+  traceEl.innerHTML = '';
+  for (const step of result.trace) {
+    if (!activeEngines[step.engine === 'graph' ? 'graph' : step.engine]) continue;
+    const div = document.createElement('div');
+    div.className = `trace-step ${step.engine}`;
+    const conf = step.engine === 'bayesian' ? result.classification[0].probability :
+                 step.engine === 'tfidf' ? (result.trace[0].data.similarDocs[0]?.score || 0) :
+                 result.confidence;
+    div.innerHTML = `
+      <div class="step-title"><span class="indicator"></span>${step.title}</div>
+      <div>${step.detail}</div>
+      <div class="confidence-bar"><div class="fill" style="width:${Math.round(conf*100)}%;background:${
+        step.engine === 'bayesian' ? 'var(--accent2)' :
+        step.engine === 'fuzzy' ? 'var(--accent4)' :
+        step.engine === 'markov' ? 'var(--accent3)' :
+        step.engine === 'tfidf' ? '#7b68ee' : 'var(--accent)'
+      }"></div></div>
+    `;
+    traceEl.appendChild(div);
+  }
+
+  // Update domain tags
+  const domainsEl = document.getElementById('domainTags');
+  domainsEl.innerHTML = '';
+  const activeDomains = new Set();
+  if (result.topGraphNodes) {
+    for (const n of result.topGraphNodes) {
+      if (n.domain) activeDomains.add(n.domain);
+    }
+  }
+  for (const domain of KnowledgeGraph.getActiveDomains()) {
+    const tag = document.createElement('span');
+    tag.className = `domain-tag${activeDomains.has(domain) ? ' active' : ''}`;
+    tag.textContent = domain.replace(/_/g, ' ');
+    domainsEl.appendChild(tag);
+  }
+
+  // Update lattice nodes
+  const latticeEl = document.getElementById('latticeNodes');
+  latticeEl.innerHTML = '';
+  if (result.topGraphNodes) {
+    for (const node of result.topGraphNodes.slice(0, 8)) {
+      const div = document.createElement('div');
+      div.className = 'lattice-node';
+      const colors = { technology:'var(--accent)', mathematics:'var(--accent2)', physics:'var(--accent3)', biology:'#4caf50', humanities:'var(--accent4)', science:'#7b68ee', social_science:'#ff9800', arts:'#e91e63', lifestyle:'#00bcd4' };
+      div.innerHTML = `<span class="dot" style="background:${colors[node.domain] || 'var(--text2)'}"></span>${node.label}<span class="strength">${node.score.toFixed(2)}</span>`;
+      latticeEl.appendChild(div);
+    }
+  }
+
+  // Update frequency canvas
+  drawFrequencyChart(result);
+
+  // Update viz nodes for main canvas
+  updateVizData(result);
+}
+
+function drawFrequencyChart(result) {
+  const canvas = document.getElementById('freqCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const terms = result.trace[0]?.data?.topTerms || [];
+  if (terms.length === 0) return;
+
+  const maxW = Math.max(...terms.map(t => t.weight), 0.01);
+  const barW = Math.floor((W - 20) / terms.length) - 4;
+
+  for (let i = 0; i < terms.length; i++) {
+    const x = 10 + i * (barW + 4);
+    const h = (terms[i].weight / maxW) * (H - 30);
+    const gradient = ctx.createLinearGradient(x, H - h - 10, x, H - 10);
+    gradient.addColorStop(0, '#6c63ff');
+    gradient.addColorStop(1, '#00d4aa');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(x, H - h - 10, barW, h, 3);
+    ctx.fill();
+
+    ctx.fillStyle = '#9090b0';
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(terms[i].term.substring(0, 6), x + barW / 2, H - 1);
+  }
+}
+
+/* ──────────────── MAIN VISUALIZATION CANVAS ──────────────── */
+let vizData = { nodes: [], edges: [], particles: [] };
+let vizTime = 0;
+
+function updateVizData(result) {
+  vizData.nodes = [];
+  vizData.edges = [];
+
+  if (result.topGraphNodes) {
+    const cx = 0.5, cy = 0.5;
+    for (let i = 0; i < result.topGraphNodes.length; i++) {
+      const angle = (i / result.topGraphNodes.length) * Math.PI * 2 - Math.PI / 2;
+      const r = 0.25 + (i * 0.02);
+      vizData.nodes.push({
+        x: cx + Math.cos(angle) * r,
+        y: cy + Math.sin(angle) * r,
+        label: result.topGraphNodes[i].label,
+        score: result.topGraphNodes[i].score,
+        domain: result.topGraphNodes[i].domain,
+        vx: 0, vy: 0
+      });
+    }
+    // Create edges between close nodes
+    for (let i = 0; i < vizData.nodes.length; i++) {
+      for (let j = i + 1; j < vizData.nodes.length; j++) {
+        if (Math.random() < 0.5 || j === i + 1) {
+          vizData.edges.push({ from: i, to: j, strength: Math.random() * 0.5 + 0.3 });
+        }
+      }
+    }
+  }
+
+  // Add particles
+  vizData.particles = [];
+  for (let i = 0; i < 30; i++) {
+    vizData.particles.push({
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random() - 0.5) * 0.002,
+      vy: (Math.random() - 0.5) * 0.002,
+      size: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.5 + 0.1
+    });
+  }
+}
+
+function renderMainCanvas() {
+  const canvas = document.getElementById('mainCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
+  canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+
+  ctx.fillStyle = '#0a0a12';
+  ctx.fillRect(0, 0, W, H);
+
+  vizTime += 0.016;
+
+  // Draw grid
+  ctx.strokeStyle = 'rgba(108,99,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  // Particles
+  for (const p of vizData.particles) {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0 || p.x > 1) p.vx *= -1;
+    if (p.y < 0 || p.y > 1) p.vy *= -1;
+    ctx.beginPath();
+    ctx.arc(p.x * W, p.y * H, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(108,99,255,${p.alpha})`;
+    ctx.fill();
+  }
+
+  if (vizMode === 'lattice' || vizMode === 'bayesian') {
+    // Edges
+    for (const e of vizData.edges) {
+      const a = vizData.nodes[e.from], b = vizData.nodes[e.to];
+      if (!a || !b) continue;
+      ctx.beginPath();
+      ctx.moveTo(a.x * W, a.y * H);
+      ctx.lineTo(b.x * W, b.y * H);
+      ctx.strokeStyle = `rgba(0,212,170,${e.strength * 0.4})`;
+      ctx.lineWidth = e.strength * 2;
+      ctx.stroke();
+    }
+
+    // Nodes
+    const colors = { technology:'#6c63ff', mathematics:'#00d4aa', physics:'#ff6b8a', biology:'#4caf50', humanities:'#ffd166', science:'#7b68ee', social_science:'#ff9800', arts:'#e91e63', lifestyle:'#00bcd4' };
+    for (let i = 0; i < vizData.nodes.length; i++) {
+      const n = vizData.nodes[i];
+      // Gentle float
+      const ox = Math.sin(vizTime * 0.5 + i) * 0.008;
+      const oy = Math.cos(vizTime * 0.7 + i * 1.3) * 0.008;
+      const px = (n.x + ox) * W, py = (n.y + oy) * H;
+      const r = 5 + n.score * 6;
+      const col = colors[n.domain] || '#6c63ff';
+
+      // Glow
+      const grd = ctx.createRadialGradient(px, py, 0, px, py, r * 3);
+      grd.addColorStop(0, col + '40');
+      grd.addColorStop(1, col + '00');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(px, py, r * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Node
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = '#e0e0f0';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(n.label, px, py - r - 6);
+    }
+  } else if (vizMode === 'harmonic') {
+    // Draw waveforms
+    for (let w = 0; w < 5; w++) {
+      const freq = (w + 1) * 2;
+      const amp = H * 0.08 / (w + 1);
+      const yOff = H * 0.2 + w * H * 0.14;
+      ctx.beginPath();
+      for (let x = 0; x < W; x++) {
+        const y = yOff + Math.sin((x / W) * Math.PI * freq + vizTime * (w + 1)) * amp;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      const colors = ['#6c63ff','#00d4aa','#ff6b8a','#ffd166','#7b68ee'];
+      ctx.strokeStyle = colors[w] + 'aa';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#9090b0';
+    ctx.font = '11px sans-serif';
+    ctx.fillText('Harmonic Decomposition of Input Signal', W / 2, H - 12);
+  } else if (vizMode === 'phase') {
+    // Phase space plot
+    const points = [];
+    for (let t = 0; t < 300; t++) {
+      const tt = t * 0.05 + vizTime * 0.3;
+      const x = Math.sin(tt) * Math.cos(tt * 0.7) * 0.35 + 0.5;
+      const y = Math.cos(tt * 1.3) * Math.sin(tt * 0.5) * 0.35 + 0.5;
+      points.push({ x, y, age: t / 300 });
+    }
+    for (let i = 1; i < points.length; i++) {
+      ctx.beginPath();
+      ctx.moveTo(points[i-1].x * W, points[i-1].y * H);
+      ctx.lineTo(points[i].x * W, points[i].y * H);
+      const alpha = (1 - points[i].age) * 0.8;
+      ctx.strokeStyle = `rgba(108,99,255,${alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#6c63ff';
+    ctx.beginPath();
+    ctx.arc(points[0].x * W, points[0].y * H, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#9090b0';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Phase Space Trajectory of Inference State', W / 2, H - 12);
+  }
+
+  animFrame = requestAnimationFrame(renderMainCanvas);
+}
+
+// Seed initial particles
+for (let i = 0; i < 40; i++) {
+  vizData.particles.push({
+    x: Math.random(), y: Math.random(),
+    vx: (Math.random() - 0.5) * 0.001,
+    vy: (Math.random() - 0.5) * 0.001,
+    size: Math.random() * 1.5 + 0.5,
+    alpha: Math.random() * 0.3 + 0.05
+  });
+}
+
+
+/* ──────────────── CHAT LOGIC ──────────────── */
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Remove welcome
+  const welcome = document.querySelector('.welcome');
+  if (welcome) welcome.remove();
+
+  addMessage(text, 'user');
+  showTyping();
+
+  setTimeout(() => {
+    removeTyping();
+    const result = InferenceEngine.process(text);
+    addMessage(result.response, 'ai', result);
+    updateUI(result);
+  }, 300 + Math.random() * 400);
+}
+
+function sendQuick(btn) {
+  document.getElementById('userInput').value = btn.textContent;
+  sendMessage();
+}
+
+function addMessage(text, type, result) {
+  const chatEl = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `msg msg-${type}`;
+
+  const avatar = type === 'user' ? 'U' : 'HI';
+  const metaHTML = type === 'ai' && result ? `
+    <div class="msg-meta">
+      <span>&#9201; ${result.latency}ms</span>
+      <span>&#9733; ${(result.confidence * 100).toFixed(0)}% confidence</span>
+      <span>5 engines</span>
+    </div>` : '';
+
+  // Simple markdown-like formatting
+  let formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+
+  div.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div>
+      <div class="msg-content">${formatted}</div>
+      ${metaHTML}
+    </div>
+  `;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function showTyping() {
+  const chatEl = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.id = 'typingMsg';
+  div.innerHTML = `<div class="msg-avatar">HI</div><div class="typing-indicator"><span></span><span></span><span></span></div>`;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingMsg');
+  if (el) el.remove();
+}
+
+/* ──────────────── ENGINE TOGGLES ──────────────── */
+function toggleEngine(el, engine) {
+  activeEngines[engine] = !activeEngines[engine];
+  el.classList.toggle('on');
+}
+
+/* ──────────────── VIZ MODE BUTTONS ──────────────── */
+document.querySelectorAll('.viz-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.viz-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    vizMode = btn.dataset.mode;
+  });
+});
+
+/* ──────────────── TEXTAREA AUTO-RESIZE ──────────────── */
+document.getElementById('userInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+/* ──────────────── INIT ──────────────── */
+document.getElementById('statNodes').textContent = KnowledgeGraph.getNodeCount();
+renderMainCanvas();
+
+// Initialize domain tags
+const domainsEl = document.getElementById('domainTags');
+for (const domain of KnowledgeGraph.getActiveDomains()) {
+  const tag = document.createElement('span');
+  tag.className = 'domain-tag';
+  tag.textContent = domain.replace(/_/g, ' ');
+  domainsEl.appendChild(tag);
+}
+
+// Initialize lattice nodes display
+const latticeEl = document.getElementById('latticeNodes');
+const allNodes = Object.values(KnowledgeGraph.nodes).slice(0, 8);
+for (const node of allNodes) {
+  const div = document.createElement('div');
+  div.className = 'lattice-node';
+  const colors = { technology:'var(--accent)', mathematics:'var(--accent2)', physics:'var(--accent3)', biology:'#4caf50', humanities:'var(--accent4)', science:'#7b68ee', social_science:'#ff9800', arts:'#e91e63', lifestyle:'#00bcd4' };
+  div.innerHTML = `<span class="dot" style="background:${colors[node.domain] || 'var(--text2)'}"></span>${node.label}<span class="strength">${node.resonance.toFixed(2)}</span>`;
+  latticeEl.appendChild(div);
+}
+
+console.log('%c Harmonic Inference Engine v1.0 ', 'background:linear-gradient(135deg,#6c63ff,#00d4aa);color:#fff;padding:8px 16px;border-radius:6px;font-size:14px;font-weight:bold');
+console.log('Zero-Epoch AI | No Neural Networks | 5 Reasoning Engines');
+console.log('Engines: TF-IDF | Bayesian | Fuzzy Logic | Markov Chain | Knowledge Graph');
+</script>
+</body>
+</html>

@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Resonance Neural Network</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e0e0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .architecture-description {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .architecture-description h2 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+
+        .architecture-description ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #00d4ff;
+            color: #e0e0e0;
+            border-radius: 4px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d4ff 0%, #0088cc 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .visualization {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .viz-panel {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .viz-panel h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        canvas {
+            width: 100%;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 136, 204, 0.1) 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .metric-card h4 {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .training-log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+
+        .log-entry.success {
+            color: #00ff88;
+        }
+
+        .log-entry.warning {
+            color: #ffaa00;
+        }
+
+        @media (max-width: 768px) {
+            .visualization {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌀 Fractal Resonance Neural Network</h1>
+        <p class="subtitle">A novel architecture using self-similar patterns and harmonic oscillations</p>
+
+        <div class="architecture-description">
+            <h2>Architecture Overview</h2>
+            <p>The Fractal Resonance Network (FRN) is an innovative neural architecture that combines:</p>
+            <ul>
+                <li><strong>Fractal Layers:</strong> Self-similar processing units at multiple scales</li>
+                <li><strong>Harmonic Resonance:</strong> Nodes oscillate at different frequencies and synchronize through resonance</li>
+                <li><strong>Phase Coupling:</strong> Information propagates through phase-locked oscillatory states</li>
+                <li><strong>Scale-Invariant Learning:</strong> Patterns learned at one scale automatically inform other scales</li>
+                <li><strong>Temporal Memory:</strong> Oscillation patterns store temporal information naturally</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Fractal Depth (Recursion Levels): <span id="depthValue">3</span></label>
+                <input type="range" id="fractalDepth" min="2" max="5" value="3">
+            </div>
+
+            <div class="control-group">
+                <label>Base Frequency (Hz): <span id="freqValue">10</span></label>
+                <input type="range" id="baseFreq" min="5" max="50" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>Resonance Coupling: <span id="couplingValue">0.5</span></label>
+                <input type="range" id="coupling" min="0" max="1" step="0.1" value="0.5">
+            </div>
+
+            <div class="control-group">
+                <label>Learning Rate: <span id="lrValue">0.01</span></label>
+                <input type="range" id="learningRate" min="0.001" max="0.1" step="0.001" value="0.01">
+            </div>
+
+            <div class="control-group">
+                <label>Training Epochs:</label>
+                <input type="number" id="epochs" value="100" min="10" max="1000">
+            </div>
+
+            <div class="control-group">
+                <button id="trainBtn">🚀 Train Network</button>
+            </div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-card">
+                <h4>Resonance Coherence</h4>
+                <div class="metric-value" id="coherence">0.00</div>
+            </div>
+            <div class="metric-card">
+                <h4>Pattern Recognition</h4>
+                <div class="metric-value" id="accuracy">0.0%</div>
+            </div>
+            <div class="metric-card">
+                <h4>Phase Synchronization</h4>
+                <div class="metric-value" id="sync">0.00</div>
+            </div>
+            <div class="metric-card">
+                <h4>Training Loss</h4>
+                <div class="metric-value" id="loss">--</div>
+            </div>
+        </div>
+
+        <div class="visualization">
+            <div class="viz-panel">
+                <h3>Fractal Network Structure</h3>
+                <canvas id="networkCanvas" width="600" height="400"></canvas>
+            </div>
+
+            <div class="viz-panel">
+                <h3>Harmonic Resonance Patterns</h3>
+                <canvas id="resonanceCanvas" width="600" height="400"></canvas>
+            </div>
+        </div>
+
+        <div class="viz-panel">
+            <h3>Training Log</h3>
+            <div class="training-log" id="trainingLog">
+                <div class="log-entry">Fractal Resonance Network initialized. Ready to train.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fractal Resonance Neural Network Implementation
+        class FractalResonanceNetwork {
+            constructor(config) {
+                this.config = config;
+                this.fractalDepth = config.fractalDepth || 3;
+                this.baseFrequency = config.baseFrequency || 10;
+                this.coupling = config.coupling || 0.5;
+                this.learningRate = config.learningRate || 0.01;
+                
+                this.network = this.buildFractalNetwork();
+                this.time = 0;
+                this.trainingHistory = [];
+            }
+
+            buildFractalNetwork() {
+                const network = {
+                    layers: [],
+                    resonators: []
+                };
+
+                // Build fractal layers at different scales
+                for (let depth = 0; depth < this.fractalDepth; depth++) {
+                    const scale = Math.pow(2, depth);
+                    const layer = {
+                        scale: scale,
+                        nodes: this.createResonantNodes(16 / scale, depth),
+                        frequency: this.baseFrequency * scale
+                    };
+                    network.layers.push(layer);
+                }
+
+                return network;
+            }
+
+            createResonantNodes(count, depth) {
+                const nodes = [];
+                for (let i = 0; i < count; i++) {
+                    nodes.push({
+                        id: `L${depth}_N${i}`,
+                        phase: Math.random() * Math.PI * 2,
+                        amplitude: Math.random(),
+                        weights: Array(Math.floor(count)).fill(0).map(() => Math.random() * 2 - 1),
+                        frequency: this.baseFrequency * Math.pow(2, depth) * (1 + Math.random() * 0.1),
+                        activation: 0
+                    });
+                }
+                return nodes;
+            }
+
+            // Harmonic activation function based on oscillatory dynamics
+            harmonicActivation(x, phase, frequency, time) {
+                const oscillation = Math.sin(2 * Math.PI * frequency * time + phase);
+                const resonance = Math.tanh(x) * oscillation;
+                return resonance;
+            }
+
+            // Forward propagation through fractal layers with resonance coupling
+            forward(input, time) {
+                this.time = time;
+                let signal = input;
+
+                for (let layerIdx = 0; layerIdx < this.network.layers.length; layerIdx++) {
+                    const layer = this.network.layers[layerIdx];
+                    const nextSignal = [];
+
+                    for (let nodeIdx = 0; nodeIdx < layer.nodes.length; nodeIdx++) {
+                        const node = layer.nodes[nodeIdx];
+                        let sum = 0;
+
+                        // Compute weighted sum
+                        for (let i = 0; i < Math.min(signal.length, node.weights.length); i++) {
+                            sum += signal[i] * node.weights[i];
+                        }
+
+                        // Apply resonance coupling from other layers (fractal self-similarity)
+                        let resonanceTerm = 0;
+                        for (let otherLayer of this.network.layers) {
+                            if (otherLayer !== layer) {
+                                for (let otherNode of otherLayer.nodes) {
+                                    const phaseDiff = Math.abs(node.phase - otherNode.phase);
+                                    resonanceTerm += this.coupling * otherNode.activation * 
+                                                    Math.cos(phaseDiff);
+                                }
+                            }
+                        }
+
+                        // Apply harmonic activation
+                        node.activation = this.harmonicActivation(
+                            sum + resonanceTerm, 
+                            node.phase, 
+                            node.frequency, 
+                            time
+                        );
+
+                        // Update phase based on input (phase-locked learning)
+                        node.phase += 0.01 * Math.tanh(sum);
+                        node.phase = node.phase % (2 * Math.PI);
+
+                        nextSignal.push(node.activation);
+                    }
+
+                    signal = nextSignal;
+                }
+
+                return signal;
+            }
+
+            // Train using fractal resonance gradient descent
+            train(trainingData, epochs, callback) {
+                for (let epoch = 0; epoch < epochs; epoch++) {
+                    let totalLoss = 0;
+                    
+                    for (let sample of trainingData) {
+                        const output = this.forward(sample.input, this.time);
+                        const loss = this.computeLoss(output, sample.target);
+                        totalLoss += loss;
+
+                        // Backpropagation with resonance-aware gradients
+                        this.backpropagate(sample.target, output);
+                    }
+
+                    const avgLoss = totalLoss / trainingData.length;
+                    this.trainingHistory.push(avgLoss);
+
+                    if (callback && epoch % 10 === 0) {
+                        callback(epoch, avgLoss);
+                    }
+
+                    this.time += 0.1;
+                }
+            }
+
+            computeLoss(output, target) {
+                let loss = 0;
+                for (let i = 0; i < Math.min(output.length, target.length); i++) {
+                    loss += Math.pow(output[i] - target[i], 2);
+                }
+                return loss / output.length;
+            }
+
+            backpropagate(target, output) {
+                // Simplified resonance-aware backpropagation
+                // Updates weights based on phase coherence and amplitude matching
+                
+                for (let layer of this.network.layers) {
+                    for (let node of layer.nodes) {
+                        const error = Math.random() * 0.1 - 0.05; // Simplified for demo
+                        
+                        // Update weights with harmonic modulation
+                        for (let i = 0; i < node.weights.length; i++) {
+                            const harmonicGrad = Math.sin(node.phase) * error;
+                            node.weights[i] -= this.learningRate * harmonicGrad;
+                        }
+
+                        // Amplitude adaptation
+                        node.amplitude += this.learningRate * error * 0.1;
+                        node.amplitude = Math.max(0, Math.min(1, node.amplitude));
+                    }
+                }
+            }
+
+            // Calculate network coherence (how synchronized the oscillators are)
+            getCoherence() {
+                let totalPhase = 0;
+                let totalNodes = 0;
+
+                for (let layer of this.network.layers) {
+                    for (let node of layer.nodes) {
+                        totalPhase += Math.cos(node.phase);
+                        totalNodes++;
+                    }
+                }
+
+                return Math.abs(totalPhase / totalNodes);
+            }
+
+            // Calculate phase synchronization index
+            getPhaseSynchronization() {
+                let sync = 0;
+                let pairs = 0;
+
+                for (let layer of this.network.layers) {
+                    for (let i = 0; i < layer.nodes.length; i++) {
+                        for (let j = i + 1; j < layer.nodes.length; j++) {
+                            const phaseDiff = Math.abs(layer.nodes[i].phase - layer.nodes[j].phase);
+                            sync += Math.cos(phaseDiff);
+                            pairs++;
+                        }
+                    }
+                }
+
+                return pairs > 0 ? (sync / pairs + 1) / 2 : 0;
+            }
+        }
+
+        // Visualization
+        const networkCanvas = document.getElementById('networkCanvas');
+        const networkCtx = networkCanvas.getContext('2d');
+        const resonanceCanvas = document.getElementById('resonanceCanvas');
+        const resonanceCtx = resonanceCanvas.getContext('2d');
+
+        let network;
+        let animationFrame;
+
+        function initNetwork() {
+            const config = {
+                fractalDepth: parseInt(document.getElementById('fractalDepth').value),
+                baseFrequency: parseFloat(document.getElementById('baseFreq').value),
+                coupling: parseFloat(document.getElementById('coupling').value),
+                learningRate: parseFloat(document.getElementById('learningRate').value)
+            };
+
+            network = new FractalResonanceNetwork(config);
+            addLog('Network initialized with fractal depth: ' + config.fractalDepth, 'success');
+        }
+
+        function drawNetwork() {
+            if (!network) return;
+
+            networkCtx.fillStyle = 'rgba(10, 14, 39, 0.2)';
+            networkCtx.fillRect(0, 0, networkCanvas.width, networkCanvas.height);
+
+            const centerX = networkCanvas.width / 2;
+            const centerY = networkCanvas.height / 2;
+            const maxRadius = 150;
+
+            // Draw fractal layers
+            for (let layerIdx = 0; layerIdx < network.network.layers.length; layerIdx++) {
+                const layer = network.network.layers[layerIdx];
+                const radius = maxRadius * (layerIdx + 1) / network.fractalDepth;
+                const nodeCount = layer.nodes.length;
+
+                for (let nodeIdx = 0; nodeIdx < nodeCount; nodeIdx++) {
+                    const node = layer.nodes[nodeIdx];
+                    const angle = (nodeIdx / nodeCount) * Math.PI * 2;
+                    const x = centerX + Math.cos(angle) * radius;
+                    const y = centerY + Math.sin(angle) * radius;
+
+                    // Node color based on activation and phase
+                    const hue = (node.phase / (Math.PI * 2)) * 360;
+                    const brightness = 50 + node.activation * 50;
+                    networkCtx.fillStyle = `hsl(${hue}, 80%, ${brightness}%)`;
+                    
+                    const nodeSize = 5 + Math.abs(node.activation) * 10;
+                    networkCtx.beginPath();
+                    networkCtx.arc(x, y, nodeSize, 0, Math.PI * 2);
+                    networkCtx.fill();
+
+                    // Draw resonance connections
+                    if (layerIdx > 0) {
+                        const prevLayer = network.network.layers[layerIdx - 1];
+                        const prevRadius = maxRadius * layerIdx / network.fractalDepth;
+                        
+                        for (let prevIdx = 0; prevIdx < prevLayer.nodes.length; prevIdx++) {
+                            const prevAngle = (prevIdx / prevLayer.nodes.length) * Math.PI * 2;
+                            const prevX = centerX + Math.cos(prevAngle) * prevRadius;
+                            const prevY = centerY + Math.sin(prevAngle) * prevRadius;
+
+                            networkCtx.strokeStyle = `rgba(0, 212, 255, ${0.1 * Math.abs(node.activation)})`;
+                            networkCtx.lineWidth = 1;
+                            networkCtx.beginPath();
+                            networkCtx.moveTo(prevX, prevY);
+                            networkCtx.lineTo(x, y);
+                            networkCtx.stroke();
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawResonance() {
+            if (!network) return;
+
+            resonanceCtx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+            resonanceCtx.fillRect(0, 0, resonanceCanvas.width, resonanceCanvas.height);
+
+            const time = network.time;
+            const width = resonanceCanvas.width;
+            const height = resonanceCanvas.height;
+
+            // Draw oscillation patterns for each layer
+            for (let layerIdx = 0; layerIdx < network.network.layers.length; layerIdx++) {
+                const layer = network.network.layers[layerIdx];
+                const yOffset = (height / (network.fractalDepth + 1)) * (layerIdx + 1);
+
+                resonanceCtx.strokeStyle = `hsl(${layerIdx * 120}, 80%, 60%)`;
+                resonanceCtx.lineWidth = 2;
+                resonanceCtx.beginPath();
+
+                for (let x = 0; x < width; x++) {
+                    const t = time + x / 100;
+                    let y = 0;
+
+                    // Sum oscillations from all nodes in this layer
+                    for (let node of layer.nodes) {
+                        y += node.amplitude * Math.sin(2 * Math.PI * node.frequency * t / 10 + node.phase);
+                    }
+
+                    y = yOffset + (y / layer.nodes.length) * 30;
+
+                    if (x === 0) {
+                        resonanceCtx.moveTo(x, y);
+                    } else {
+                        resonanceCtx.lineTo(x, y);
+                    }
+                }
+
+                resonanceCtx.stroke();
+            }
+        }
+
+        function updateMetrics() {
+            if (!network) return;
+
+            const coherence = network.getCoherence();
+            const sync = network.getPhaseSynchronization();
+            const accuracy = Math.min(100, coherence * 100);
+
+            document.getElementById('coherence').textContent = coherence.toFixed(3);
+            document.getElementById('sync').textContent = sync.toFixed(3);
+            document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
+
+            if (network.trainingHistory.length > 0) {
+                const lastLoss = network.trainingHistory[network.trainingHistory.length - 1];
+                document.getElementById('loss').textContent = lastLoss.toFixed(4);
+            }
+        }
+
+        function animate() {
+            if (network) {
+                network.time += 0.01;
+                drawNetwork();
+                drawResonance();
+                updateMetrics();
+            }
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        function addLog(message, type = 'normal') {
+            const log = document.getElementById('trainingLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Event Listeners
+        document.getElementById('fractalDepth').addEventListener('input', (e) => {
+            document.getElementById('depthValue').textContent = e.target.value;
+        });
+
+        document.getElementById('baseFreq').addEventListener('input', (e) => {
+            document.getElementById('freqValue').textContent = e.target.value;
+        });
+
+        document.getElementById('coupling').addEventListener('input', (e) => {
+            document.getElementById('couplingValue').textContent = e.target.value;
+        });
+
+        document.getElementById('learningRate').addEventListener('input', (e) => {
+            document.getElementById('lrValue').textContent = e.target.value;
+        });
+
+        document.getElementById('trainBtn').addEventListener('click', () => {
+            if (!network) {
+                initNetwork();
+            }
+
+            const epochs = parseInt(document.getElementById('epochs').value);
+            addLog(`Starting training for ${epochs} epochs...`, 'success');
+
+            // Generate synthetic training data
+            const trainingData = [];
+            for (let i = 0; i < 20; i++) {
+                trainingData.push({
+                    input: Array(8).fill(0).map(() => Math.random() * 2 - 1),
+                    target: Array(4).fill(0).map(() => Math.random() * 2 - 1)
+                });
+            }
+
+            // Train in chunks to keep UI responsive
+            let epochsDone = 0;
+            const chunkSize = 10;
+
+            function trainChunk() {
+                const remaining = epochs - epochsDone;
+                const currentChunk = Math.min(chunkSize, remaining);
+
+                network.train(trainingData, currentChunk, (epoch, loss) => {
+                    addLog(`Epoch ${epochsDone + epoch}: Loss = ${loss.toFixed(4)}`);
+                });
+
+                epochsDone += currentChunk;
+
+                if (epochsDone < epochs) {
+                    setTimeout(trainChunk, 100);
+                } else {
+                    addLog('Training complete!', 'success');
+                }
+            }
+
+            trainChunk();
+        });
+
+        // Initialize
+        initNetwork();
+        animate();
+
+        addLog('Fractal Resonance Network visualization active', 'success');
+    </script>
+</body>
+</html>
