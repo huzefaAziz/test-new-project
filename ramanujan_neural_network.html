@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramanujan Neural Network - Full Architecture</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%);
+    color: #00ffd5; font-family: 'Courier New', monospace;
+    overflow-x: hidden; min-height: 100vh;
+}
+.container { max-width: 1800px; margin: 0 auto; padding: 20px; }
+h1 {
+    text-align: center; color: #ffcc00; font-size: 2.5em;
+    text-shadow: 0 0 20px rgba(255,204,0,0.8); margin-bottom: 10px;
+    animation: glow 2s ease-in-out infinite alternate;
+}
+@keyframes glow {
+    from { text-shadow: 0 0 20px rgba(255,204,0,0.8); }
+    to { text-shadow: 0 0 40px rgba(255,204,0,1), 0 0 60px rgba(255,204,0,0.6); }
+}
+.subtitle { text-align: center; color: #00ffd5; font-size: 1.1em; margin-bottom: 30px; opacity: 0.8; }
+.controls { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+.control-group { display: flex; flex-direction: column; gap: 5px; }
+.control-group label { font-size: 0.9em; color: #00ffd5; }
+input[type="range"] { width: 200px; accent-color: #00ffd5; }
+input[type="number"] {
+    background: rgba(0,255,213,0.1); border: 1px solid #00ffd5; color: #00ffd5;
+    padding: 5px 10px; border-radius: 4px; width: 100px;
+}
+button {
+    background: rgba(0,255,213,0.2); border: 1px solid #00ffd5; color: #00ffd5;
+    padding: 10px 20px; border-radius: 6px; cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 1em; transition: all 0.3s;
+}
+button:hover {
+    background: rgba(0,255,213,0.4); box-shadow: 0 0 20px rgba(0,255,213,0.6);
+    transform: translateY(-2px);
+}
+button.active { background: rgba(255,204,0,0.3); border-color: #ffcc00; color: #ffcc00; }
+#canvas-container {
+    position: relative; width: 100%; height: 600px; border: 2px solid #00ffd5;
+    border-radius: 10px; background: rgba(0,20,30,0.5); overflow: hidden;
+    box-shadow: 0 0 30px rgba(0,255,213,0.3);
+}
+canvas { display: block; }
+.layer { position: absolute; display: flex; flex-direction: column; gap: 15px; top: 50%; transform: translateY(-50%); }
+.node {
+    padding: 12px 16px; border: 2px solid #00ffd5; border-radius: 10px;
+    background: rgba(0,255,213,0.08); box-shadow: 0 0 15px rgba(0,255,213,0.4);
+    min-width: 160px; text-align: center; cursor: pointer; transition: all 0.3s;
+    position: relative; backdrop-filter: blur(5px);
+}
+.node:hover { background: rgba(0,255,213,0.2); box-shadow: 0 0 25px rgba(0,255,213,0.8); transform: scale(1.05); }
+.node.core {
+    border-color: #ffcc00; color: #ffcc00; box-shadow: 0 0 20px rgba(255,204,0,0.7);
+    background: rgba(255,204,0,0.1);
+}
+.node.core:hover { box-shadow: 0 0 35px rgba(255,204,0,1); }
+.node.active { animation: pulse 0.6s ease-in-out; }
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); box-shadow: 0 0 40px currentColor; }
+}
+.node-label { font-weight: bold; font-size: 0.95em; }
+.node-value { font-size: 0.8em; opacity: 0.7; margin-top: 4px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 30px; }
+.stat-card {
+    background: rgba(0,255,213,0.08); border: 1px solid #00ffd5; border-radius: 10px;
+    padding: 20px; box-shadow: 0 0 15px rgba(0,255,213,0.2);
+}
+.stat-card h3 { color: #ffcc00; margin-bottom: 10px; font-size: 1.1em; }
+.stat-value { font-size: 1.5em; color: #00ffd5; font-weight: bold; }
+.stat-description { font-size: 0.85em; opacity: 0.7; margin-top: 5px; }
+.legend { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 10px; }
+.legend-color { width: 20px; height: 20px; border-radius: 4px; }
+.particle {
+    position: absolute; width: 6px; height: 6px; background: #00ffd5; border-radius: 50%;
+    pointer-events: none; box-shadow: 0 0 10px #00ffd5;
+}
+.info-panel {
+    background: rgba(0,255,213,0.05); border: 1px solid #00ffd5; border-radius: 10px;
+    padding: 20px; margin-top: 30px;
+}
+.info-panel h2 { color: #ffcc00; margin-bottom: 15px; }
+.info-panel p { line-height: 1.6; opacity: 0.9; }
+.formula {
+    background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin: 10px 0;
+    font-family: 'Times New Roman', serif; font-style: italic; text-align: center; color: #ffcc00;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>⚡ Ramanujan Neural Network ⚡</h1>
+    <div class="subtitle">Internal Architecture with Infinite Series Expansion</div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label>Input Value (x):</label>
+            <input type="number" id="inputValue" value="2" step="0.1" min="0" max="10">
+        </div>
+        <div class="control-group">
+            <label>Series Terms (n):</label>
+            <input type="range" id="seriesTerms" min="3" max="20" value="10">
+            <span id="termsValue">10</span>
+        </div>
+        <div class="control-group">
+            <label>Animation Speed:</label>
+            <input type="range" id="animSpeed" min="1" max="10" value="5">
+            <span id="speedValue">5</span>
+        </div>
+        <button id="runBtn">▶ Run Network</button>
+        <button id="pauseBtn">⏸ Pause</button>
+        <button id="resetBtn">↻ Reset</button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="connectionCanvas"></canvas>
+        
+        <div class="layer" style="left: 5%;" id="layer1">
+            <div class="node core" data-layer="1" data-index="0">
+                <div class="node-label">Input Seed</div>
+                <div class="node-value" id="input-value">x = 2.0</div>
+            </div>
+        </div>
+        
+        <div class="layer" style="left: 25%;" id="layer2">
+            <div class="node" data-layer="2" data-index="0">
+                <div class="node-label">x¹ / 1!</div>
+                <div class="node-value" id="series-0">0</div>
+            </div>
+            <div class="node" data-layer="2" data-index="1">
+                <div class="node-label">x² / 2!</div>
+                <div class="node-value" id="series-1">0</div>
+            </div>
+            <div class="node" data-layer="2" data-index="2">
+                <div class="node-label">x³ / 3!</div>
+                <div class="node-value" id="series-2">0</div>
+            </div>
+            <div class="node" data-layer="2" data-index="3">
+                <div class="node-label">x⁴ / 4!</div>
+                <div class="node-value" id="series-3">0</div>
+            </div>
+            <div class="node" data-layer="2" data-index="4">
+                <div class="node-label">⋯ Σ xⁿ/n!</div>
+                <div class="node-value" id="series-sum">0</div>
+            </div>
+        </div>
+        
+        <div class="layer" style="left: 45%;" id="layer3">
+            <div class="node" data-layer="3" data-index="0">
+                <div class="node-label">q¹</div>
+                <div class="node-value" id="mod-0">0</div>
+            </div>
+            <div class="node" data-layer="3" data-index="1">
+                <div class="node-label">q⁴</div>
+                <div class="node-value" id="mod-1">0</div>
+            </div>
+            <div class="node" data-layer="3" data-index="2">
+                <div class="node-label">q⁹</div>
+                <div class="node-value" id="mod-2">0</div>
+            </div>
+            <div class="node" data-layer="3" data-index="3">
+                <div class="node-label">Σ qⁿ²</div>
+                <div class="node-value" id="mod-sum">0</div>
+            </div>
+        </div>
+        
+        <div class="layer" style="left: 65%;" id="layer4">
+            <div class="node" data-layer="4" data-index="0">
+                <div class="node-label">p(1)</div>
+                <div class="node-value" id="part-0">1</div>
+            </div>
+            <div class="node" data-layer="4" data-index="1">
+                <div class="node-label">p(5)</div>
+                <div class="node-value" id="part-1">7</div>
+            </div>
+            <div class="node" data-layer="4" data-index="2">
+                <div class="node-label">p(10)</div>
+                <div class="node-value" id="part-2">42</div>
+            </div>
+            <div class="node" data-layer="4" data-index="3">
+                <div class="node-label">p(n) Growth</div>
+                <div class="node-value" id="part-growth">0</div>
+            </div>
+        </div>
+        
+        <div class="layer" style="left: 85%;" id="layer5">
+            <div class="node core" data-layer="5" data-index="0">
+                <div class="node-label">Identity</div>
+                <div class="node-value" id="output-0">0</div>
+            </div>
+            <div class="node" data-layer="5" data-index="1">
+                <div class="node-label">Symmetry</div>
+                <div class="node-value" id="output-1">0</div>
+            </div>
+            <div class="node" data-layer="5" data-index="2">
+                <div class="node-label">Resonance</div>
+                <div class="node-value" id="output-2">0</div>
+            </div>
+            <div class="node core" data-layer="5" data-index="3">
+                <div class="node-label">Output</div>
+                <div class="node-value" id="output-final">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>Series Convergence</h3>
+            <div class="stat-value" id="stat-convergence">0%</div>
+            <div class="stat-description">Exponential series approximation</div>
+        </div>
+        <div class="stat-card">
+            <h3>Modular Transform</h3>
+            <div class="stat-value" id="stat-modular">0.000</div>
+            <div class="stat-description">q-series transformation</div>
+        </div>
+        <div class="stat-card">
+            <h3>Partition Weight</h3>
+            <div class="stat-value" id="stat-partition">0</div>
+            <div class="stat-description">Integer partition sum</div>
+        </div>
+        <div class="stat-card">
+            <h3>Network Output</h3>
+            <div class="stat-value" id="stat-output">0.000</div>
+            <div class="stat-description">Final pattern recognition</div>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffcc00; box-shadow: 0 0 10px #ffcc00;"></div>
+            <span>Core Nodes</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #00ffd5; box-shadow: 0 0 10px #00ffd5;"></div>
+            <span>Processing Nodes</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: rgba(0,255,213,0.5);"></div>
+            <span>Active Connection</span>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <h2>Mathematical Foundation</h2>
+        <p>
+            This neural network architecture is inspired by Srinivasa Ramanujan's work on infinite series,
+            modular forms, and partition theory. Each layer represents a fundamental concept:
+        </p>
+        <div class="formula">
+            e<sup>x</sup> = Σ(x<sup>n</sup>/n!) → θ(q) = Σq<sup>n²</sup> → p(n) ≈ (1/4n√3)·exp(π√(2n/3))
+        </div>
+        <p>
+            The network transforms input through exponential series expansion, applies modular arithmetic
+            transformations, computes partition functions, and produces symmetry-aware pattern recognition
+            through Ramanujan's identities.
+        </p>
+    </div>
+</div>
+
+<script>
+let networkState = { input: 2.0, seriesTerms: 10, animationSpeed: 5, isRunning: false, isPaused: false };
+const canvas = document.getElementById('connectionCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvas-container');
+let nodePositions = {};
+
+function factorial(n) {
+    if (n <= 1) return 1;
+    let result = 1;
+    for (let i = 2; i <= n; i++) result *= i;
+    return result;
+}
+
+function exponentialSeries(x, terms) {
+    let sum = 0;
+    const values = [];
+    for (let n = 0; n < terms; n++) {
+        const term = Math.pow(x, n) / factorial(n);
+        sum += term;
+        values.push(term);
+    }
+    return { sum, values };
+}
+
+function modularTransform(x, n) {
+    const q = Math.exp(-Math.PI * Math.abs(x) / 10);
+    const values = [];
+    let sum = 0;
+    for (let i = 1; i <= n; i++) {
+        const term = Math.pow(q, i * i);
+        values.push(term);
+        sum += term;
+    }
+    return { sum, values, q };
+}
+
+function partitionExact(n) {
+    const partitions = [1, 1, 2, 3, 5, 7, 11, 15, 22, 30, 42, 56, 77, 101, 135];
+    if (n < partitions.length) return partitions[n];
+    return Math.floor(Math.exp(Math.PI * Math.sqrt(2 * n / 3)) / (4 * n * Math.sqrt(3)));
+}
+
+function getNodePositions() {
+    nodePositions = {};
+    const layers = document.querySelectorAll('.layer');
+    layers.forEach((layer, layerIdx) => {
+        const nodes = layer.querySelectorAll('.node');
+        nodes.forEach((node, nodeIdx) => {
+            const rect = node.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const key = layerIdx + '-' + nodeIdx;
+            nodePositions[key] = {
+                x: rect.left - containerRect.left + rect.width / 2,
+                y: rect.top - containerRect.top + rect.height / 2
+            };
+        });
+    });
+}
+
+function drawConnections() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    getNodePositions();
+    
+    const connections = [
+        ['0-0', '1-0'], ['0-0', '1-1'], ['0-0', '1-2'], ['0-0', '1-3'], ['0-0', '1-4'],
+        ['1-0', '2-0'], ['1-1', '2-1'], ['1-2', '2-2'], ['1-3', '2-3'], ['1-4', '2-3'],
+        ['2-0', '3-0'], ['2-1', '3-1'], ['2-2', '3-2'], ['2-3', '3-3'],
+        ['3-0', '4-0'], ['3-1', '4-1'], ['3-2', '4-2'], ['3-3', '4-3']
+    ];
+    
+    connections.forEach(function(conn) {
+        const startPos = nodePositions[conn[0]];
+        const endPos = nodePositions[conn[1]];
+        if (startPos && endPos) {
+            const gradient = ctx.createLinearGradient(startPos.x, startPos.y, endPos.x, endPos.y);
+            gradient.addColorStop(0, 'rgba(0, 255, 213, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 255, 213, 0.6)');
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(startPos.x, startPos.y);
+            ctx.lineTo(endPos.x, endPos.y);
+            ctx.stroke();
+        }
+    });
+}
+
+function resizeCanvas() {
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    drawConnections();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function createParticle(startPos, endPos) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = startPos.x + 'px';
+    particle.style.top = startPos.y + 'px';
+    container.appendChild(particle);
+    const duration = 1000 / networkState.animationSpeed;
+    particle.animate([
+        { left: startPos.x + 'px', top: startPos.y + 'px', opacity: 1 },
+        { left: endPos.x + 'px', top: endPos.y + 'px', opacity: 0 }
+    ], { duration: duration, easing: 'ease-out' });
+    setTimeout(function() { particle.remove(); }, duration);
+}
+
+function highlightConnection(startKey, endKey) {
+    const startPos = nodePositions[startKey];
+    const endPos = nodePositions[endKey];
+    if (startPos && endPos) {
+        ctx.strokeStyle = 'rgba(255, 204, 0, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ffcc00';
+        ctx.beginPath();
+        ctx.moveTo(startPos.x, startPos.y);
+        ctx.lineTo(endPos.x, endPos.y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        createParticle(startPos, endPos);
+    }
+}
+
+function activateNode(layer, index) {
+    const node = document.querySelector('[data-layer="' + layer + '"][data-index="' + index + '"]');
+    if (node) {
+        node.classList.add('active');
+        setTimeout(function() { node.classList.remove('active'); }, 600);
+    }
+}
+
+function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
+async function runNetwork() {
+    if (networkState.isRunning) return;
+    networkState.isRunning = true;
+    networkState.isPaused = false;
+    const x = networkState.input;
+    const terms = networkState.seriesTerms;
+    const delay = 1000 / networkState.animationSpeed;
+    
+    document.getElementById('input-value').textContent = 'x = ' + x.toFixed(2);
+    activateNode(1, 0);
+    await sleep(delay);
+    
+    const series = exponentialSeries(x, terms);
+    for (let i = 0; i < Math.min(4, series.values.length); i++) {
+        if (networkState.isPaused) return;
+        document.getElementById('series-' + i).textContent = series.values[i].toFixed(4);
+        highlightConnection('0-0', '1-' + i);
+        activateNode(2, i);
+        await sleep(delay * 0.5);
+    }
+    
+    document.getElementById('series-sum').textContent = 'Σ = ' + series.sum.toFixed(4);
+    activateNode(2, 4);
+    document.getElementById('stat-convergence').textContent = ((series.sum / Math.exp(x)) * 100).toFixed(1) + '%';
+    await sleep(delay);
+    
+    const modular = modularTransform(x, 4);
+    for (let i = 0; i < Math.min(3, modular.values.length); i++) {
+        if (networkState.isPaused) return;
+        document.getElementById('mod-' + i).textContent = modular.values[i].toFixed(6);
+        highlightConnection('1-' + i, '2-' + i);
+        activateNode(3, i);
+        await sleep(delay * 0.5);
+    }
+    
+    document.getElementById('mod-sum').textContent = modular.sum.toFixed(6);
+    activateNode(3, 3);
+    document.getElementById('stat-modular').textContent = modular.sum.toFixed(6);
+    await sleep(delay);
+    
+    const partitions = [1, 5, 10].map(function(n) { return partitionExact(n); });
+    for (let i = 0; i < 3; i++) {
+        if (networkState.isPaused) return;
+        document.getElementById('part-' + i).textContent = partitions[i];
+        highlightConnection('2-' + i, '3-' + i);
+        activateNode(4, i);
+        await sleep(delay * 0.5);
+    }
+    
+    const partitionSum = partitions.reduce(function(a, b) { return a + b; }, 0);
+    document.getElementById('part-growth').textContent = 'Σ = ' + partitionSum;
+    activateNode(4, 3);
+    document.getElementById('stat-partition').textContent = partitionSum;
+    await sleep(delay);
+    
+    const identity = series.sum * modular.sum;
+    const symmetry = Math.abs(Math.sin(partitionSum * Math.PI / 180));
+    const resonance = modular.q * partitionSum;
+    const output = (identity + symmetry + resonance) / 3;
+    
+    document.getElementById('output-0').textContent = identity.toFixed(4);
+    highlightConnection('3-0', '4-0');
+    activateNode(5, 0);
+    await sleep(delay * 0.5);
+    
+    document.getElementById('output-1').textContent = symmetry.toFixed(4);
+    highlightConnection('3-1', '4-1');
+    activateNode(5, 1);
+    await sleep(delay * 0.5);
+    
+    document.getElementById('output-2').textContent = resonance.toFixed(4);
+    highlightConnection('3-2', '4-2');
+    activateNode(5, 2);
+    await sleep(delay * 0.5);
+    
+    document.getElementById('output-final').textContent = output.toFixed(4);
+    highlightConnection('3-3', '4-3');
+    activateNode(5, 3);
+    document.getElementById('stat-output').textContent = output.toFixed(6);
+    
+    networkState.isRunning = false;
+    drawConnections();
+}
+
+document.getElementById('inputValue').addEventListener('input', function(e) {
+    networkState.input = parseFloat(e.target.value) || 0;
+});
+document.getElementById('seriesTerms').addEventListener('input', function(e) {
+    networkState.seriesTerms = parseInt(e.target.value);
+    document.getElementById('termsValue').textContent = e.target.value;
+});
+document.getElementById('animSpeed').addEventListener('input', function(e) {
+    networkState.animationSpeed = parseInt(e.target.value);
+    document.getElementById('speedValue').textContent = e.target.value;
+});
+document.getElementById('runBtn').addEventListener('click', function() {
+    if (!networkState.isRunning) {
+        document.getElementById('runBtn').classList.add('active');
+        runNetwork().then(function() { document.getElementById('runBtn').classList.remove('active'); });
+    }
+});
+document.getElementById('pauseBtn').addEventListener('click', function() {
+    networkState.isPaused = !networkState.isPaused;
+    document.getElementById('pauseBtn').classList.toggle('active');
+});
+document.getElementById('resetBtn').addEventListener('click', function() {
+    networkState.isPaused = true;
+    networkState.isRunning = false;
+    document.querySelectorAll('.node-value').forEach(function(el) {
+        if (el.id.indexOf('input') === -1) el.textContent = '0';
+    });
+    document.getElementById('stat-convergence').textContent = '0%';
+    document.getElementById('stat-modular').textContent = '0.000';
+    document.getElementById('stat-partition').textContent = '0';
+    document.getElementById('stat-output').textContent = '0.000';
+    drawConnections();
+});
+
+drawConnections();
+setTimeout(function() { runNetwork(); }, 500);
+</script>
+</body>
+</html>
