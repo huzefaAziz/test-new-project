@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morphic Drift Field — MDF-1 Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne+Mono&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --void: #050508;
+    --deep: #0a0a14;
+    --field: #0d1a2e;
+    --amber: #c8962a;
+    --amber-glow: #e8b84b;
+    --copper: #a0622a;
+    --ice: #8ec8e8;
+    --ice-deep: #4a8ab0;
+    --plasma: #e04060;
+    --plasma-dim: #602030;
+    --drift: #40e080;
+    --drift-dim: #205040;
+    --text-prime: #d8cfc0;
+    --text-muted: #8a8278;
+    --text-dim: #4a4640;
+    --border: rgba(200, 150, 42, 0.18);
+    --glass: rgba(13, 26, 46, 0.6);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--void);
+    font-family: 'Syne', sans-serif;
+    color: var(--text-prime);
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* GRAIN OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* FIELD CANVAS */
+  #field-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  /* HEADER */
+  header {
+    padding: 60px 0 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 60px;
+  }
+
+  .logo-block {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo-tag {
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(38px, 5vw, 72px);
+    font-weight: 700;
+    line-height: 0.95;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--amber-glow);
+  }
+
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .version-badge {
+    font-family: 'Syne Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    letter-spacing: 0.15em;
+  }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    color: var(--drift);
+    letter-spacing: 0.2em;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    background: var(--drift);
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.6); }
+  }
+
+  /* CONCEPT INTRO */
+  .concept-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    margin-bottom: 80px;
+    align-items: start;
+  }
+
+  .concept-text h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-style: italic;
+    color: var(--text-prime);
+    margin-bottom: 20px;
+    line-height: 1.3;
+  }
+
+  .concept-text p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .concept-text p strong {
+    color: var(--amber-glow);
+    font-weight: 600;
+  }
+
+  .axioms {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .axiom {
+    display: flex;
+    gap: 16px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    background: var(--glass);
+    backdrop-filter: blur(8px);
+    transition: border-color 0.3s;
+  }
+
+  .axiom:hover {
+    border-color: rgba(200, 150, 42, 0.4);
+  }
+
+  .axiom-num {
+    font-family: 'Syne Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    min-width: 28px;
+    padding-top: 2px;
+  }
+
+  .axiom-content h4 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-prime);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .axiom-content p {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* MAIN VISUALIZATION */
+  .viz-section {
+    margin-bottom: 80px;
+  }
+
+  .section-label {
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .main-viz {
+    position: relative;
+    width: 100%;
+    height: 520px;
+    border: 1px solid var(--border);
+    background: rgba(8, 12, 22, 0.8);
+    overflow: hidden;
+  }
+
+  #mdf-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .viz-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .corner-tag {
+    position: absolute;
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+  }
+  .corner-tag.tl { top: 14px; left: 16px; }
+  .corner-tag.tr { top: 14px; right: 16px; text-align: right; }
+  .corner-tag.bl { bottom: 14px; left: 16px; }
+  .corner-tag.br { bottom: 14px; right: 16px; text-align: right; }
+
+  /* INTERACTIVE CONTROLS */
+  .controls-bar {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+    margin-bottom: 40px;
+  }
+
+  .ctrl-btn {
+    flex: 1;
+    padding: 12px 8px;
+    background: rgba(13, 26, 46, 0.5);
+    border: 1px solid var(--border);
+    border-right: none;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .ctrl-btn:last-child { border-right: 1px solid var(--border); }
+
+  .ctrl-btn:hover, .ctrl-btn.active {
+    background: rgba(200, 150, 42, 0.12);
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  /* ARCHITECTURE DIAGRAM */
+  .arch-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2px;
+    margin-bottom: 80px;
+  }
+
+  .arch-layer {
+    background: rgba(10, 14, 26, 0.7);
+    border: 1px solid var(--border);
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    transition: border-color 0.3s, background 0.3s;
+  }
+
+  .arch-layer::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--layer-color), transparent);
+    opacity: 0.6;
+  }
+
+  .arch-layer:hover {
+    background: rgba(10, 14, 26, 0.95);
+    border-color: var(--layer-color);
+  }
+
+  .arch-layer.input { --layer-color: var(--ice); }
+  .arch-layer.process { --layer-color: var(--amber); }
+  .arch-layer.output { --layer-color: var(--drift); }
+
+  .layer-num {
+    font-family: 'Syne Mono', monospace;
+    font-size: 48px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.04);
+    position: absolute;
+    right: 16px;
+    bottom: 8px;
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+
+  .layer-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 16px;
+  }
+
+  .arch-layer h3 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--layer-color);
+    margin-bottom: 8px;
+  }
+
+  .arch-layer .layer-subtitle {
+    font-family: 'Syne Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .arch-layer p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  .arch-layer .micro-chart {
+    margin-top: 20px;
+    height: 40px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .micro-bar {
+    flex: 1;
+    background: var(--layer-color);
+    opacity: 0.3;
+    border-radius: 1px;
+    animation: breathe-bar 3s ease-in-out infinite;
+  }
+
+  .micro-bar:nth-child(2) { animation-delay: 0.3s; }
+  .micro-bar:nth-child(3) { animation-delay: 0.6s; }
+  .micro-bar:nth-child(4) { animation-delay: 0.9s; }
+  .micro-bar:nth-child(5) { animation-delay: 1.2s; }
+  .micro-bar:nth-child(6) { animation-delay: 1.5s; }
+
+  @keyframes breathe-bar {
+    0%, 100% { opacity: 0.2; transform: scaleY(0.7); }
+    50% { opacity: 0.6; transform: scaleY(1); }
+  }
+
+  /* MATH EQUATIONS */
+  .equations-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 80px;
+  }
+
+  .eq-card {
+    background: rgba(8, 12, 22, 0.9);
+    border: 1px solid var(--border);
+    padding: 28px;
+    position: relative;
+  }
+
+  .eq-card::after {
+    content: attr(data-eq);
+    font-family: 'Syne Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    position: absolute;
+    top: 12px;
+    right: 16px;
+  }
+
+  .eq-card h4 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 16px;
+  }
+
+  .equation {
+    font-family: 'Syne Mono', monospace;
+    font-size: 15px;
+    color: #fff;
+    margin-bottom: 12px;
+    line-height: 1.6;
+    padding: 14px 16px;
+    background: rgba(200, 150, 42, 0.06);
+    border-left: 2px solid var(--amber);
+  }
+
+  .eq-card p {
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  /* LIVE METRICS */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    margin-bottom: 80px;
+  }
+
+  .metric {
+    background: rgba(10, 14, 26, 0.6);
+    border: 1px solid var(--border);
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .metric-value {
+    font-family: 'Syne Mono', monospace;
+    font-size: 28px;
+    color: var(--amber-glow);
+    margin-bottom: 6px;
+    display: block;
+    animation: flicker-val 4s ease-in-out infinite;
+  }
+
+  @keyframes flicker-val {
+    0%, 95%, 100% { opacity: 1; }
+    97% { opacity: 0.5; }
+  }
+
+  .metric-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* PHASE DIAGRAM */
+  .phase-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2px;
+    margin-bottom: 80px;
+  }
+
+  .phase-canvas-wrap {
+    border: 1px solid var(--border);
+    background: rgba(8, 12, 22, 0.9);
+    position: relative;
+    height: 320px;
+    overflow: hidden;
+  }
+
+  #phase-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .phase-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .phase-item {
+    background: rgba(10, 14, 26, 0.7);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .phase-dot-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .pdot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .phase-item h5 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-prime);
+  }
+
+  .phase-item p {
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-left {
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  .footer-right {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .concept-row, .equations-section, .phase-section { grid-template-columns: 1fr; }
+    .arch-section { grid-template-columns: 1fr; }
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+    header { flex-direction: column; gap: 20px; }
+  }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: fixed;
+    background: rgba(10, 14, 26, 0.95);
+    border: 1px solid var(--amber);
+    padding: 8px 14px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 10px;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    pointer-events: none;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  /* SCANLINE */
+  .main-viz::after, .phase-canvas-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="field-canvas"></canvas>
+<div class="tooltip" id="tooltip"></div>
+
+<div class="page">
+  <header>
+    <div class="logo-block">
+      <span class="logo-tag">Architecture Proposal — MDF-1 System</span>
+      <h1>Morphic<br><em>Drift Field</em></h1>
+    </div>
+    <div class="header-right">
+      <div class="version-badge">MDF · REV 0.1</div>
+      <div class="status-dot"><span class="dot"></span>FIELD ACTIVE</div>
+    </div>
+  </header>
+
+  <!-- CONCEPT -->
+  <div class="concept-row">
+    <div class="concept-text">
+      <h2>"Intelligence as topology, not computation"</h2>
+      <p>The <strong>Morphic Drift Field</strong> is a novel AI architecture that discards all notions of neurons, weights, layers, and backpropagation. Instead, it models cognition as the <strong>continuous deformation of a high-dimensional field manifold</strong> — similar to how weather patterns form, drift, and dissolve across Earth's atmosphere.</p>
+      <p>There are no discrete processing units. There are no matrices multiplied. Knowledge is encoded as <strong>curvature in the field</strong>, and inference is performed by observing how an injected stimulus <em>drifts</em> toward attractor basins carved by prior experience.</p>
+      <p>The system never "computes" an answer — it <strong>relaxes toward one</strong>, the same way soap film finds minimum energy or water finds its level. The result is not calculated; it <em>emerges</em>.</p>
+    </div>
+
+    <div class="axioms">
+      <div class="axiom">
+        <span class="axiom-num">Λ.1</span>
+        <div class="axiom-content">
+          <h4>No Weights</h4>
+          <p>Knowledge is not stored in scalar parameters. It is encoded as permanent curvature gradients in the Drift Manifold Ω — a smooth, continuous surface in high-dimensional space.</p>
+        </div>
+      </div>
+      <div class="axiom">
+        <span class="axiom-num">Λ.2</span>
+        <div class="axiom-content">
+          <h4>No Forward Pass</h4>
+          <p>There is no sequential signal propagation. A stimulus induces a field perturbation that propagates omnidirectionally, with the field settling into its lowest-entropy configuration.</p>
+        </div>
+      </div>
+      <div class="axiom">
+        <span class="axiom-num">Λ.3</span>
+        <div class="axiom-content">
+          <h4>No Loss Function</h4>
+          <p>Learning is field-sculpting via Morphic Imprint — new experiences warp the local manifold geometry, creating attractor basins without any gradient descent or error signal.</p>
+        </div>
+      </div>
+      <div class="axiom">
+        <span class="axiom-num">Λ.4</span>
+        <div class="axiom-content">
+          <h4>Temporal Coherence</h4>
+          <p>The field has memory through visco-elastic damping — recent perturbations leave decaying echoes that influence subsequent drift trajectories, giving rise to context-awareness.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN VISUALIZATION -->
+  <div class="viz-section">
+    <div class="section-label">Live Field Simulation</div>
+    <div class="main-viz">
+      <canvas id="mdf-canvas"></canvas>
+      <div class="viz-overlay">
+        <div class="corner-tag tl">DRIFT MANIFOLD Ω — CROSS SECTION</div>
+        <div class="corner-tag tr" id="field-entropy">ENTROPY: —</div>
+        <div class="corner-tag bl" id="attractor-count">ATTRACTORS: 0</div>
+        <div class="corner-tag br">CLICK TO INJECT STIMULUS</div>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <button class="ctrl-btn active" id="btn-drift" onclick="setMode('drift')">Drift Mode</button>
+      <button class="ctrl-btn" id="btn-imprint" onclick="setMode('imprint')">Imprint Mode</button>
+      <button class="ctrl-btn" id="btn-dissolve" onclick="setMode('dissolve')">Dissolve Mode</button>
+      <button class="ctrl-btn" id="btn-cascade" onclick="setMode('cascade')">Cascade Mode</button>
+      <button class="ctrl-btn" onclick="resetField()">Reset Field</button>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE LAYERS -->
+  <div class="section-label">Functional Architecture</div>
+  <div class="arch-section">
+    <div class="arch-layer input">
+      <svg class="layer-icon" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="14" stroke="#8ec8e8" stroke-width="1" opacity="0.4"/>
+        <circle cx="18" cy="18" r="8" stroke="#8ec8e8" stroke-width="1.5" opacity="0.7"/>
+        <circle cx="18" cy="18" r="3" fill="#8ec8e8"/>
+        <line x1="18" y1="4" x2="18" y2="14" stroke="#8ec8e8" stroke-width="1" opacity="0.5"/>
+        <line x1="32" y1="18" x2="22" y2="18" stroke="#8ec8e8" stroke-width="1" opacity="0.5"/>
+        <line x1="18" y1="32" x2="18" y2="22" stroke="#8ec8e8" stroke-width="1" opacity="0.5"/>
+        <line x1="4" y1="18" x2="14" y2="18" stroke="#8ec8e8" stroke-width="1" opacity="0.5"/>
+      </svg>
+      <h3>Stimulus Injection</h3>
+      <div class="layer-subtitle">Layer I — Ω Perturbation</div>
+      <p>Raw input is converted into a geometric perturbation — a localized dimple or ridge pressed into the field surface. The shape of this perturbation encodes the semantic content of the stimulus without any encoding table.</p>
+      <div class="micro-chart">
+        <div class="micro-bar" style="height:60%"></div>
+        <div class="micro-bar" style="height:80%"></div>
+        <div class="micro-bar" style="height:45%"></div>
+        <div class="micro-bar" style="height:95%"></div>
+        <div class="micro-bar" style="height:55%"></div>
+        <div class="micro-bar" style="height:70%"></div>
+      </div>
+      <span class="layer-num">I</span>
+    </div>
+
+    <div class="arch-layer process">
+      <svg class="layer-icon" viewBox="0 0 36 36" fill="none">
+        <path d="M6 18 Q12 6 18 18 Q24 30 30 18" stroke="#c8962a" stroke-width="1.5" fill="none"/>
+        <path d="M4 22 Q10 10 16 22 Q22 34 28 22" stroke="#c8962a" stroke-width="1" fill="none" opacity="0.4"/>
+        <path d="M8 14 Q14 2 20 14 Q26 26 32 14" stroke="#c8962a" stroke-width="1" fill="none" opacity="0.4"/>
+        <circle cx="18" cy="18" r="2" fill="#c8962a"/>
+      </svg>
+      <h3>Morphic Drift</h3>
+      <div class="layer-subtitle">Layer II — Geodesic Relaxation</div>
+      <p>The perturbation begins drifting along the field's natural curvature — following geodesic paths shaped by all prior imprints. This drift is not computed but physically simulated via a partial differential equation governing field evolution. Interference patterns emerge where drift paths cross.</p>
+      <div class="micro-chart">
+        <div class="micro-bar" style="height:30%"></div>
+        <div class="micro-bar" style="height:75%"></div>
+        <div class="micro-bar" style="height:100%"></div>
+        <div class="micro-bar" style="height:60%"></div>
+        <div class="micro-bar" style="height:85%"></div>
+        <div class="micro-bar" style="height:40%"></div>
+      </div>
+      <span class="layer-num">II</span>
+    </div>
+
+    <div class="arch-layer output">
+      <svg class="layer-icon" viewBox="0 0 36 36" fill="none">
+        <rect x="8" y="8" width="20" height="20" stroke="#40e080" stroke-width="1" opacity="0.4" rx="2"/>
+        <rect x="13" y="13" width="10" height="10" stroke="#40e080" stroke-width="1.5" rx="1"/>
+        <line x1="18" y1="2" x2="18" y2="8" stroke="#40e080" stroke-width="1" opacity="0.6"/>
+        <line x1="18" y1="28" x2="18" y2="34" stroke="#40e080" stroke-width="1" opacity="0.6"/>
+        <line x1="2" y1="18" x2="8" y2="18" stroke="#40e080" stroke-width="1" opacity="0.6"/>
+        <line x1="28" y1="18" x2="34" y2="18" stroke="#40e080" stroke-width="1" opacity="0.6"/>
+        <circle cx="18" cy="18" r="2" fill="#40e080"/>
+      </svg>
+      <h3>Attractor Crystallization</h3>
+      <div class="layer-subtitle">Layer III — Ω Equilibrium Read</div>
+      <p>When the field reaches quasi-static equilibrium, the system reads the configuration of the deepest attractor basin the drift settled into. This basin represents the "answer" — decoded back into output space via inverse perturbation mapping. No sampling, no argmax.</p>
+      <div class="micro-chart">
+        <div class="micro-bar" style="height:50%"></div>
+        <div class="micro-bar" style="height:50%"></div>
+        <div class="micro-bar" style="height:90%"></div>
+        <div class="micro-bar" style="height:50%"></div>
+        <div class="micro-bar" style="height:50%"></div>
+        <div class="micro-bar" style="height:90%"></div>
+      </div>
+      <span class="layer-num">III</span>
+    </div>
+  </div>
+
+  <!-- EQUATIONS -->
+  <div class="section-label">Field Dynamics — Governing Equations</div>
+  <div class="equations-section">
+    <div class="eq-card" data-eq="EQ·01">
+      <h4>Drift Evolution Equation</h4>
+      <div class="equation">∂φ/∂t = −∇E(φ) + η·∇²φ + ξ(x,t)</div>
+      <p>The field φ(x,t) evolves under the gradient of an energy functional E, smoothed by diffusion coefficient η, with stochastic perturbation ξ from new stimuli. No discrete steps — φ is continuous in both space and time.</p>
+    </div>
+
+    <div class="eq-card" data-eq="EQ·02">
+      <h4>Morphic Imprint Operator</h4>
+      <div class="equation">Ω' = Ω ⊕ κ·G(σ)·exp(−|x−x₀|²/2σ²)</div>
+      <p>A new experience imprints on the manifold Ω as a Gaussian curvature deformation centered at semantic location x₀ with radius σ. The imprint depth κ controls how strongly the memory reshapes the field geometry.</p>
+    </div>
+
+    <div class="eq-card" data-eq="EQ·03">
+      <h4>Attractor Basin Depth</h4>
+      <div class="equation">D(a) = ∮∂a −⟨∇φ, n̂⟩ dΓ</div>
+      <p>Basin depth measures how strongly attractor a draws passing drift trajectories. Deep basins represent well-learned concepts. The line integral around the attractor boundary ∂a captures the net inward pull of the field gradient.</p>
+    </div>
+
+    <div class="eq-card" data-eq="EQ·04">
+      <h4>Visco-Elastic Memory Decay</h4>
+      <div class="equation">M(t) = M₀·exp(−t/τ) + ∫₀ᵗ K(t−s)φ(s) ds</div>
+      <p>The memory term M retains an exponentially decaying echo of past field configurations, convolved with kernel K. This creates temporal coherence — recent context influences current drift without any recurrent cell or attention mechanism.</p>
+    </div>
+  </div>
+
+  <!-- LIVE METRICS -->
+  <div class="section-label">Live System Telemetry</div>
+  <div class="metrics-row">
+    <div class="metric">
+      <span class="metric-value" id="m-drift">0.00</span>
+      <span class="metric-label">Drift Velocity</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value" id="m-curv">0.00</span>
+      <span class="metric-label">Field Curvature</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value" id="m-basin">0</span>
+      <span class="metric-label">Active Basins</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value" id="m-entropy">0.00</span>
+      <span class="metric-label">Field Entropy</span>
+    </div>
+    <div class="metric">
+      <span class="metric-value" id="m-coh">0.00</span>
+      <span class="metric-label">Coherence τ</span>
+    </div>
+  </div>
+
+  <!-- PHASE DIAGRAM -->
+  <div class="section-label">Phase Space — Drift State Manifold</div>
+  <div class="phase-section">
+    <div class="phase-canvas-wrap">
+      <canvas id="phase-canvas"></canvas>
+      <div class="corner-tag tl">φ(x) PHASE PORTRAIT</div>
+      <div class="corner-tag br">∂φ/∂t vs φ</div>
+    </div>
+    <div class="phase-legend">
+      <div class="phase-item">
+        <div class="phase-dot-row">
+          <div class="pdot" style="background:#40e080"></div>
+          <h5>Crystallized State</h5>
+        </div>
+        <p>Field has settled into a deep attractor basin. High certainty, stable output. Analogous to "knowing" something confidently.</p>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot-row">
+          <div class="pdot" style="background:#c8962a"></div>
+          <h5>Liminal Drift</h5>
+        </div>
+        <p>Field is navigating between attractor basins. Represents ambiguity — multiple possible inferences competing. Resolved by field dynamics, not sampling.</p>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot-row">
+          <div class="pdot" style="background:#e04060"></div>
+          <h5>Chaotic Flux</h5>
+        </div>
+        <p>Field in high-entropy state — no dominant attractor. Triggered by novel, unimprinted stimuli. The system "explores" before settling.</p>
+      </div>
+      <div class="phase-item">
+        <div class="phase-dot-row">
+          <div class="pdot" style="background:#8ec8e8"></div>
+          <h5>Resonant Echo</h5>
+        </div>
+        <p>Visco-elastic memory creating constructive interference with current drift. Produces context-sensitive behavior without attention heads.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-left">
+      MDF-1 ARCHITECTURE · CONCEPTUAL DRAFT<br>
+      MORPHIC DRIFT FIELD SYSTEM · REV 0.1.0<br>
+      NOT NEURAL · NOT SYMBOLIC · NOT HYBRID
+    </div>
+    <div class="footer-right">
+      "The field does not think.<br>It <em>becomes</em>."
+    </div>
+  </footer>
+</div>
+
+<script>
+// =====================================================
+// BACKGROUND AMBIENT FIELD
+// =====================================================
+const bgCanvas = document.getElementById('field-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+let bgW, bgH;
+
+function resizeBg() {
+  bgW = bgCanvas.width = window.innerWidth;
+  bgH = bgCanvas.height = window.innerHeight;
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+let bgTime = 0;
+function drawBg() {
+  bgCtx.clearRect(0, 0, bgW, bgH);
+  const cols = 40, rows = 25;
+  const cw = bgW / cols, ch = bgH / rows;
+
+  for (let r = 0; r <= rows; r++) {
+    for (let c = 0; c <= cols; c++) {
+      const x = c * cw;
+      const y = r * ch;
+      const v = Math.sin(c * 0.4 + bgTime) * Math.cos(r * 0.3 + bgTime * 0.7) * 0.5 + 0.5;
+      const v2 = Math.sin(c * 0.2 - bgTime * 0.5) * Math.cos(r * 0.5 + bgTime * 0.3) * 0.5 + 0.5;
+      const combined = (v + v2) / 2;
+      const size = combined * 1.5 + 0.3;
+      const alpha = combined * 0.12 + 0.02;
+
+      let r1, g1, b1;
+      if (combined < 0.4) {
+        const t = combined / 0.4;
+        r1 = Math.floor(78 * t);
+        g1 = Math.floor(138 * t);
+        b1 = Math.floor(176 * t);
+      } else {
+        const t = (combined - 0.4) / 0.6;
+        r1 = Math.floor(78 + (200 - 78) * t);
+        g1 = Math.floor(138 + (150 - 138) * t);
+        b1 = Math.floor(176 + (42 - 176) * t);
+      }
+
+      bgCtx.fillStyle = `rgba(${r1},${g1},${b1},${alpha})`;
+      bgCtx.beginPath();
+      bgCtx.arc(x, y, size, 0, Math.PI * 2);
+      bgCtx.fill();
+    }
+  }
+  bgTime += 0.008;
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+// =====================================================
+// MAIN DRIFT FIELD SIMULATION
+// =====================================================
+const canvas = document.getElementById('mdf-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = canvas.width = rect.width;
+  H = canvas.height = rect.height;
+  initField();
+}
+
+// Field grid
+const GRID = 80;
+let field = [], velocity = [], attractors = [];
+let mode = 'drift';
+let frameCount = 0;
+
+function initField() {
+  field = [];
+  velocity = [];
+  for (let i = 0; i < GRID; i++) {
+    field[i] = [];
+    velocity[i] = [];
+    for (let j = 0; j < GRID; j++) {
+      field[i][j] = (Math.random() - 0.5) * 0.05;
+      velocity[i][j] = 0;
+    }
+  }
+  attractors = [];
+  // Seed a few initial attractor basins
+  for (let k = 0; k < 5; k++) {
+    const ax = 10 + Math.floor(Math.random() * 60);
+    const ay = 10 + Math.floor(Math.random() * 60);
+    const depth = 0.4 + Math.random() * 0.6;
+    attractors.push({ x: ax, y: ay, depth, age: 0 });
+    imprintAttractor(ax, ay, depth, 6);
+  }
+}
+
+function imprintAttractor(cx, cy, depth, radius) {
+  for (let i = 0; i < GRID; i++) {
+    for (let j = 0; j < GRID; j++) {
+      const dist = Math.sqrt((i - cx) ** 2 + (j - cy) ** 2);
+      if (dist < radius * 2) {
+        const g = -depth * Math.exp(-(dist * dist) / (2 * radius * radius));
+        field[i][j] += g;
+      }
+    }
+  }
+}
+
+function stepField() {
+  const newField = [];
+  const newVel = [];
+  const eta = 0.15;
+  const damping = mode === 'dissolve' ? 0.85 : 0.96;
+  const noise = mode === 'cascade' ? 0.04 : 0.002;
+
+  for (let i = 0; i < GRID; i++) {
+    newField[i] = [];
+    newVel[i] = [];
+    for (let j = 0; j < GRID; j++) {
+      const ip = Math.max(0, i - 1), in_ = Math.min(GRID - 1, i + 1);
+      const jp = Math.max(0, j - 1), jn = Math.min(GRID - 1, j + 1);
+
+      // Laplacian (diffusion)
+      const lap = field[ip][j] + field[in_][j] + field[i][jp] + field[i][jn] - 4 * field[i][j];
+
+      // Gradient energy term
+      const gx = (field[in_][j] - field[ip][j]) / 2;
+      const gy = (field[i][jn] - field[i][jp]) / 2;
+      const gradMag = Math.sqrt(gx * gx + gy * gy);
+
+      const dE = -field[i][j] * (1 - field[i][j] * field[i][j]) - 0.1 * gradMag;
+
+      const xi = (Math.random() - 0.5) * noise;
+
+      const acc = -0.3 * dE + eta * lap + xi;
+      newVel[i][j] = velocity[i][j] * damping + acc * 0.1;
+      newField[i][j] = field[i][j] + newVel[i][j];
+
+      // Clamp
+      newField[i][j] = Math.max(-1.5, Math.min(1.5, newField[i][j]));
+    }
+  }
+  field = newField;
+  velocity = newVel;
+}
+
+function drawField() {
+  const cellW = W / GRID;
+  const cellH = H / GRID;
+
+  for (let i = 0; i < GRID; i++) {
+    for (let j = 0; j < GRID; j++) {
+      const v = field[i][j];
+      const norm = (v + 1.5) / 3;
+
+      let r, g, b;
+      if (norm < 0.2) {
+        const t = norm / 0.2;
+        r = Math.floor(5 + 224 * t * 0.3);
+        g = Math.floor(5 + 96 * t * 0.3);
+        b = Math.floor(8 + 42 * t * 0.3);
+      } else if (norm < 0.45) {
+        const t = (norm - 0.2) / 0.25;
+        r = Math.floor(67 + 78 * t);
+        g = Math.floor(29 - 29 * t);
+        b = Math.floor(13 + 5 * t);
+      } else if (norm < 0.55) {
+        const t = (norm - 0.45) / 0.1;
+        r = Math.floor(145 + 55 * t);
+        g = Math.floor(0 + 0 * t);
+        b = Math.floor(18 + 0 * t);
+      } else if (norm < 0.75) {
+        const t = (norm - 0.55) / 0.2;
+        r = Math.floor(200 - 162 * t);
+        g = Math.floor(0 + 200 * t);
+        b = Math.floor(18 + 110 * t);
+      } else {
+        const t = (norm - 0.75) / 0.25;
+        r = Math.floor(38 + 180 * t);
+        g = Math.floor(200 + 30 * t);
+        b = Math.floor(128 + 100 * t);
+      }
+
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(i * cellW, j * cellH, cellW + 1, cellH + 1);
+    }
+  }
+
+  // Draw attractor markers
+  attractors.forEach(a => {
+    const px = a.x * cellW + cellW / 2;
+    const py = a.y * cellH + cellH / 2;
+    const pulseR = 4 + Math.sin(frameCount * 0.05 + a.x) * 2;
+
+    ctx.beginPath();
+    ctx.arc(px, py, pulseR, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(200, 150, 42, ${0.4 + a.depth * 0.4})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(px, py, 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(232, 184, 75, ${0.6 + a.depth * 0.3})`;
+    ctx.fill();
+
+    // Ripple
+    const rippleR = (frameCount % 80) / 80 * 30 * a.depth;
+    const rippleAlpha = (1 - rippleR / 30) * 0.15;
+    if (rippleAlpha > 0) {
+      ctx.beginPath();
+      ctx.arc(px, py, rippleR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(200, 150, 42, ${rippleAlpha})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  });
+
+  // Draw drift particles
+  drawParticles();
+}
+
+// Particles
+let particles = [];
+for (let i = 0; i < 60; i++) {
+  particles.push({
+    x: Math.random() * (GRID - 1),
+    y: Math.random() * (GRID - 1),
+    age: Math.random() * 100,
+    life: 80 + Math.random() * 120
+  });
+}
+
+function drawParticles() {
+  const cellW = W / GRID;
+  const cellH = H / GRID;
+
+  particles.forEach(p => {
+    p.age++;
+    if (p.age > p.life) {
+      p.x = Math.random() * (GRID - 1);
+      p.y = Math.random() * (GRID - 1);
+      p.age = 0;
+      p.life = 80 + Math.random() * 120;
+      return;
+    }
+
+    const i = Math.floor(p.x);
+    const j = Math.floor(p.y);
+    if (i < 1 || i >= GRID - 1 || j < 1 || j >= GRID - 1) {
+      p.x = Math.random() * (GRID - 1);
+      p.y = Math.random() * (GRID - 1);
+      return;
+    }
+
+    const gx = (field[i + 1][j] - field[i - 1][j]) / 2;
+    const gy = (field[i][j + 1] - field[i][j - 1]) / 2;
+
+    // Follow gradient (downhill)
+    const speed = 0.15 + Math.abs(field[i][j]) * 0.1;
+    p.x -= gx * speed;
+    p.y -= gy * speed;
+
+    const lifeRatio = 1 - p.age / p.life;
+    const alpha = lifeRatio * 0.7;
+
+    const px = p.x * cellW;
+    const py = p.y * cellH;
+
+    const v = field[i][j];
+    let pr, pg, pb;
+    if (v < -0.3) { pr = 224; pg = 64; pb = 96; }
+    else if (v < 0.3) { pr = 200; pg = 150; pb = 42; }
+    else { pr = 64; pg = 224; pb = 128; }
+
+    ctx.beginPath();
+    ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${pr},${pg},${pb},${alpha})`;
+    ctx.fill();
+  });
+}
+
+// INJECT STIMULUS ON CLICK
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const gx = Math.floor((mx / W) * GRID);
+  const gy = Math.floor((my / H) * GRID);
+
+  if (mode === 'drift') {
+    // Inject upward bump
+    for (let i = 0; i < GRID; i++) {
+      for (let j = 0; j < GRID; j++) {
+        const d = Math.sqrt((i - gx) ** 2 + (j - gy) ** 2);
+        if (d < 8) field[i][j] += 0.8 * Math.exp(-(d * d) / 12);
+      }
+    }
+  } else if (mode === 'imprint') {
+    const depth = 0.5 + Math.random() * 0.5;
+    imprintAttractor(gx, gy, depth, 5);
+    attractors.push({ x: gx, y: gy, depth, age: 0 });
+    if (attractors.length > 12) attractors.shift();
+  } else if (mode === 'dissolve') {
+    for (let i = 0; i < GRID; i++) {
+      for (let j = 0; j < GRID; j++) {
+        const d = Math.sqrt((i - gx) ** 2 + (j - gy) ** 2);
+        if (d < 10) field[i][j] *= 0.2;
+      }
+    }
+  } else if (mode === 'cascade') {
+    for (let k = 0; k < 5; k++) {
+      const ox = gx + Math.floor((Math.random() - 0.5) * 20);
+      const oy = gy + Math.floor((Math.random() - 0.5) * 20);
+      for (let i = 0; i < GRID; i++) {
+        for (let j = 0; j < GRID; j++) {
+          const d = Math.sqrt((i - ox) ** 2 + (j - oy) ** 2);
+          if (d < 5) {
+            field[i][j] += (Math.random() - 0.5) * 1.0 * Math.exp(-(d * d) / 8);
+          }
+        }
+      }
+    }
+  }
+});
+
+// METRICS
+function updateMetrics() {
+  if (frameCount % 8 !== 0) return;
+
+  let totalV = 0, totalF = 0, count = 0;
+  for (let i = 1; i < GRID - 1; i++) {
+    for (let j = 1; j < GRID - 1; j++) {
+      totalV += Math.abs(velocity[i][j]);
+      totalF += field[i][j] * field[i][j];
+      count++;
+    }
+  }
+  const avgV = (totalV / count);
+  const entropy = (totalF / count);
+  const coherence = 1 / (1 + entropy * 10);
+
+  // Curvature estimate
+  let curv = 0;
+  for (let i = 1; i < GRID - 1; i += 4) {
+    for (let j = 1; j < GRID - 1; j += 4) {
+      const lap = field[i-1][j] + field[i+1][j] + field[i][j-1] + field[i][j+1] - 4*field[i][j];
+      curv += Math.abs(lap);
+    }
+  }
+  curv /= ((GRID/4) * (GRID/4));
+
+  document.getElementById('m-drift').textContent = avgV.toFixed(3);
+  document.getElementById('m-curv').textContent = curv.toFixed(3);
+  document.getElementById('m-basin').textContent = attractors.length;
+  document.getElementById('m-entropy').textContent = entropy.toFixed(3);
+  document.getElementById('m-coh').textContent = coherence.toFixed(3);
+
+  document.getElementById('field-entropy').textContent = `ENTROPY: ${entropy.toFixed(4)}`;
+  document.getElementById('attractor-count').textContent = `ATTRACTORS: ${attractors.length}`;
+}
+
+function mainLoop() {
+  frameCount++;
+  stepField();
+  ctx.clearRect(0, 0, W, H);
+  drawField();
+  updateMetrics();
+  requestAnimationFrame(mainLoop);
+}
+
+window.setMode = function(m) {
+  mode = m;
+  document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + m)?.classList.add('active');
+};
+
+window.resetField = function() {
+  initField();
+};
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+mainLoop();
+
+// =====================================================
+// PHASE CANVAS
+// =====================================================
+const pCanvas = document.getElementById('phase-canvas');
+const pCtx = pCanvas.getContext('2d');
+let pW, pH;
+const phaseHistory = [];
+
+function resizePhase() {
+  const rect = pCanvas.parentElement.getBoundingClientRect();
+  pW = pCanvas.width = rect.width;
+  pH = pCanvas.height = rect.height;
+}
+resizePhase();
+window.addEventListener('resize', resizePhase);
+
+function drawPhase() {
+  pCtx.fillStyle = 'rgba(8, 12, 22, 0.25)';
+  pCtx.fillRect(0, 0, pW, pH);
+
+  // Axes
+  pCtx.strokeStyle = 'rgba(200, 150, 42, 0.15)';
+  pCtx.lineWidth = 1;
+  pCtx.beginPath();
+  pCtx.moveTo(pW/2, 0); pCtx.lineTo(pW/2, pH);
+  pCtx.moveTo(0, pH/2); pCtx.lineTo(pW, pH/2);
+  pCtx.stroke();
+
+  // Sample field points for phase portrait
+  const samples = 12;
+  for (let k = 0; k < samples; k++) {
+    const i = Math.floor(10 + Math.random() * 60);
+    const j = Math.floor(10 + Math.random() * 60);
+    if (!field[i] || !velocity[i]) continue;
+
+    const phi = field[i][j];
+    const dphi = velocity[i][j];
+
+    const px = pW/2 + phi * pW * 0.3;
+    const py = pH/2 - dphi * pH * 30;
+
+    let color;
+    if (Math.abs(phi) > 0.8) color = '#e04060';
+    else if (Math.abs(velocity[i][j]) > 0.02) color = '#c8962a';
+    else if (phi < -0.3) color = '#8ec8e8';
+    else color = '#40e080';
+
+    phaseHistory.push({ px, py, color, age: 0 });
+  }
+
+  // Draw phase history
+  phaseHistory.forEach((pt, idx) => {
+    pt.age++;
+    const alpha = Math.max(0, 1 - pt.age / 120) * 0.6;
+    if (alpha <= 0) return;
+
+    pCtx.beginPath();
+    pCtx.arc(pt.px, pt.py, 1.5, 0, Math.PI * 2);
+    const rgb = pt.color.startsWith('#') ? hexToRgb(pt.color) : pt.color;
+    if (rgb) pCtx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`;
+    pCtx.fill();
+  });
+
+  // Prune old
+  for (let i = phaseHistory.length - 1; i >= 0; i--) {
+    if (phaseHistory[i].age > 120) phaseHistory.splice(i, 1);
+  }
+
+  requestAnimationFrame(drawPhase);
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return { r, g, b };
+}
+
+drawPhase();
+
+// Tooltip on metric hover
+document.querySelectorAll('.metric').forEach((m, i) => {
+  const labels = ['Average velocity of field drift across all grid points', 'Mean Laplacian of field — local bending intensity', 'Number of active attractor basins carved into Ω', 'Shannon-like entropy of field energy distribution', 'Visco-elastic coherence time constant'];
+  const tip = document.getElementById('tooltip');
+  m.addEventListener('mouseenter', (e) => {
+    tip.textContent = labels[i];
+    tip.style.opacity = '1';
+  });
+  m.addEventListener('mousemove', (e) => {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top = (e.clientY - 28) + 'px';
+  });
+  m.addEventListener('mouseleave', () => { tip.style.opacity = '0'; });
+});
+</script>
+</body>
+</html>
