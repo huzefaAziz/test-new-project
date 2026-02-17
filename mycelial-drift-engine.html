@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mycelial Drift Engine — MDE v1.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne+Mono&family=Syne:wght@400;700;800&family=DM+Serif+Display:ital@0;1&display=swap');
+
+  :root {
+    --soil: #0a0704;
+    --humus: #12100d;
+    --thread: #c8a96e;
+    --thread-dim: #5c4a2a;
+    --spore: #e8d5a0;
+    --nutrient: #4ecb8d;
+    --nutrient-dim: #1a4d35;
+    --decay: #8b3a3a;
+    --signal: #f0e68c;
+    --myco-glow: rgba(200, 169, 110, 0.15);
+    --border: rgba(200, 169, 110, 0.2);
+    --text: #d4c4a0;
+    --text-dim: #7a6a50;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--soil);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Soil texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 200% 100% at 50% 100%, rgba(20,15,8,0.9) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    padding: 40px 60px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    position: relative;
+  }
+
+  .logo-cluster h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    color: var(--thread);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .logo-cluster h1 em {
+    font-style: italic;
+    color: var(--spore);
+  }
+
+  .logo-cluster .tagline {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .version-badge {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--nutrient);
+    border: 1px solid var(--nutrient-dim);
+    padding: 4px 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto auto;
+    gap: 0;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* ─── CANVAS AREA ─── */
+  .canvas-wrap {
+    position: relative;
+    border-right: 1px solid var(--border);
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(30,22,10,1) 0%, var(--soil) 100%);
+    min-height: 520px;
+  }
+
+  #mde-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+
+  .canvas-overlay-label {
+    position: absolute;
+    bottom: 20px;
+    left: 24px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .nutrient-hint {
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--nutrient);
+    opacity: 0.7;
+    letter-spacing: 0.1em;
+    pointer-events: none;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel {
+    border-bottom: 1px solid var(--border);
+    padding: 24px 28px;
+  }
+
+  .panel-label {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .arch-layer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+    cursor: default;
+    position: relative;
+  }
+
+  .arch-layer.active {
+    border-color: var(--thread-dim);
+    background: rgba(200, 169, 110, 0.05);
+  }
+
+  .arch-layer:hover {
+    border-color: var(--thread);
+    background: rgba(200, 169, 110, 0.08);
+  }
+
+  .layer-glyph {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .layer-glyph svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .layer-info .layer-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--thread);
+    letter-spacing: 0.05em;
+  }
+
+  .layer-info .layer-desc {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .layer-pulse {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--nutrient);
+    opacity: 0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .arch-layer.active .layer-pulse { opacity: 1; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.2; transform: translateY(-50%) scale(1); }
+    50% { opacity: 1; transform: translateY(-50%) scale(1.5); box-shadow: 0 0 6px var(--nutrient); }
+  }
+
+  /* Metrics */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .metric-card {
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .metric-val {
+    font-family: 'Syne Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--thread);
+    letter-spacing: -0.02em;
+  }
+
+  .metric-label {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+
+  /* Controls */
+  .ctrl-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border: 1px solid var(--thread-dim);
+    background: transparent;
+    color: var(--thread);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+  }
+
+  .ctrl-btn:hover {
+    background: var(--thread);
+    color: var(--soil);
+  }
+
+  .ctrl-btn.danger {
+    border-color: var(--decay);
+    color: var(--decay);
+  }
+
+  .ctrl-btn.danger:hover {
+    background: var(--decay);
+    color: var(--spore);
+  }
+
+  .ctrl-btn.nutrient-btn {
+    border-color: var(--nutrient-dim);
+    color: var(--nutrient);
+  }
+
+  .ctrl-btn.nutrient-btn:hover {
+    background: var(--nutrient);
+    color: var(--soil);
+  }
+
+  .slider-row {
+    margin-bottom: 14px;
+  }
+
+  .slider-row label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .slider-row label span {
+    color: var(--thread);
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--thread-dim);
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--thread);
+    cursor: pointer;
+    border-radius: 0;
+  }
+
+  /* ─── BOTTOM STRIP ─── */
+  .bottom-strip {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    padding: 20px 60px;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    flex-wrap: wrap;
+  }
+
+  .principle-block {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .principle-block h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 0.9rem;
+    color: var(--thread);
+    margin-bottom: 4px;
+  }
+
+  .principle-block p {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    letter-spacing: 0.03em;
+  }
+
+  /* ─── LOG ─── */
+  .log-panel {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 100px;
+    overflow: hidden;
+  }
+
+  .log-entry {
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    display: flex;
+    gap: 10px;
+    opacity: 0;
+    animation: fadeLog 0.3s forwards;
+  }
+
+  @keyframes fadeLog {
+    to { opacity: 1; }
+  }
+
+  .log-entry .log-time { color: var(--thread-dim); }
+  .log-entry .log-event { color: var(--spore); }
+  .log-entry.nutrient .log-event { color: var(--nutrient); }
+  .log-entry.decay .log-event { color: var(--decay); }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    font-family: 'Syne Mono', monospace;
+    font-size: 0.6rem;
+    background: var(--humus);
+    color: var(--thread);
+    padding: 6px 10px;
+    border: 1px solid var(--thread-dim);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 999;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .canvas-wrap { min-height: 360px; border-right: none; border-bottom: 1px solid var(--border); }
+    header { padding: 24px 24px 16px; }
+    .bottom-strip { padding: 20px 24px; gap: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-cluster">
+    <h1><em>Mycelial</em> Drift Engine</h1>
+    <div class="tagline">Bio-diffusive AI Architecture · No Neurons · No Weights · No Backpropagation</div>
+  </div>
+  <div class="version-badge">MDE v1.0 — 2026</div>
+</header>
+
+<div class="main-grid">
+
+  <!-- CANVAS -->
+  <div class="canvas-wrap">
+    <canvas id="mde-canvas"></canvas>
+    <div class="nutrient-hint">↑ CLICK TO PLACE NUTRIENT NODE · RIGHT-CLICK DECAY NODE</div>
+    <div class="canvas-overlay-label" id="status-label">MYCELIAL NETWORK IDLE</div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Architecture layers -->
+    <div class="panel">
+      <div class="panel-label">Compute Substrate</div>
+      <div class="arch-diagram">
+
+        <div class="arch-layer" id="layer-spore">
+          <div class="layer-glyph">
+            <svg viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="5" stroke="#c8a96e" stroke-width="1.2"/>
+              <circle cx="16" cy="16" r="10" stroke="#5c4a2a" stroke-width="0.6" stroke-dasharray="2 3"/>
+              <circle cx="8" cy="8" r="2" fill="#c8a96e" opacity="0.5"/>
+              <circle cx="24" cy="10" r="1.5" fill="#c8a96e" opacity="0.4"/>
+              <circle cx="10" cy="24" r="1.8" fill="#c8a96e" opacity="0.3"/>
+              <circle cx="23" cy="24" r="1.2" fill="#c8a96e" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="layer-info">
+            <div class="layer-name">Spore Dispersal</div>
+            <div class="layer-desc">stochastic seed propagation</div>
+          </div>
+          <div class="layer-pulse"></div>
+        </div>
+
+        <div class="arch-layer" id="layer-hypha">
+          <div class="layer-glyph">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M4 28 Q10 18 16 16 Q22 14 28 6" stroke="#c8a96e" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M16 16 Q14 22 12 28" stroke="#5c4a2a" stroke-width="0.8" stroke-linecap="round"/>
+              <path d="M20 12 Q24 16 26 22" stroke="#5c4a2a" stroke-width="0.8" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="2" fill="#c8a96e"/>
+            </svg>
+          </div>
+          <div class="layer-info">
+            <div class="layer-name">Hyphal Threading</div>
+            <div class="layer-desc">gradient-chasing filament growth</div>
+          </div>
+          <div class="layer-pulse"></div>
+        </div>
+
+        <div class="arch-layer" id="layer-gradient">
+          <div class="layer-glyph">
+            <svg viewBox="0 0 32 32" fill="none">
+              <defs>
+                <radialGradient id="g1" cx="50%" cy="50%">
+                  <stop offset="0%" stop-color="#4ecb8d" stop-opacity="0.9"/>
+                  <stop offset="100%" stop-color="#4ecb8d" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <circle cx="16" cy="16" r="14" fill="url(#g1)"/>
+              <circle cx="16" cy="16" r="3" fill="#4ecb8d" opacity="0.8"/>
+            </svg>
+          </div>
+          <div class="layer-info">
+            <div class="layer-name">Nutrient Gradient</div>
+            <div class="layer-desc">diffusion-based signal field</div>
+          </div>
+          <div class="layer-pulse"></div>
+        </div>
+
+        <div class="arch-layer" id="layer-anastomosis">
+          <div class="layer-glyph">
+            <svg viewBox="0 0 32 32" fill="none">
+              <circle cx="8" cy="8" r="3" stroke="#c8a96e" stroke-width="1"/>
+              <circle cx="24" cy="8" r="3" stroke="#c8a96e" stroke-width="1"/>
+              <circle cx="8" cy="24" r="3" stroke="#c8a96e" stroke-width="1"/>
+              <circle cx="24" cy="24" r="3" stroke="#c8a96e" stroke-width="1"/>
+              <path d="M11 8 L21 8 M8 11 L8 21 M24 11 L24 21 M11 24 L21 24" stroke="#5c4a2a" stroke-width="0.8"/>
+              <path d="M11 11 L21 21 M21 11 L11 21" stroke="#c8a96e" stroke-width="0.5" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="layer-info">
+            <div class="layer-name">Anastomosis Fusion</div>
+            <div class="layer-desc">thread merging & path reinforcement</div>
+          </div>
+          <div class="layer-pulse"></div>
+        </div>
+
+        <div class="arch-layer" id="layer-memory">
+          <div class="layer-glyph">
+            <svg viewBox="0 0 32 32" fill="none">
+              <rect x="4" y="10" width="24" height="12" rx="2" stroke="#c8a96e" stroke-width="1"/>
+              <path d="M10 10 L10 22 M16 10 L16 22 M22 10 L22 22" stroke="#5c4a2a" stroke-width="0.6"/>
+              <circle cx="10" cy="16" r="1.5" fill="#e8d5a0" opacity="0.7"/>
+              <circle cx="22" cy="16" r="1.5" fill="#e8d5a0" opacity="0.4"/>
+              <path d="M8 7 L12 10 M20 7 L24 10" stroke="#5c4a2a" stroke-width="0.6"/>
+            </svg>
+          </div>
+          <div class="layer-info">
+            <div class="layer-name">Scar Memory</div>
+            <div class="layer-desc">chitin-hardened pathway encoding</div>
+          </div>
+          <div class="layer-pulse"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="panel">
+      <div class="panel-label">Network State</div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="m-threads">0</div>
+          <div class="metric-label">Active Threads</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-spores">0</div>
+          <div class="metric-label">Spores</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-nutrients">0</div>
+          <div class="metric-label">Nutrients</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="m-fusions">0</div>
+          <div class="metric-label">Fusions</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel">
+      <div class="panel-label">Parameters</div>
+      <div class="slider-row">
+        <label>Growth Rate <span id="val-grow">0.7</span></label>
+        <input type="range" id="sl-grow" min="0.1" max="2.0" step="0.05" value="0.7">
+      </div>
+      <div class="slider-row">
+        <label>Diffusion <span id="val-diff">0.4</span></label>
+        <input type="range" id="sl-diff" min="0.05" max="1.0" step="0.05" value="0.4">
+      </div>
+      <div class="slider-row">
+        <label>Branching <span id="val-branch">0.25</span></label>
+        <input type="range" id="sl-branch" min="0.0" max="1.0" step="0.05" value="0.25">
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn" id="btn-run">▶ GROW</button>
+        <button class="ctrl-btn" id="btn-pause">❙❙ PAUSE</button>
+      </div>
+      <div class="ctrl-row">
+        <button class="ctrl-btn nutrient-btn" id="btn-spore">+ SPORE</button>
+        <button class="ctrl-btn danger" id="btn-clear">✕ RESET</button>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel log-panel">
+      <div class="panel-label">Event Log</div>
+      <div class="log-entries" id="log-entries"></div>
+    </div>
+
+  </aside>
+
+  <!-- BOTTOM STRIP -->
+  <div class="bottom-strip">
+    <div class="principle-block">
+      <h3>Gradient Chemotaxis</h3>
+      <p>Threads navigate by sensing nutrient concentration differentials across 360°. No learned weights — purely reactive field mathematics derived from Fick's second law of diffusion.</p>
+    </div>
+    <div class="principle-block">
+      <h3>Scar-Encoded Memory</h3>
+      <p>Reinforced pathways deposit chitin-like structural markers. High-traffic corridors harden into semi-permanent decision channels, creating persistent bias without parameter storage.</p>
+    </div>
+    <div class="principle-block">
+      <h3>Anastomosis Inference</h3>
+      <p>When two hyphae collide and fuse, their nutrient histories merge. Consensus patterns emerge from network-wide fusion events rather than top-down layer propagation.</p>
+    </div>
+    <div class="principle-block">
+      <h3>Spore Epistemic Reset</h3>
+      <p>Spores carry compressed path entropy records and re-seed distant regions. Each spore launch resets local priors — enabling catastrophic forgetting <em>as a feature</em>.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+"use strict";
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('mde-canvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let running = false;
+let raf = null;
+let tick = 0;
+let fusionCount = 0;
+
+// Parameters
+let growthRate = 0.7;
+let diffusion = 0.4;
+let branching = 0.25;
+
+// Nutrient field (grid-based diffusion)
+let GRID_W, GRID_H;
+const CELL = 8;
+let nutrientField = [];
+let chitin = []; // Scar memory
+
+const nutrients = [];   // {x, y, strength, decay type: 'grow'|'decay'}
+const threads = [];     // Active hyphal tips
+const segments = [];    // Rendered filament segments
+const spores = [];      // Spore particles
+const fusions = [];     // Fusion flash events
+
+let metrics = { threads: 0, spores: 0, nutrients: 0, fusions: 0 };
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+function resize() {
+  const wrap = canvas.parentElement;
+  W = wrap.clientWidth;
+  H = wrap.clientHeight || 500;
+  canvas.width = W;
+  canvas.height = H;
+  GRID_W = Math.ceil(W / CELL);
+  GRID_H = Math.ceil(H / CELL);
+  nutrientField = new Float32Array(GRID_W * GRID_H);
+  chitin = new Float32Array(GRID_W * GRID_H);
+  renderAll();
+}
+
+window.addEventListener('resize', () => { resize(); });
+resize();
+
+// Seed initial state
+function seedInitial() {
+  // Central nutrient cluster
+  addNutrient(W * 0.5, H * 0.4, 1.0, 'grow');
+  addNutrient(W * 0.25, H * 0.6, 0.7, 'grow');
+  addNutrient(W * 0.75, H * 0.55, 0.8, 'grow');
+  addNutrient(W * 0.5, H * 0.7, 0.6, 'grow');
+
+  // Seed starting spores
+  for (let i = 0; i < 6; i++) {
+    addSpore(
+      W * 0.3 + Math.random() * W * 0.4,
+      H * 0.45 + Math.random() * H * 0.15
+    );
+  }
+}
+
+// ─── NUTRIENT FIELD ───────────────────────────────────────────────────────────
+
+function gIdx(gx, gy) {
+  return gy * GRID_W + gx;
+}
+
+function addNutrient(x, y, strength, type) {
+  nutrients.push({ x, y, strength: strength * 3, type, age: 0 });
+  // Inject into field with radial decay
+  const gx = Math.floor(x / CELL);
+  const gy = Math.floor(y / CELL);
+  const radius = Math.floor(60 / CELL * strength);
+  const sign = type === 'decay' ? -1 : 1;
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const nx = gx + dx, ny = gy + dy;
+      if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > radius) continue;
+      const val = sign * strength * (1 - dist / radius);
+      nutrientField[gIdx(nx, ny)] += val;
+    }
+  }
+  metrics.nutrients = nutrients.filter(n => n.type === 'grow').length;
+  updateMetrics();
+  log(type === 'decay' ? 'decay' : 'nutrient',
+    type === 'decay' ? `DECAY NODE PLACED @ ${Math.round(x)},${Math.round(y)}`
+                     : `NUTRIENT GRADIENT @ ${Math.round(x)},${Math.round(y)} +${(strength*3).toFixed(1)}`);
+}
+
+function diffuseField() {
+  const rate = diffusion * 0.06;
+  const next = new Float32Array(GRID_W * GRID_H);
+  for (let gy = 1; gy < GRID_H - 1; gy++) {
+    for (let gx = 1; gx < GRID_W - 1; gx++) {
+      const c = nutrientField[gIdx(gx, gy)];
+      const neighbors = nutrientField[gIdx(gx-1, gy)] + nutrientField[gIdx(gx+1, gy)] +
+                        nutrientField[gIdx(gx, gy-1)] + nutrientField[gIdx(gx, gy+1)];
+      next[gIdx(gx, gy)] = c + rate * (neighbors * 0.25 - c) - c * 0.0008;
+    }
+  }
+  // Blend back + add chitin influence (scar hardening resists diffusion)
+  for (let i = 0; i < nutrientField.length; i++) {
+    const scarDamp = 1 - chitin[i] * 0.3;
+    nutrientField[i] = next[i] * scarDamp;
+    if (nutrientField[i] < 0.001 && nutrientField[i] > -0.001) nutrientField[i] = 0;
+  }
+}
+
+// Sample field gradient at world position
+function sampleGradient(x, y) {
+  const gx = Math.floor(x / CELL);
+  const gy = Math.floor(y / CELL);
+  if (gx <= 0 || gy <= 0 || gx >= GRID_W - 1 || gy >= GRID_H - 1) return { dx: 0, dy: 0, val: 0 };
+  const gxp = nutrientField[gIdx(gx + 1, gy)];
+  const gxn = nutrientField[gIdx(gx - 1, gy)];
+  const gyp = nutrientField[gIdx(gx, gy + 1)];
+  const gyn = nutrientField[gIdx(gx, gy - 1)];
+  return {
+    dx: (gxp - gxn) * 0.5,
+    dy: (gyp - gyn) * 0.5,
+    val: nutrientField[gIdx(gx, gy)]
+  };
+}
+
+// ─── THREADS ──────────────────────────────────────────────────────────────────
+
+function addSpore(x, y) {
+  const angle = Math.random() * Math.PI * 2;
+  spores.push({ x, y, vx: Math.cos(angle) * 1.5, vy: Math.sin(angle) * 1.5, age: 0, germinated: false });
+  metrics.spores = spores.length;
+  updateMetrics();
+  log('default', `SPORE DISPERSED @ ${Math.round(x)},${Math.round(y)}`);
+}
+
+function germinateSpore(s) {
+  s.germinated = true;
+  for (let i = 0; i < 3; i++) {
+    const a = Math.random() * Math.PI * 2;
+    spawnThread(s.x, s.y, a, 0);
+  }
+  log('default', `GERMINATION EVENT → 3 HYPHAE`);
+}
+
+function spawnThread(x, y, angle, parentDepth) {
+  if (parentDepth > 8) return;
+  threads.push({
+    x, y,
+    angle,
+    speed: growthRate * (0.5 + Math.random() * 0.5),
+    age: 0,
+    energy: 1.0,
+    depth: parentDepth,
+    scarTrail: [],
+    id: Math.random().toString(36).slice(2, 7)
+  });
+}
+
+function updateThreads() {
+  const dead = [];
+
+  for (let i = 0; i < threads.length; i++) {
+    const t = threads[i];
+    t.age++;
+
+    // Sample gradient
+    const g = sampleGradient(t.x, t.y);
+    const gradMag = Math.sqrt(g.dx * g.dx + g.dy * g.dy);
+
+    let targetAngle = t.angle;
+    if (gradMag > 0.001) {
+      let gradAngle = Math.atan2(g.dy, g.dx);
+      // Interpolate toward gradient
+      let da = gradAngle - t.angle;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      t.angle += da * 0.15 * (1 + gradMag * 2);
+    }
+
+    // Add random wandering
+    t.angle += (Math.random() - 0.5) * 0.3;
+
+    // Scar memory — steer away from dense chitin
+    const cx = Math.floor(t.x / CELL), cy = Math.floor(t.y / CELL);
+    if (cx > 0 && cy > 0 && cx < GRID_W - 1 && cy < GRID_H - 1) {
+      const scarHere = chitin[gIdx(cx, cy)];
+      if (scarHere > 0.5) {
+        t.angle += (Math.random() - 0.5) * 1.2;
+      }
+    }
+
+    const spd = t.speed * growthRate;
+    const nx = t.x + Math.cos(t.angle) * spd;
+    const ny = t.y + Math.sin(t.angle) * spd;
+
+    // Boundary check
+    if (nx < 0 || nx > W || ny < 0 || ny > H) {
+      dead.push(i);
+      continue;
+    }
+
+    // Record segment
+    segments.push({ x1: t.x, y1: t.y, x2: nx, y2: ny, age: 0, depth: t.depth, energy: t.energy, val: g.val });
+
+    // Deposit chitin scar
+    if (cx >= 0 && cy >= 0 && cx < GRID_W && cy < GRID_H) {
+      chitin[gIdx(cx, cy)] = Math.min(1, chitin[gIdx(cx, cy)] + 0.015);
+    }
+
+    t.x = nx;
+    t.y = ny;
+
+    // Consume nutrients
+    t.energy -= 0.005;
+    if (g.val > 0.05) t.energy += g.val * 0.03;
+
+    // Branching
+    if (Math.random() < branching * 0.02 && t.depth < 6 && t.energy > 0.4) {
+      const branchAngle = t.angle + (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 4 + Math.random() * 0.5);
+      spawnThread(t.x, t.y, branchAngle, t.depth + 1);
+    }
+
+    // Spore ejection
+    if (Math.random() < 0.002 && t.energy > 0.7) {
+      spores.push({ x: t.x, y: t.y, vx: Math.cos(t.angle + Math.PI * 0.5) * 2, vy: Math.sin(t.angle + Math.PI * 0.5) * 2, age: 0, germinated: false });
+      metrics.spores++;
+      updateMetrics();
+    }
+
+    // Death
+    if (t.energy <= 0 || t.age > 800) {
+      dead.push(i);
+    }
+  }
+
+  // Remove dead threads (reverse to preserve indices)
+  for (let i = dead.length - 1; i >= 0; i--) {
+    threads.splice(dead[i], 1);
+  }
+
+  // Anastomosis — check fusions between close thread tips
+  for (let i = 0; i < threads.length; i++) {
+    for (let j = i + 1; j < threads.length; j++) {
+      const dx = threads[i].x - threads[j].x;
+      const dy = threads[i].y - threads[j].y;
+      if (dx * dx + dy * dy < 64) {
+        fusions.push({ x: (threads[i].x + threads[j].x) * 0.5, y: (threads[i].y + threads[j].y) * 0.5, age: 0 });
+        fusionCount++;
+        metrics.fusions = fusionCount;
+        updateMetrics();
+        // Merge energy
+        const avg = (threads[i].energy + threads[j].energy) * 0.5;
+        threads[i].energy = avg + 0.1;
+        threads.splice(j, 1);
+        break;
+      }
+    }
+  }
+
+  // Germinate spores
+  for (const s of spores) {
+    if (!s.germinated) {
+      s.x += s.vx;
+      s.y += s.vy;
+      s.vx *= 0.95;
+      s.vy *= 0.95;
+      s.age++;
+      if (s.age > 60 && Math.random() < 0.02) germinateSpore(s);
+      if (s.age > 200) s.germinated = true;
+    }
+  }
+
+  metrics.threads = threads.length;
+  metrics.spores = spores.filter(s => !s.germinated).length;
+  updateMetrics();
+}
+
+// Prune old segments
+function pruneSegments() {
+  for (const s of segments) s.age++;
+  while (segments.length > 6000) segments.shift();
+  for (const f of fusions) f.age++;
+  while (fusions.length > 30) fusions.shift();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+
+function renderAll() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  const bg = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, Math.max(W, H) * 0.7);
+  bg.addColorStop(0, '#14100a');
+  bg.addColorStop(1, '#0a0704');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw nutrient field heatmap
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      const v = nutrientField[gIdx(gx, gy)];
+      if (Math.abs(v) < 0.02) continue;
+      const px = gx * CELL, py = gy * CELL;
+      if (v > 0) {
+        ctx.fillStyle = `rgba(78,203,141,${Math.min(0.12, v * 0.06)})`;
+      } else {
+        ctx.fillStyle = `rgba(139,58,58,${Math.min(0.1, -v * 0.05)})`;
+      }
+      ctx.fillRect(px, py, CELL, CELL);
+    }
+  }
+
+  // Draw chitin scar layer
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      const c = chitin[gIdx(gx, gy)];
+      if (c < 0.1) continue;
+      ctx.fillStyle = `rgba(80,60,30,${c * 0.08})`;
+      ctx.fillRect(gx * CELL, gy * CELL, CELL, CELL);
+    }
+  }
+
+  // Draw segments
+  for (const seg of segments) {
+    const alpha = Math.max(0, 1 - seg.age / 400) * Math.min(1, seg.age / 5);
+    const depthFade = Math.max(0.2, 1 - seg.depth * 0.1);
+    const r = 200, g = 169, b = 110;
+    ctx.strokeStyle = `rgba(${r},${g},${b},${alpha * depthFade * 0.7})`;
+    ctx.lineWidth = Math.max(0.3, 1.5 - seg.depth * 0.15);
+    ctx.beginPath();
+    ctx.moveTo(seg.x1, seg.y1);
+    ctx.lineTo(seg.x2, seg.y2);
+    ctx.stroke();
+  }
+
+  // Draw nutrients
+  for (const n of nutrients) {
+    n.age++;
+    const pulse = 0.6 + 0.4 * Math.sin(n.age * 0.05);
+    if (n.type === 'grow') {
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 30 * n.strength * pulse * 0.3);
+      grad.addColorStop(0, `rgba(78,203,141,0.5)`);
+      grad.addColorStop(1, `rgba(78,203,141,0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 30 * n.strength * pulse * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(78,203,141,${0.6 * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(78,203,141,${pulse})`;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = `rgba(139,58,58,${0.7 * pulse})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(139,58,58,${0.4 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 12 * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // Draw spores
+  for (const s of spores) {
+    if (s.germinated) continue;
+    const a = Math.max(0, 1 - s.age / 200);
+    ctx.fillStyle = `rgba(232,213,160,${a * 0.8})`;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw thread tips
+  for (const t of threads) {
+    const a = Math.min(1, t.energy);
+    ctx.fillStyle = `rgba(200,169,110,${a * 0.9})`;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // Energy glow
+    if (t.energy > 0.6) {
+      ctx.fillStyle = `rgba(200,169,110,0.15)`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Draw fusion events
+  for (const f of fusions) {
+    const a = Math.max(0, 1 - f.age / 40);
+    ctx.strokeStyle = `rgba(240,230,140,${a})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.age * 0.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Active layer highlight
+  const dominated = dominantLayer();
+  document.querySelectorAll('.arch-layer').forEach(el => el.classList.remove('active'));
+  if (dominated) document.getElementById(dominated)?.classList.add('active');
+
+  // Status label
+  document.getElementById('status-label').textContent = running
+    ? `TICK ${tick} · ${threads.length} HYPHAE ACTIVE · ${fusionCount} FUSIONS`
+    : 'MYCELIAL NETWORK PAUSED';
+}
+
+function dominantLayer() {
+  if (spores.filter(s => !s.germinated).length > threads.length * 2) return 'layer-spore';
+  if (threads.length > 20) return 'layer-hypha';
+  if (metrics.nutrients > 2) return 'layer-gradient';
+  if (fusionCount > 5) return 'layer-anastomosis';
+  if (segments.length > 200) return 'layer-memory';
+  return null;
+}
+
+// ─── MAIN LOOP ────────────────────────────────────────────────────────────────
+
+function loop() {
+  if (!running) return;
+  tick++;
+  diffuseField();
+  updateThreads();
+  pruneSegments();
+  renderAll();
+  raf = requestAnimationFrame(loop);
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+
+function updateMetrics() {
+  document.getElementById('m-threads').textContent = metrics.threads;
+  document.getElementById('m-spores').textContent = metrics.spores;
+  document.getElementById('m-nutrients').textContent = metrics.nutrients;
+  document.getElementById('m-fusions').textContent = metrics.fusions;
+}
+
+const logEntries = document.getElementById('log-entries');
+function log(type, msg) {
+  const el = document.createElement('div');
+  el.className = `log-entry ${type}`;
+  const t = ((performance.now() / 1000)).toFixed(2);
+  el.innerHTML = `<span class="log-time">${t}s</span><span class="log-event">${msg}</span>`;
+  logEntries.prepend(el);
+  while (logEntries.children.length > 5) logEntries.removeChild(logEntries.lastChild);
+}
+
+document.getElementById('btn-run').addEventListener('click', () => {
+  if (!running) {
+    running = true;
+    log('default', 'MYCELIAL GROWTH INITIATED');
+    loop();
+  }
+});
+
+document.getElementById('btn-pause').addEventListener('click', () => {
+  running = !running;
+  if (running) {
+    loop();
+    log('default', 'NETWORK RESUMED');
+  } else {
+    log('default', 'NETWORK PAUSED');
+    renderAll();
+  }
+});
+
+document.getElementById('btn-spore').addEventListener('click', () => {
+  for (let i = 0; i < 4; i++) {
+    addSpore(W * 0.2 + Math.random() * W * 0.6, H * 0.2 + Math.random() * H * 0.6);
+  }
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  running = false;
+  cancelAnimationFrame(raf);
+  threads.length = 0;
+  segments.length = 0;
+  spores.length = 0;
+  nutrients.length = 0;
+  fusions.length = 0;
+  fusionCount = 0;
+  tick = 0;
+  nutrientField.fill(0);
+  chitin.fill(0);
+  metrics = { threads: 0, spores: 0, nutrients: 0, fusions: 0 };
+  updateMetrics();
+  renderAll();
+  log('decay', 'NETWORK RESET — SUBSTRATE CLEARED');
+  seedInitial();
+});
+
+// Sliders
+document.getElementById('sl-grow').addEventListener('input', function() {
+  growthRate = parseFloat(this.value);
+  document.getElementById('val-grow').textContent = growthRate.toFixed(2);
+});
+document.getElementById('sl-diff').addEventListener('input', function() {
+  diffusion = parseFloat(this.value);
+  document.getElementById('val-diff').textContent = diffusion.toFixed(2);
+});
+document.getElementById('sl-branch').addEventListener('input', function() {
+  branching = parseFloat(this.value);
+  document.getElementById('val-branch').textContent = branching.toFixed(2);
+});
+
+// Canvas interactions
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  addNutrient(e.clientX - rect.left, e.clientY - rect.top, 0.7 + Math.random() * 0.3, 'grow');
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  addNutrient(e.clientX - rect.left, e.clientY - rect.top, 0.5, 'decay');
+});
+
+// Tooltip on hover
+const tooltip = document.getElementById('tooltip');
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const gx = Math.floor(mx / CELL);
+  const gy = Math.floor(my / CELL);
+  let tip = '';
+  if (gx >= 0 && gy >= 0 && gx < GRID_W && gy < GRID_H) {
+    const v = nutrientField[gIdx(gx, gy)];
+    const c = chitin[gIdx(gx, gy)];
+    if (Math.abs(v) > 0.05 || c > 0.05) {
+      tip = `Gradient: ${v.toFixed(3)}  Scar: ${c.toFixed(3)}`;
+    }
+  }
+  if (tip) {
+    tooltip.style.opacity = '1';
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY - 8) + 'px';
+    tooltip.textContent = tip;
+  } else {
+    tooltip.style.opacity = '0';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+
+seedInitial();
+renderAll();
+log('default', 'MDE v1.0 SUBSTRATE INITIALISED');
+log('nutrient', '4 NUTRIENT NODES SEEDED');
+log('default', '6 DORMANT SPORES PLACED');
+log('default', 'PRESS ▶ GROW TO BEGIN');
+</script>
+</body>
+</html>
