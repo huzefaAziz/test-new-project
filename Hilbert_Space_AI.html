@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hilbert Space AI - Quantum-Inspired Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.1em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .panel h2 {
+            color: #8b5cf6;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+
+        .visualization {
+            grid-column: 1 / -1;
+            height: 500px;
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls {
+            display: grid;
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            color: #a0a0a0;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(139, 92, 246, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            cursor: pointer;
+            border: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #a0a0a0;
+        }
+
+        .metric-value {
+            color: #8b5cf6;
+            font-weight: 600;
+        }
+
+        .training-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .data-point {
+            aspect-ratio: 1;
+            background: rgba(139, 92, 246, 0.1);
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.5em;
+        }
+
+        .data-point:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: #8b5cf6;
+        }
+
+        .data-point.class-0 {
+            border-color: #ec4899;
+            color: #ec4899;
+        }
+
+        .data-point.class-1 {
+            border-color: #8b5cf6;
+            color: #8b5cf6;
+        }
+
+        .theory {
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .theory h3 {
+            color: #ec4899;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hilbert Space AI Model</h1>
+            <p class="subtitle">Quantum-Inspired Learning Without Neural Networks</p>
+        </header>
+
+        <div class="main-grid">
+            <div class="panel visualization">
+                <canvas id="hilbertCanvas"></canvas>
+            </div>
+
+            <div class="panel">
+                <h2>⚛️ Hilbert Space Controls</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Basis Functions: <span id="basisValue">20</span></label>
+                        <input type="range" id="basisCount" min="5" max="50" value="20">
+                    </div>
+                    <div class="control-group">
+                        <label>Projection Depth: <span id="depthValue">5</span></label>
+                        <input type="range" id="projectionDepth" min="1" max="10" value="5">
+                    </div>
+                    <div class="control-group">
+                        <label>Learning Rate (λ): <span id="lrValue">0.1</span></label>
+                        <input type="range" id="learningRate" min="0.01" max="0.5" step="0.01" value="0.1">
+                    </div>
+                    <button onclick="trainModel()">🚀 Train Model</button>
+                    <button onclick="generateTestData()">🔄 Generate New Data</button>
+                    <button onclick="resetModel()">↺ Reset Model</button>
+                </div>
+
+                <div class="theory">
+                    <h3>How It Works</h3>
+                    <p>This model uses <strong>functional analysis</strong> in infinite-dimensional Hilbert spaces. Instead of neurons, it employs orthogonal basis functions (like Fourier series) to represent data as projections onto function spaces. Learning occurs through <strong>operator eigendecomposition</strong> and <strong>kernel methods</strong>.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📊 Model Metrics</h2>
+                <div class="metric">
+                    <span class="metric-label">Inner Product Norm</span>
+                    <span class="metric-value" id="normMetric">0.000</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Spectral Radius</span>
+                    <span class="metric-value" id="spectralMetric">0.000</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Projection Accuracy</span>
+                    <span class="metric-value" id="accuracyMetric">0%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Kernel Variance</span>
+                    <span class="metric-value" id="varianceMetric">0.000</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Training Iterations</span>
+                    <span class="metric-value" id="iterationMetric">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Hilbert Space AI Model - No Neural Networks
+        class HilbertSpaceModel {
+            constructor(basisCount, projectionDepth) {
+                this.basisCount = basisCount;
+                this.projectionDepth = projectionDepth;
+                this.basisFunctions = [];
+                this.projectionOperators = [];
+                this.eigenvalues = [];
+                this.trainingData = [];
+                this.trained = false;
+                
+                this.initializeBasisFunctions();
+            }
+
+            // Initialize orthogonal basis functions (like Fourier basis)
+            initializeBasisFunctions() {
+                this.basisFunctions = [];
+                for (let i = 0; i < this.basisCount; i++) {
+                    const frequency = (i + 1) * Math.PI;
+                    const phase = Math.random() * Math.PI * 2;
+                    this.basisFunctions.push({
+                        freq: frequency,
+                        phase: phase,
+                        coefficient: Math.random() * 2 - 1
+                    });
+                }
+            }
+
+            // Compute inner product in Hilbert space
+            innerProduct(x1, y1, x2, y2) {
+                const kernel = this.gaussianKernel(x1, y1, x2, y2, 0.5);
+                return kernel;
+            }
+
+            // Gaussian kernel for inner product
+            gaussianKernel(x1, y1, x2, y2, sigma) {
+                const dist = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+                return Math.exp(-(dist ** 2) / (2 * sigma ** 2));
+            }
+
+            // Project data point onto Hilbert space basis
+            projectToHilbertSpace(x, y) {
+                const projection = new Array(this.basisCount).fill(0);
+                
+                for (let i = 0; i < this.basisCount; i++) {
+                    const basis = this.basisFunctions[i];
+                    // Use trigonometric basis functions
+                    const value = Math.sin(basis.freq * x + basis.phase) * 
+                                  Math.cos(basis.freq * y) * 
+                                  basis.coefficient;
+                    projection[i] = value;
+                }
+                
+                return projection;
+            }
+
+            // Compute operator norm
+            computeOperatorNorm(projection) {
+                return Math.sqrt(projection.reduce((sum, val) => sum + val ** 2, 0));
+            }
+
+            // Train using functional analysis and operator theory
+            train(data, learningRate = 0.1) {
+                this.trainingData = data;
+                const iterations = 50;
+                
+                for (let iter = 0; iter < iterations; iter++) {
+                    // Build kernel matrix
+                    const gramMatrix = this.buildGramMatrix(data);
+                    
+                    // Compute spectral decomposition
+                    this.eigenvalues = this.computeEigenvalues(gramMatrix);
+                    
+                    // Update basis functions using gradient descent on functional space
+                    this.updateBasisFunctions(data, learningRate);
+                }
+                
+                this.trained = true;
+                return iterations;
+            }
+
+            // Build Gram matrix (kernel matrix)
+            buildGramMatrix(data) {
+                const n = data.length;
+                const matrix = Array(n).fill(0).map(() => Array(n).fill(0));
+                
+                for (let i = 0; i < n; i++) {
+                    for (let j = 0; j < n; j++) {
+                        matrix[i][j] = this.innerProduct(
+                            data[i].x, data[i].y,
+                            data[j].x, data[j].y
+                        );
+                    }
+                }
+                
+                return matrix;
+            }
+
+            // Simplified eigenvalue computation (power iteration)
+            computeEigenvalues(matrix) {
+                const n = matrix.length;
+                if (n === 0) return [];
+                
+                let vector = Array(n).fill(1 / Math.sqrt(n));
+                
+                for (let iter = 0; iter < 20; iter++) {
+                    const newVector = Array(n).fill(0);
+                    
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < n; j++) {
+                            newVector[i] += matrix[i][j] * vector[j];
+                        }
+                    }
+                    
+                    const norm = Math.sqrt(newVector.reduce((sum, val) => sum + val ** 2, 0));
+                    vector = newVector.map(v => v / norm);
+                }
+                
+                return vector;
+            }
+
+            // Update basis functions based on training data
+            updateBasisFunctions(data, learningRate) {
+                for (let i = 0; i < this.basisCount; i++) {
+                    let gradient = 0;
+                    
+                    for (const point of data) {
+                        const projection = this.projectToHilbertSpace(point.x, point.y);
+                        const prediction = this.classify(point.x, point.y);
+                        const error = point.label - prediction;
+                        
+                        gradient += error * projection[i];
+                    }
+                    
+                    this.basisFunctions[i].coefficient += learningRate * gradient / data.length;
+                }
+            }
+
+            // Classify using functional projection
+            classify(x, y) {
+                const projection = this.projectToHilbertSpace(x, y);
+                
+                // Weighted sum using eigenvalues and basis coefficients
+                let score = 0;
+                for (let i = 0; i < this.basisCount; i++) {
+                    const eigenWeight = this.eigenvalues[i] || 1;
+                    score += projection[i] * eigenWeight;
+                }
+                
+                return 1 / (1 + Math.exp(-score)); // Sigmoid for [0,1]
+            }
+
+            // Compute decision boundary
+            getDecisionBoundary(x, y) {
+                return this.classify(x, y);
+            }
+        }
+
+        // Visualization and UI
+        const canvas = document.getElementById('hilbertCanvas');
+        const ctx = canvas.getContext('2d');
+        let model;
+        let trainingData = [];
+        let animationFrame;
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        }
+
+        function generateTestData() {
+            trainingData = [];
+            const pointsPerClass = 50;
+            
+            // Generate two spirals (classic non-linear problem)
+            for (let i = 0; i < pointsPerClass; i++) {
+                const t = i / pointsPerClass * 4 * Math.PI;
+                const r = t / (4 * Math.PI);
+                
+                // Class 0 spiral
+                const x0 = r * Math.cos(t) * 0.4 + 0.5 + (Math.random() - 0.5) * 0.05;
+                const y0 = r * Math.sin(t) * 0.4 + 0.5 + (Math.random() - 0.5) * 0.05;
+                trainingData.push({ x: x0, y: y0, label: 0 });
+                
+                // Class 1 spiral (opposite)
+                const x1 = r * Math.cos(t + Math.PI) * 0.4 + 0.5 + (Math.random() - 0.5) * 0.05;
+                const y1 = r * Math.sin(t + Math.PI) * 0.4 + 0.5 + (Math.random() - 0.5) * 0.05;
+                trainingData.push({ x: x1, y: y1, label: 1 });
+            }
+            
+            drawVisualization();
+        }
+
+        function trainModel() {
+            const basisCount = parseInt(document.getElementById('basisCount').value);
+            const projectionDepth = parseInt(document.getElementById('projectionDepth').value);
+            const learningRate = parseFloat(document.getElementById('learningRate').value);
+            
+            model = new HilbertSpaceModel(basisCount, projectionDepth);
+            const iterations = model.train(trainingData, learningRate);
+            
+            updateMetrics(iterations);
+            animateTraining();
+        }
+
+        function resetModel() {
+            model = null;
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            generateTestData();
+            updateMetrics(0);
+        }
+
+        function drawVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw decision boundary if model is trained
+            if (model && model.trained) {
+                drawDecisionBoundary();
+            }
+            
+            // Draw training data
+            trainingData.forEach(point => {
+                const x = point.x * canvas.width;
+                const y = point.y * canvas.height;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = point.label === 0 ? '#ec4899' : '#8b5cf6';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        function drawDecisionBoundary() {
+            const resolution = 3;
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let x = 0; x < canvas.width; x += resolution) {
+                for (let y = 0; y < canvas.height; y += resolution) {
+                    const nx = x / canvas.width;
+                    const ny = y / canvas.height;
+                    const prediction = model.getDecisionBoundary(nx, ny);
+                    
+                    const color = prediction > 0.5 ? 
+                        [139, 92, 246, 30] : // Purple
+                        [236, 72, 153, 30];  // Pink
+                    
+                    for (let dx = 0; dx < resolution; dx++) {
+                        for (let dy = 0; dy < resolution; dy++) {
+                            const px = x + dx;
+                            const py = y + dy;
+                            if (px < canvas.width && py < canvas.height) {
+                                const index = (py * canvas.width + px) * 4;
+                                imageData.data[index] = color[0];
+                                imageData.data[index + 1] = color[1];
+                                imageData.data[index + 2] = color[2];
+                                imageData.data[index + 3] = color[3];
+                            }
+                        }
+                    }
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function animateTraining() {
+            drawVisualization();
+            animationFrame = requestAnimationFrame(animateTraining);
+        }
+
+        function updateMetrics(iterations) {
+            if (!model) {
+                document.getElementById('normMetric').textContent = '0.000';
+                document.getElementById('spectralMetric').textContent = '0.000';
+                document.getElementById('accuracyMetric').textContent = '0%';
+                document.getElementById('varianceMetric').textContent = '0.000';
+                document.getElementById('iterationMetric').textContent = '0';
+                return;
+            }
+            
+            // Compute metrics
+            const sampleProjection = model.projectToHilbertSpace(0.5, 0.5);
+            const norm = model.computeOperatorNorm(sampleProjection);
+            
+            const spectral = model.eigenvalues.length > 0 ? 
+                Math.abs(model.eigenvalues[0]) : 0;
+            
+            let correct = 0;
+            trainingData.forEach(point => {
+                const pred = model.classify(point.x, point.y);
+                if ((pred > 0.5 && point.label === 1) || (pred <= 0.5 && point.label === 0)) {
+                    correct++;
+                }
+            });
+            const accuracy = (correct / trainingData.length * 100).toFixed(1);
+            
+            const variance = model.basisFunctions.reduce((sum, b) => 
+                sum + b.coefficient ** 2, 0) / model.basisCount;
+            
+            document.getElementById('normMetric').textContent = norm.toFixed(3);
+            document.getElementById('spectralMetric').textContent = spectral.toFixed(3);
+            document.getElementById('accuracyMetric').textContent = accuracy + '%';
+            document.getElementById('varianceMetric').textContent = variance.toFixed(3);
+            document.getElementById('iterationMetric').textContent = iterations;
+        }
+
+        // UI Updates
+        document.getElementById('basisCount').addEventListener('input', (e) => {
+            document.getElementById('basisValue').textContent = e.target.value;
+        });
+
+        document.getElementById('projectionDepth').addEventListener('input', (e) => {
+            document.getElementById('depthValue').textContent = e.target.value;
+        });
+
+        document.getElementById('learningRate').addEventListener('input', (e) => {
+            document.getElementById('lrValue').textContent = e.target.value;
+        });
+
+        // Initialize
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drawVisualization();
+        });
+
+        resizeCanvas();
+        generateTestData();
+    </script>
+</body>
+</html>
